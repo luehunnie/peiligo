@@ -18,3 +18,13 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Local AI collaboration documents and reports
+docs/ai/
+
+# Local AI coding assistant state
+.codex/
+.claude/
+.cursor/
+.continue/
+.windsurf/
+.gemini/
