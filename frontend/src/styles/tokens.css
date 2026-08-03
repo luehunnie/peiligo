@@ -1,0 +1,60 @@
+/* 培黎智寻主题变量：集中维护颜色、间距、字号与圆角，供全局与组件复用 */
+
+:root {
+  /* 背景与表面 */
+  --page-bg: #f5f7fa;
+  --content-bg: #ffffff;
+
+  /* 文字 */
+  --text-primary: #1f2a37;
+  --text-secondary: #64748b;
+
+  /* 品牌色：集中定义，不在组件内复制相同色值 */
+  --brand-color: #2f7a6e;
+  --brand-color-hover: #266359;
+  --brand-bg-soft: #e8f1ee;
+
+  /* 边框与分隔 */
+  --border-color: #e2e8f0;
+
+  /* 原型提示：M1 阶段说明文字与底色 */
+  --notice-text: #8a6512;
+  --notice-bg: #fbf4e4;
+  --notice-border: #efddb6;
+
+  /* 布局尺度 */
+  --content-max-width: 1120px;
+  --header-height: 64px;
+
+  /* 常用间距 */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 56px;
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius: 8px;
+
+  /* 克制阴影 */
+  --shadow-subtle: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+
+  /* 字号层级 */
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-h3: 20px;
+  --font-size-h2: 24px;
+  --font-size-h1: 32px;
+
+  /* 行高 */
+  --line-height-base: 1.7;
+  --line-height-tight: 1.3;
+
+  /* 字体栈：中文系统字体优先 */
+  --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC",
+    "Noto Sans CJK SC", sans-serif;
+}

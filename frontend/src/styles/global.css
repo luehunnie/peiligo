@@ -1,0 +1,115 @@
+/* 全局基础样式：盒模型、排版、链接、焦点与公共容器 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size-base);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* 标题与段落默认外边距归零，交由组件自行控制 */
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  line-height: var(--line-height-tight);
+  font-weight: 700;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  line-height: var(--line-height-tight);
+  font-weight: 600;
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+  line-height: var(--line-height-tight);
+  font-weight: 600;
+}
+
+a {
+  color: var(--brand-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* 键盘焦点：清晰可见，且不只依赖颜色单一信号 */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--brand-color);
+  outline-offset: 2px;
+}
+
+/* 公共内容容器：统一最大宽度与水平内边距 */
+.site-container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin-inline: auto;
+  padding-inline: var(--space-lg);
+}
+
+/* 跳过导航：默认移出可视区，获得焦点时显现 */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--brand-color);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: var(--space-md);
+}
