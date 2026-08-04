@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '../pages/HomePage.vue'
 import ContentListPage from '../pages/ContentListPage.vue'
+import ContentDetailPage from '../pages/ContentDetailPage.vue'
 import NotFoundPage from '../pages/NotFoundPage.vue'
 
-// 仅注册当前已实现的首页与兜底 404，不提前注册未实现业务路由
+// 注册当前已实现的首页、内容浏览、内容详情与兜底 404
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -16,6 +17,11 @@ const router = createRouter({
       path: '/contents',
       name: 'contents',
       component: ContentListPage,
+    },
+    {
+      path: '/contents/:id',
+      name: 'content-detail',
+      component: ContentDetailPage,
     },
     {
       path: '/:pathMatch(.*)*',

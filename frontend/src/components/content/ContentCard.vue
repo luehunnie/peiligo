@@ -1,54 +1,63 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { ContentItem, ContentType } from '../../types/content'
-import { CONTENT_TYPE_OPTIONS } from '../../constants/content-types'
+import { useRoute } from 'vue-router'
+import type { ContentItem } from '../../types/content'
+import ContentMeta from './ContentMeta.vue'
 
 const props = defineProps<{ item: ContentItem }>()
 
-// 板块标签查找表：由集中配置驱动
-const boardLabels = new Map<ContentType, string>(
-  CONTENT_TYPE_OPTIONS.map((option): [ContentType, string] => [
-    option.value,
-    option.label,
-  ]),
-)
+const route = useRoute()
 
-const boardLabel = computed(
-  () => boardLabels.get(props.item.contentType) ?? props.item.contentType,
-)
-
-// ISO 日期格式化为简洁中文日期；解析失败时回退原值
-const formatDate = (iso: string): string => {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-}
+// 进入详情时携带当前列表的 q 与 type，供详情页"返回列表"复原筛选
+const detailTo = computed(() => {
+  const query: Record<string, string> = {}
+  const q = route.query.q
+  const type = route.query.type
+  if (typeof q === 'string' && q) query.q = q
+  if (typeof type === 'string' && type) query.type = type
+  return { name: 'content-detail', params: { id: props.item.id }, query }
+})
 </script>
 
 <template>
-  <article class="content-card">
-    <header class="content-card__meta">
-      <span class="content-card__board">{{ boardLabel }}</span>
-      <time :datetime="item.publishedAt" class="content-card__date">
-        {{ formatDate(item.publishedAt) }}
-      </time>
-    </header>
-    <h2 class="content-card__title">{{ item.title }}</h2>
-    <p class="content-card__summary">{{ item.summary }}</p>
-    <p v-if="item.sourceName" class="content-card__source">
-      来源：{{ item.sourceName }}
-    </p>
-  </article>
+  <router-link :to="detailTo" class="content-card-link">
+    <article class="content-card">
+      <header class="content-card__meta">
+        <ContentMeta
+          :content-type="item.contentType"
+          :published-at="item.publishedAt"
+        />
+      </header>
+      <h2 class="content-card__title">{{ item.title }}</h2>
+      <p class="content-card__summary">{{ item.summary }}</p>
+      <p v-if="item.sourceName" class="content-card__source">
+        来源：{{ item.sourceName }}
+      </p>
+    </article>
+  </router-link>
 </template>
 
 <style scoped>
-.content-card {
+.content-card-link {
+  display: flex;
+  width: 100%;
   height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.content-card {
+  width: 100%;
   padding: var(--space-lg);
   background: var(--content-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   box-shadow: var(--shadow-subtle);
+  transition: border-color 0.15s ease;
+}
+
+.content-card-link:hover .content-card {
+  border-color: var(--brand-color);
 }
 
 .content-card__meta {
@@ -56,19 +65,6 @@ const formatDate = (iso: string): string => {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.content-card__board {
-  padding: 2px var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--brand-color);
-  background: var(--brand-bg-soft);
-  border-radius: var(--radius-sm);
-}
-
-.content-card__date {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
 }
 
 .content-card__title {
