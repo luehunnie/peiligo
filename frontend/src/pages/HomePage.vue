@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import type { ContentType } from '../types/content'
 import { CONTENT_TYPE_OPTIONS } from '../constants/content-types'
 import { MOCK_CONTENTS } from '../data/mock-contents'
 
 // 近期内容预览：仅展示少量已发布内容，按发布时间倒序
 const RECENT_LIMIT = 5
+
+const router = useRouter()
+const searchKeyword = ref('')
+
+const submitSearch = () => {
+  const trimmed = searchKeyword.value.trim()
+  router.push({
+    name: 'contents',
+    query: trimmed ? { q: trimmed } : {},
+  })
+}
 
 // 板块标签查找表：由集中配置 CONTENT_TYPE_OPTIONS 驱动，键值类型与模型一致
 const boardLabels = new Map<ContentType, string>(
@@ -46,10 +58,29 @@ const recentContents = computed(() =>
       </p>
     </section>
 
+    <section class="search" aria-labelledby="search-title">
+      <h2 id="search-title" class="section-title">搜索内容</h2>
+      <form class="search-form" @submit.prevent="submitSearch">
+        <label for="home-search" class="search-form__label">关键词</label>
+        <div class="search-form__controls">
+          <input
+            id="home-search"
+            v-model="searchKeyword"
+            type="search"
+            placeholder="搜索标题、摘要或正文"
+          />
+          <button type="submit" class="btn btn--primary">搜索</button>
+        </div>
+        <p class="search-form__hint">
+          输入关键词后点击搜索，可进入内容浏览页查看完整结果并按板块筛选。
+        </p>
+      </form>
+    </section>
+
     <section class="boards" aria-labelledby="boards-title">
       <h2 id="boards-title" class="section-title">内容板块</h2>
       <p class="section-hint">
-        五个板块由统一配置驱动；完整的内容列表与按板块筛选将在后续 M1 批次接入。
+        五个板块由统一配置驱动；可在内容浏览页按板块筛选与搜索。
       </p>
       <ul class="boards__list">
         <li
@@ -62,14 +93,14 @@ const recentContents = computed(() =>
         </li>
       </ul>
       <p class="boards__footnote">
-        各板块的完整浏览与详情将在后续接入，当前卡片仅作展示，暂不可进入。
+        可在内容浏览页查看各板块内容；详情页将在后续接入。
       </p>
     </section>
 
     <section class="recent" aria-labelledby="recent-title">
       <h2 id="recent-title" class="section-title">近期内容预览</h2>
       <p class="section-hint">
-        搜索与完整内容列表将在后续 M1 批次接入；当前仅展示少量已发布内容的标题、板块与时间。
+        以下仅展示少量近期已发布内容；完整列表请在内容浏览页查看。
       </p>
       <ul class="recent__list">
         <li
@@ -92,8 +123,6 @@ const recentContents = computed(() =>
         以下页面与功能尚未建立，将在后续 M1 批次逐步接入，当前不提供链接：
       </p>
       <ul class="roadmap__list">
-        <li>内容列表页与按板块筛选</li>
-        <li>内容搜索</li>
         <li>内容详情页</li>
         <li>投稿说明</li>
         <li>关于本站</li>
@@ -136,6 +165,24 @@ const recentContents = computed(() =>
   border: 1px solid var(--notice-border);
   border-radius: var(--radius-sm);
   color: var(--notice-text);
+  font-size: var(--font-size-sm);
+}
+
+.search-form__label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.search-form__controls {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.search-form__hint {
+  margin-top: var(--space-xs);
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
 }
 

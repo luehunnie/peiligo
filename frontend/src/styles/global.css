@@ -85,9 +85,68 @@ img {
 /* 键盘焦点：清晰可见，且不只依赖颜色单一信号 */
 a:focus-visible,
 button:focus-visible,
-[tabindex]:focus-visible {
+[tabindex]:focus-visible,
+input:focus-visible {
   outline: 2px solid var(--brand-color);
   outline-offset: 2px;
+}
+
+/* 搜索输入框：公共基础样式 */
+input[type='search'] {
+  min-width: 0;
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+input[type='search']::placeholder {
+  color: var(--text-secondary);
+}
+
+input[type='search']:focus-visible {
+  border-color: var(--brand-color);
+}
+
+/* 按钮变体：主操作与次要操作 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-xs) var(--space-lg);
+  font: inherit;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  color: #ffffff;
+  background: var(--brand-color);
+  border-color: var(--brand-color);
+}
+
+.btn--primary:hover {
+  background: var(--brand-color-hover);
+  border-color: var(--brand-color-hover);
+  text-decoration: none;
+}
+
+.btn--ghost {
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.btn--ghost:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+  text-decoration: none;
 }
 
 /* 公共内容容器：统一最大宽度与水平内边距 */

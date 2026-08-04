@@ -5,6 +5,7 @@ import { RouterLink, useRoute } from 'vue-router'
 // 当前是否处于首页：用于导航高亮（同时用 aria-current 提供语义标记，不只依赖颜色）
 const route = useRoute()
 const isHome = computed(() => route.name === 'home')
+const isContents = computed(() => route.name === 'contents')
 </script>
 
 <template>
@@ -12,13 +13,20 @@ const isHome = computed(() => route.name === 'home')
     <div class="site-header__inner">
       <RouterLink to="/" class="site-logo">培黎智寻</RouterLink>
       <p class="site-tagline">校园 Web 资源聚合 · M1 静态原型</p>
-      <nav class="site-nav" aria-label="主导航">
+  <nav class="site-nav" aria-label="主导航">
         <RouterLink
           to="/"
           class="nav-link"
           :aria-current="isHome ? 'page' : undefined"
         >
           首页
+        </RouterLink>
+        <RouterLink
+          to="/contents"
+          class="nav-link"
+          :aria-current="isContents ? 'page' : undefined"
+        >
+          内容浏览
         </RouterLink>
       </nav>
     </div>
