@@ -6,6 +6,8 @@ import { RouterLink, useRoute } from 'vue-router'
 const route = useRoute()
 const isHome = computed(() => route.name === 'home')
 const isContents = computed(() => route.name === 'contents')
+const isSubmission = computed(() => route.name === 'submission')
+const isAbout = computed(() => route.name === 'about')
 </script>
 
 <template>
@@ -26,7 +28,21 @@ const isContents = computed(() => route.name === 'contents')
           class="nav-link"
           :aria-current="isContents ? 'page' : undefined"
         >
-          内容浏览
+         内容浏览
+       </RouterLink>
+        <RouterLink
+          to="/submission"
+          class="nav-link"
+          :aria-current="isSubmission ? 'page' : undefined"
+        >
+          投稿说明
+        </RouterLink>
+        <RouterLink
+          to="/about"
+          class="nav-link"
+          :aria-current="isAbout ? 'page' : undefined"
+        >
+          关于本站
         </RouterLink>
       </nav>
     </div>

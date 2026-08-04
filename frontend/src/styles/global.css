@@ -111,6 +111,61 @@ input[type='search']:focus-visible {
   border-color: var(--brand-color);
 }
 
+/* 表单控件：文本输入、密码输入与文本域的公共基础样式 */
+input[type='text'],
+input[type='password'],
+textarea,
+select {
+  min-width: 0;
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  font: inherit;
+  color: var(--text-primary);
+  background: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+textarea {
+  resize: vertical;
+}
+
+input[type='text']:focus-visible,
+input[type='password']:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--brand-color);
+}
+
+/* 表单字段：标签与控件的垂直布局 */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.form-field__label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.form-field__hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* 操作反馈提示：提交后出现的说明信息 */
+.form-notice {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--notice-bg);
+  border: 1px solid var(--notice-border);
+  border-radius: var(--radius-sm);
+  color: var(--notice-text);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+}
+
 /* 按钮变体：主操作与次要操作 */
 .btn {
   display: inline-flex;
