@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import type { ContentType } from '../types/content'
+import { ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { CONTENT_TYPE_OPTIONS } from '../constants/content-types'
-import { MOCK_CONTENTS } from '../data/mock-contents'
-
-// 近期内容预览：仅展示少量已发布内容，按发布时间倒序
-const RECENT_LIMIT = 5
+import HomeRecentContents from '../components/content/HomeRecentContents.vue'
 
 const router = useRouter()
 const searchKeyword = ref('')
@@ -18,31 +14,6 @@ const submitSearch = () => {
     query: trimmed ? { q: trimmed } : {},
   })
 }
-
-// 板块标签查找表：由集中配置 CONTENT_TYPE_OPTIONS 驱动，键值类型与模型一致
-const boardLabels = new Map<ContentType, string>(
-  CONTENT_TYPE_OPTIONS.map((option): [ContentType, string] => [
-    option.value,
-    option.label,
-  ]),
-)
-
-const getBoardLabel = (type: ContentType): string =>
-  boardLabels.get(type) ?? type
-
-// 将 ISO 日期格式化为简洁中文日期；解析失败时回退原值
-const formatDate = (iso: string): string => {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-}
-
-// 仅已发布、按发布时间倒序、截取少量条目
-const recentContents = computed(() =>
-  MOCK_CONTENTS.filter((item) => item.status === 'published')
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .slice(0, RECENT_LIMIT),
-)
 </script>
 
 <template>
@@ -54,7 +25,7 @@ const recentContents = computed(() =>
         汇集校园学习、活动、资料、软件与入学指引等内容板块，方便同学集中查找与浏览。
       </p>
       <p class="hero__note">
-        当前为 M1 静态原型阶段：页面内容均为示例演示数据，仅用于展示内容结构与板块字段，不代表学校正式信息。
+        近期内容来自内容系统已发布条目；正式上线前内容仍在完善，部分信息仅供校内同学参考，不代表学校正式通知或政策。
       </p>
     </section>
 
@@ -83,49 +54,36 @@ const recentContents = computed(() =>
         五个板块由统一配置驱动；可在内容浏览页按板块筛选与搜索。
       </p>
       <ul class="boards__list">
-        <li
-          v-for="option in CONTENT_TYPE_OPTIONS"
-          :key="option.value"
-          class="board-card"
-        >
-          <h3 class="board-card__title">{{ option.label }}</h3>
-          <p class="board-card__desc">{{ option.description }}</p>
+        <li v-for="option in CONTENT_TYPE_OPTIONS" :key="option.value">
+          <RouterLink
+            class="board-card"
+            :to="{ name: 'contents', query: { type: option.value } }"
+            :aria-label="`进入「${option.label}」板块浏览内容`"
+          >
+            <h3 class="board-card__title">{{ option.label }}</h3>
+            <p class="board-card__desc">{{ option.description }}</p>
+          </RouterLink>
         </li>
       </ul>
       <p class="boards__footnote">
-        可在内容浏览页查看各板块内容；详情页将在后续接入。
+        可在内容浏览页查看各板块内容，点击任意条目即可进入内容详情页。
       </p>
     </section>
 
-    <section class="recent" aria-labelledby="recent-title">
-      <h2 id="recent-title" class="section-title">近期内容预览</h2>
-      <p class="section-hint">
-        以下仅展示少量近期已发布内容；完整列表请在内容浏览页查看。
-      </p>
-      <ul class="recent__list">
-        <li
-          v-for="item in recentContents"
-          :key="item.id"
-          class="recent-item"
-        >
-          <p class="recent-item__title">{{ item.title }}</p>
-          <p class="recent-item__meta">
-            <span class="recent-item__board">{{ getBoardLabel(item.contentType) }}</span>
-            <span class="recent-item__date">{{ formatDate(item.publishedAt) }}</span>
-          </p>
-        </li>
-      </ul>
-    </section>
+    <HomeRecentContents />
 
     <section class="roadmap" aria-labelledby="roadmap-title">
-      <h2 id="roadmap-title" class="section-title">后续计划</h2>
+      <h2 id="roadmap-title" class="section-title">更多页面</h2>
       <p class="roadmap__intro">
-        以下页面与功能尚未建立，将在后续 M1 批次逐步接入，当前不提供链接：
+        内容详情页、投稿说明与关于本站均已接入：内容详情可在内容浏览页点击条目进入，投稿说明与关于本站可直接访问。
       </p>
       <ul class="roadmap__list">
-        <li>内容详情页</li>
-        <li>投稿说明</li>
-        <li>关于本站</li>
+        <li>
+          <RouterLink class="roadmap__link" :to="{ name: 'submission' }">投稿说明</RouterLink>
+        </li>
+        <li>
+          <RouterLink class="roadmap__link" :to="{ name: 'about' }">关于本站</RouterLink>
+        </li>
       </ul>
     </section>
   </div>
@@ -201,10 +159,25 @@ const recentContents = computed(() =>
 }
 
 .board-card {
+  display: block;
+  height: 100%;
   padding: var(--space-lg);
+  color: inherit;
+  text-decoration: none;
   background: var(--content-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
+  transition: border-color 0.15s ease;
+}
+
+.board-card:hover,
+.board-card:focus-visible {
+  border-color: var(--brand-color);
+}
+
+.board-card:focus-visible {
+  outline: 2px solid var(--brand-color);
+  outline-offset: 2px;
 }
 
 .board-card__title {
@@ -224,38 +197,6 @@ const recentContents = computed(() =>
   font-size: var(--font-size-sm);
 }
 
-.recent__list {
-  margin-top: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.recent-item {
-  padding: var(--space-md) var(--space-lg);
-  background: var(--content-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-}
-
-.recent-item__title {
-  font-size: var(--font-size-lg);
-  font-weight: 500;
-}
-
-.recent-item__meta {
-  margin-top: var(--space-xs);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.recent-item__board {
-  color: var(--brand-color);
-}
-
 .roadmap__intro {
   margin-top: var(--space-sm);
   color: var(--text-secondary);
@@ -269,5 +210,14 @@ const recentContents = computed(() =>
   color: var(--text-secondary);
   list-style: disc;
   padding-left: var(--space-lg);
+}
+
+.roadmap__link {
+  color: var(--brand-color);
+  text-decoration: none;
+}
+
+.roadmap__link:hover {
+  text-decoration: underline;
 }
 </style>
