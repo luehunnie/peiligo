@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block body_class %}template-articlepage{% endblock %}
+
+{% block content %}
+{# 面包屑（IA §6.3）：首页 > 板块名 > 内容标题——不含容器段。 #}
+{% with section_url="/"|add:page.section_slug|add:"/" %}
+{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
+{% endwith %}
+
+<article class="content-article">
+    <div class="page-head">
+        <h1>{{ page.title }}</h1>
+        {# 文章有效期可选（CM-01 仅约束通知），未设置时不展示该段。 #}
+        <p class="content-meta">
+            {{ page.department }} · {{ page.first_published_at|date:"Y-m-d" }}{% if page.expire_at %} · 有效期至 {{ page.expire_at|date:"Y-m-d" }}{% endif %}
+        </p>
+        {% if page.summary %}<p class="article-lede">{{ page.summary }}</p>{% endif %}
+    </div>
+
+    {% if page.image %}
+    <figure class="block-image">
+        {% image page.image width-1120 alt=page.image.default_alt_text %}
+    </figure>
+    {% endif %}
+
+    {% comment %}活动信息（CONTENT_MODEL §7）：仅校园活动板块下有值；报名链接 #}
+    {% comment %}输出＝明文 URL，不裸跳转（§11.4；跳转页 DEFERRED_TO_M3_4）。{% endcomment %}
+    {% if page.event_start_at %}
+    <section class="event-info" aria-label="活动信息">
+        <h2>活动信息</h2>
+        <dl class="meta-list">
+            <div><dt>状态</dt><dd>{{ page.event_status }}</dd></div>
+            <div><dt>开始时间</dt><dd>{{ page.event_start_at|date:"Y-m-d H:i" }}</dd></div>
+            <div><dt>结束时间</dt><dd>{{ page.event_end_at|date:"Y-m-d H:i" }}</dd></div>
+            <div><dt>活动地点</dt><dd>{% if page.event_is_online %}线上活动{% else %}{{ page.event_location }}{% endif %}</dd></div>
+            {% if page.event_registration_url %}<div><dt>报名</dt><dd class="url-text">{{ page.event_registration_url }}</dd></div>{% endif %}
+        </dl>
+    </section>
+    {% endif %}
+
+    <div class="article-body">
+        {% for block in page.body %}{% include_block block %}{% endfor %}
+    </div>
+
+    {% if page.attachments.all %}
+    <section class="article-aside" aria-label="附件">
+        <h2>附件</h2>
+        <ul>
+            {% for doc in page.attachments.all %}
+            <li><a href="{{ doc.url }}">{{ doc.title }}</a>{% if doc.file_size %}（{{ doc.file_size|filesizeformat }}）{% endif %}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% comment %}外部链接＝明文 URL（§11.4 不裸跳转；跳转页 DEFERRED_TO_M3_4）。{% endcomment %}
+    {% if page.external_url %}
+    <section class="article-aside" aria-label="外部链接">
+        <h2>外部链接</h2>
+        <p class="url-text">{{ page.external_url }}</p>
+    </section>
+    {% endif %}
+
+    {% if page.tags.all %}
+    <section class="article-aside" aria-label="标签">
+        <h2>标签</h2>
+        <ul class="tag-chips">
+            {% for tag in page.tags.all %}<li>{{ tag.name }}</li>{% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</article>
+{% endblock content %}

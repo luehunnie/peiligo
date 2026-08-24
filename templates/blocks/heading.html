@@ -1,0 +1,2 @@
+{% comment %}标题块（CONTENT_MODEL §11.1）：仅 h2/h3——页面标题是唯一 h1。{% endcomment %}
+{% if self.level == "h2" %}<h2>{{ self.text }}</h2>{% else %}<h3>{{ self.text }}</h3>{% endif %}

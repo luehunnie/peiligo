@@ -1,0 +1,18 @@
+{% load wagtailcore_tags %}
+{% comment %}
+板块默认列表内容卡（IA §6.2；M2 合同"旧站内容卡结构 ADAPT 行"：
+meta → 标题 → 摘要 → 来源）。传入 item＝五类内容页 specific 实例；
+摘要位按类型取值：通知/文章/资料＝summary，软件＝授权或费用说明，
+指南＝地点。筛选/分页属 M3.4/MB 阶段，本卡为纯链接卡。
+{% endcomment %}
+<li>
+    <a href="{% pageurl item %}">
+        <p class="content-meta">
+            {{ item.first_published_at|date:"Y-m-d" }} · {{ item.department }}{% if item.event_status %} · {{ item.event_status }}{% endif %}
+        </p>
+        <h3>{{ item.title }}</h3>
+        <p class="card-desc">
+            {% if item.summary %}{{ item.summary }}{% elif item.license_note %}{{ item.license_note }}{% else %}{{ item.location }}{% endif %}
+        </p>
+    </a>
+</li>

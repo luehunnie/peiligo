@@ -1,0 +1,6 @@
+{% load wagtailcore_tags %}
+{% comment %}附件块（CONTENT_MODEL §11.1）：站内文档库链接（非外部跳转，§11.4 不约束）。{% endcomment %}
+<p class="block-attachment">
+    <a href="{{ self.url }}">{{ self.title }}</a>
+    {% if self.file_size %}<span class="attachment-meta">{{ self.file_size|filesizeformat }}</span>{% endif %}
+</p>

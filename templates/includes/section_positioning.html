@@ -1,0 +1,8 @@
+{% comment %}
+五板块一句话定位（IA §2 冻结文案，语义引源 PRD §7 各节）。
+定位属展示层文案：M2 不改业务模型（合同 §7 实现范围仅模板/CSS），
+故冻结于模板 include 供首页卡组与板块页头共用；M3 若引入正式
+板块描述字段，可在此替换为模型字段输出，消费方无需改动。
+用法：{% include "includes/section_positioning.html" with slug=section.slug only %}
+{% endcomment %}
+{% if slug == "chronicle" %}记录校园动态、通知公告与长期报道的板块{% elif slug == "events" %}发布校园活动预告、进行中与回顾信息的板块{% elif slug == "materials" %}按学科/专业方向与资料类型组织的学习资源共享板块{% elif slug == "software" %}汇集校园常用软件与在线工具入口及使用说明的板块{% elif slug == "guide" %}面向全校的生活与办事固定信息板块{% else %}校园信息板块{% endif %}

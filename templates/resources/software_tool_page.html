@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block body_class %}template-softwaretoolpage{% endblock %}
+
+{% block content %}
+{% with section_url="/"|add:page.section_slug|add:"/" %}
+{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
+{% endwith %}
+
+<article class="content-article">
+    <div class="page-head">
+        <h1>{{ page.title }}</h1>
+        <p class="content-meta">
+            {{ page.department }} · {{ page.first_published_at|date:"Y-m-d" }}
+        </p>
+    </div>
+
+    {% comment %}六项结构化信息（CONTENT_MODEL §9）：适用平台为受控词表 M2M #}
+    {% comment %}（≥1）；来源链接输出仅经统一确认跳转页（CM-05）——跳转页 #}
+    {% comment %}DEFERRED_TO_M3_4，就位前以完整 URL 明文呈现（域名可识别）。{% endcomment %}
+    <section class="event-info" aria-label="软件信息">
+        <h2>基本信息</h2>
+        <dl class="meta-list">
+            <div><dt>适用平台</dt><dd>{{ page.platforms.all|join:"、" }}</dd></div>
+            <div><dt>来源链接</dt><dd class="url-text">{{ page.source_url }}</dd></div>
+            <div><dt>授权或费用说明</dt><dd>{{ page.license_note }}</dd></div>
+        </dl>
+    </section>
+
+    <section class="article-body" aria-label="用途说明">
+        <h2>用途说明</h2>
+        {% for block in page.body %}{% include_block block %}{% endfor %}
+    </section>
+</article>
+{% endblock content %}

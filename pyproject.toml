@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "peiligo"
+version = "0.1.0"
+description = "Peiligo V1 rebuild — Wagtail project assembly package (settings/urls/wsgi)"
+requires-python = ">=3.13,<3.14"
+# 运行时依赖统一钉版于 requirements*.txt（计划 03 S1），此处保持为空
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "peiligo.settings.dev"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "home", "search", "departments", "notices", "resources", "guides", "frontend", "tests"]
+extend-exclude = ["**/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Django settings 拆分惯用 star import（官方 wagtail start 模板原样保留）
+"src/peiligo/settings/*" = ["F403", "F405"]

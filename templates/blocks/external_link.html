@@ -1,0 +1,6 @@
+{% comment %}
+外链块（CONTENT_MODEL §11.1/§11.4）：存原始 URL；输出安全语义＝不得裸跳转
+（无 <a>）。统一确认跳转页属 S12/DEFERRED_TO_M3_4，就位前以
+"链接文字＋完整 URL 明文"呈现（用户可识别目标域名后自行复制访问）。
+{% endcomment %}
+<p class="block-external-link">{{ self.link_text }}：<span class="url-text">{{ self.url }}</span></p>

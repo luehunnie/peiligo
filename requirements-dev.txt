@@ -1,0 +1,6 @@
+# 开发/测试工具链（计划 03 S1：dev 依赖与运行时分离）
+-r requirements.txt
+pip-audit==2.10.1
+pytest==9.1.1
+pytest-django==4.14.0
+ruff==0.16.3

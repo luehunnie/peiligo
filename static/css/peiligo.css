@@ -1,0 +1,881 @@
+/*
+ * M2 视觉恢复（A2.3）：全站视觉层。
+ * 唯一视觉事实源 docs/frontend/M2_VISUAL_RECOVERY_CONTRACT.md；token 体系
+ * DIRECT_REUSE 自旧站 frontend/src/styles/tokens.css（复用矩阵 §2）：
+ * 色彩/1120px 容器/8px 间距阶/6-8px 圆角/克制阴影/中文系统字体栈。
+ * 品牌青绿只承担识别与操作（字标、eyebrow、主按钮、链接、焦点、hover
+ * 边框），不做装饰性大色块；过渡限 150ms 色彩变化，尊重 reduced-motion。
+ */
+
+:root {
+    /* 背景与表面 */
+    --page-bg: #f5f7fa;
+    --content-bg: #ffffff;
+
+    /* 文字 */
+    --text-primary: #1f2a37;
+    --text-secondary: #64748b;
+
+    /* 品牌色（集中定义，组件内不复制色值） */
+    --brand-color: #2f7a6e;
+    --brand-color-hover: #266359;
+    --brand-bg-soft: #e8f1ee;
+
+    /* 边框与分隔 */
+    --border-color: #e2e8f0;
+
+    /* 布局尺度 */
+    --content-max-width: 1120px;
+    --header-height: 64px;
+
+    /* 常用间距（8px 阶） */
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 40px;
+    --space-2xl: 56px;
+
+    /* 圆角：控件 6px，卡片 8px */
+    --radius-sm: 6px;
+    --radius: 8px;
+
+    /* 克制阴影（仅卡片表面使用） */
+    --shadow-subtle: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+
+    /* 字号层级 */
+    --font-size-sm: 14px;
+    --font-size-base: 16px;
+    --font-size-lg: 18px;
+    --font-size-h3: 20px;
+    --font-size-h2: 24px;
+    --font-size-h1: 32px;
+
+    /* 行高 */
+    --line-height-base: 1.7;
+    --line-height-tight: 1.3;
+
+    /* 字体栈：中文系统字体优先，无下载依赖 */
+    --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+        "Microsoft YaHei", "Hiragino Sans GB", "Source Han Sans SC",
+        "Noto Sans CJK SC", sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* 基础：盒模型、排版、链接、焦点                                        */
+/* ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: var(--font-size-base);
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--page-bg);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    line-height: var(--line-height-base);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* 标题与段落默认外边距归零，交由区块自行控制 */
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure {
+    margin: 0;
+}
+
+ul,
+ol {
+    padding: 0;
+    list-style: none;
+}
+
+h1 {
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-tight);
+    font-weight: 700;
+}
+
+h2 {
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-tight);
+    font-weight: 600;
+}
+
+h3 {
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-tight);
+    font-weight: 600;
+}
+
+h4 {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-tight);
+    font-weight: 600;
+}
+
+a {
+    color: var(--brand-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+img,
+svg {
+    max-width: 100%;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* 键盘焦点：2px 品牌描边带 offset，颜色不是唯一信号（合同 §6） */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--brand-color);
+    outline-offset: 2px;
+}
+
+input[type="search"],
+input[type="text"] {
+    min-width: 0;
+    padding: 10px var(--space-sm);
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+input[type="search"]::placeholder,
+input[type="text"]::placeholder {
+    color: var(--text-secondary);
+}
+
+input[type="search"]:focus-visible {
+    border-color: var(--brand-color);
+}
+
+/* ------------------------------------------------------------------ */
+/* 布局：主体撑满、页脚沉底、公共容器                                     */
+/* ------------------------------------------------------------------ */
+
+main {
+    flex: 1 0 auto;
+    width: 100%;
+}
+
+/* 公共容器：最大 1120px，桌面横向 24px，移动端 16px（合同 §3） */
+.wrap {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin-inline: auto;
+    padding-inline: var(--space-lg);
+}
+
+main.wrap {
+    padding-block: var(--space-xl) var(--space-2xl);
+}
+
+/* 跳过导航：默认移出可视区，获得焦点时显现（首个可聚焦元素） */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--brand-color);
+    color: #ffffff;
+    border-radius: var(--radius-sm);
+    z-index: 100;
+}
+
+.skip-link:focus {
+    left: var(--space-md);
+}
+
+/* ------------------------------------------------------------------ */
+/* 页头：白色表面、64px 桌面单行、品牌字标 + 固定导航 + 搜索入口            */
+/* ------------------------------------------------------------------ */
+
+.site-header {
+    background: var(--content-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+    column-gap: var(--space-md);
+    row-gap: var(--space-xs);
+    min-height: var(--header-height);
+    padding-block: var(--space-xs);
+}
+
+/* 品牌字标：青绿色识别色 */
+.brand {
+    font-size: var(--font-size-h3);
+    font-weight: 700;
+    color: var(--brand-color);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.brand:hover {
+    text-decoration: none;
+}
+
+.nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-xs);
+    margin-left: auto;
+}
+
+.nav-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-list a:hover {
+    text-decoration: none;
+    background: var(--brand-bg-soft);
+}
+
+/* 当前项：颜色 + 字重双提示（不只依赖颜色，合同 §3/§6） */
+.nav-list a[aria-current="page"] {
+    color: var(--brand-color);
+    font-weight: 600;
+}
+
+/* 搜索入口图标随文字同色，仅装饰 */
+.nav-list a svg {
+    flex: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* 面包屑（IA §6.3）：次级小字                                          */
+/* ------------------------------------------------------------------ */
+
+.breadcrumb {
+    font-size: var(--font-size-sm);
+}
+
+.breadcrumb ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-block: var(--space-md) var(--space-xl);
+}
+
+.breadcrumb li + li::before {
+    content: "›";
+    margin-right: var(--space-xs);
+    color: var(--text-secondary);
+}
+
+.breadcrumb span[aria-current="page"] {
+    color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* 搜索表单（首页工作台与 /search/ 页共用语法，纯 CSS 无 JS）              */
+/* ------------------------------------------------------------------ */
+
+form[role="search"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+form[role="search"] label,
+form[role="search"] .search-controls,
+form[role="search"] .search-hint {
+    grid-column: 1 / -1;
+}
+
+form[role="search"] label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.search-controls {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.search-controls input[type="search"] {
+    flex: 1;
+}
+
+form[role="search"] .search-hint {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* 唯一主操作按钮：品牌底白字，hover 深化，触控目标约 44px */
+form[role="search"] button {
+    padding: 10px var(--space-lg);
+    font: inherit;
+    font-weight: 500;
+    color: #ffffff;
+    background: var(--brand-color);
+    border: 1px solid var(--brand-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+form[role="search"] button:hover {
+    background: var(--brand-color-hover);
+    border-color: var(--brand-color-hover);
+}
+
+/* ------------------------------------------------------------------ */
+/* 首页：Hero + 搜索工作台 + 五板块卡组（合同 §4）                        */
+/* ------------------------------------------------------------------ */
+
+.template-homepage main.wrap {
+    padding-block: var(--space-2xl) var(--space-2xl);
+}
+
+.template-homepage main.wrap > section + section {
+    margin-top: var(--space-2xl);
+}
+
+/* eyebrow：品牌短划线母题标记主页面头开始（全站仅两处） */
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--brand-color);
+    letter-spacing: 0.02em;
+}
+
+.eyebrow::before {
+    content: "";
+    width: var(--space-lg);
+    height: 3px;
+    border-radius: 1.5px;
+    background: var(--brand-color);
+}
+
+.hero .hero-lede {
+    margin-top: var(--space-md);
+    max-width: 40em;
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+}
+
+/* 签名元素：首页搜索工作台（白色承托卡，视觉签名冻结于合同 §1） */
+.search-bench {
+    margin-top: var(--space-lg);
+    max-width: 640px;
+    padding: var(--space-lg);
+    background: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-subtle);
+}
+
+.search-bench h2 {
+    margin-bottom: var(--space-md);
+}
+
+/* 五板块信息卡：整卡可点击，标题→定位→方向提示层级（合同 §3 Card） */
+.section-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.section-grid li:nth-child(-n + 3) {
+    grid-column: span 2;
+}
+
+.section-grid li:nth-child(n + 4) {
+    grid-column: span 3;
+}
+
+.section-grid a {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--space-lg);
+    color: inherit;
+    background: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-subtle);
+    transition: border-color 0.15s ease;
+}
+
+/* hover/focus 同一视觉语法：品牌边框，不浮起跳动（合同 §3） */
+.section-grid a:hover,
+.section-grid a:focus-visible {
+    border-color: var(--brand-color);
+}
+
+.section-grid a:hover {
+    text-decoration: none;
+}
+
+.section-grid h3 {
+    color: var(--text-primary);
+}
+
+.section-grid .card-desc {
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.section-grid .card-go {
+    margin-top: var(--space-md);
+    align-self: flex-start;
+    font-size: var(--font-size-sm);
+    color: var(--brand-color);
+}
+
+/* 卡组下站点说明/反馈引导：非业务数据的一行次级文字（合同 §4.4） */
+.site-note {
+    margin-top: var(--space-lg);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* 板块页：页头 + 非欺骗空态（合同 §5）                                   */
+/* ------------------------------------------------------------------ */
+
+/* 与首页 eyebrow 同一母题：品牌短划线标记板块页头 */
+.page-head::before {
+    content: "";
+    display: block;
+    width: var(--space-lg);
+    height: 3px;
+    border-radius: 1.5px;
+    background: var(--brand-color);
+    margin-bottom: var(--space-md);
+}
+
+.page-head .section-lede {
+    margin-top: var(--space-xs);
+    max-width: 40em;
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+}
+
+/* 全空态：居中白色虚线卡（DIRECT_REUSE 旧站 empty-state） */
+.empty-state {
+    margin-top: var(--space-xl);
+    padding: var(--space-2xl) var(--space-lg);
+    text-align: center;
+    background: var(--content-bg);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius);
+}
+
+.empty-state .empty-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+}
+
+.empty-state .empty-hint {
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* 空态与 404 的次级链接行 */
+.section-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xs) var(--space-lg);
+    margin-top: var(--space-md);
+}
+
+/* 404 页链接行左对齐 */
+.template-404 .section-links {
+    justify-content: flex-start;
+}
+
+/* ------------------------------------------------------------------ */
+/* 搜索结果页（模板不动，仅统一视觉）                                     */
+/* ------------------------------------------------------------------ */
+
+.template-searchresults form[role="search"] {
+    max-width: 640px;
+    margin-block: var(--space-md) var(--space-xl);
+}
+
+/* 结果列表（search.html 模板不动，按结构选择：main 内唯一 ul 即结果） */
+.template-searchresults main ul {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.template-searchresults main ul li {
+    padding-block: var(--space-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.template-searchresults main ul h4 {
+    margin-bottom: var(--space-xs);
+}
+
+.template-searchresults main ul h4 a {
+    color: var(--text-primary);
+}
+
+.template-searchresults main ul h4 a:hover {
+    color: var(--brand-color);
+    text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ */
+/* A3.1 内容层：板块默认列表内容卡 + 内容页详情（M2 token 体系内扩展）    */
+/* ------------------------------------------------------------------ */
+
+/* 板块默认列表（IA §6.2）：内容卡语法沿用合同卡组（meta→标题→摘要→来源） */
+.content-list {
+    display: grid;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.content-list a {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-lg);
+    color: inherit;
+    background: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-subtle);
+    transition: border-color 0.15s ease;
+}
+
+.content-list a:hover,
+.content-list a:focus-visible {
+    border-color: var(--brand-color);
+}
+
+.content-list a:hover {
+    text-decoration: none;
+}
+
+.content-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.content-list h3 {
+    margin-top: var(--space-xs);
+    color: var(--text-primary);
+}
+
+.content-list .card-desc {
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+/* 内容页详情：正文列宽收窄提升可读性（宽度语法同 hero-lede max-width） */
+.content-article {
+    max-width: 46em;
+}
+
+.article-lede {
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+}
+
+.content-article > .block-image {
+    margin-top: var(--space-lg);
+}
+
+/* 结构化信息区（活动信息/软件基本信息）：白色承托卡语法同 search-bench */
+.event-info {
+    margin-top: var(--space-lg);
+    padding: var(--space-lg);
+    background: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-subtle);
+}
+
+.event-info h2 {
+    margin-bottom: var(--space-md);
+    font-size: var(--font-size-h3);
+}
+
+.meta-list {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.meta-list > div {
+    display: grid;
+    grid-template-columns: 10em minmax(0, 1fr);
+    gap: var(--space-sm);
+}
+
+.meta-list dt {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.meta-list dd {
+    margin: 0;
+    min-width: 0;
+}
+
+/* 长 URL 明文呈现（§11.4 不裸跳转）：允许任意断行避免撑破布局 */
+.url-text {
+    font-size: var(--font-size-sm);
+    word-break: break-all;
+    color: var(--text-secondary);
+}
+
+/* 正文 StreamField：块级节奏（8px 阶） */
+.article-body {
+    margin-top: var(--space-lg);
+}
+
+.article-body > * + * {
+    margin-top: var(--space-md);
+}
+
+.article-body h2,
+.article-body h3 {
+    margin-top: var(--space-lg);
+}
+
+.article-body h2 + *,
+.article-body h3 + * {
+    margin-top: var(--space-xs);
+}
+
+.article-body img {
+    border-radius: var(--radius-sm);
+}
+
+/* 表格块：细边框紧凑呈现（无横向装饰） */
+.article-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+}
+
+.article-body th,
+.article-body td {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.article-body th {
+    background: var(--brand-bg-soft);
+    font-weight: 600;
+}
+
+.block-image img {
+    border-radius: var(--radius-sm);
+}
+
+.attachment-meta {
+    margin-left: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* 页尾信息区（附件/外部链接/标签）：细分隔线的次级区块 */
+.article-aside {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.article-aside h2 {
+    margin-bottom: var(--space-sm);
+    font-size: var(--font-size-h3);
+}
+
+.article-aside ul {
+    display: grid;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+}
+
+/* 受控标签呈现为静态词签（纯展示，无链接——筛选属 M3.4） */
+.tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.tag-chips li {
+    padding: 2px var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--brand-color);
+    background: var(--brand-bg-soft);
+    border-radius: var(--radius-sm);
+}
+
+/* ------------------------------------------------------------------ */
+/* 页脚：白底细上边框，明显弱于主体（合同 §3 Footer）                     */
+/* ------------------------------------------------------------------ */
+
+.site-footer {
+    margin-top: var(--space-2xl);
+    background: var(--content-bg);
+    border-top: 1px solid var(--border-color);
+}
+
+.footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-lg) var(--space-xl);
+    padding-block: var(--space-lg);
+}
+
+.footer-inner section {
+    flex: 1 1 20rem;
+}
+
+.footer-inner h2 {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.footer-inner p {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.footer-meta {
+    flex-basis: 100%;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* 响应式：768px 平板两列、600px 手机单列（合同 §6）                      */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 768px) {
+    .section-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* 与桌面 nth-child 规则同特异度，源序靠后覆盖为等宽两列 */
+    .section-grid li:nth-child(-n + 3),
+    .section-grid li:nth-child(n + 4) {
+        grid-column: auto;
+    }
+
+    .footer-inner section {
+        flex-basis: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .wrap {
+        padding-inline: var(--space-md);
+    }
+
+    /* 容器横向内边距 16px（合同 §3） */
+    .header-inner {
+        padding-block: var(--space-sm);
+    }
+
+    /* 导航换行可达、触控目标约 44px，不隐藏任何核心入口 */
+    .nav-list {
+        margin-left: 0;
+    }
+
+    .nav-list a {
+        padding-block: 10px;
+        font-size: var(--font-size-sm);
+    }
+
+    .section-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 搜索输入与按钮堆叠 */
+    form[role="search"] {
+        grid-template-columns: 1fr;
+    }
+
+    .search-controls {
+        flex-direction: column;
+    }
+
+    form[role="search"] button {
+        width: 100%;
+    }
+
+    .search-bench {
+        padding: var(--space-md);
+    }
+
+    /* A3.1：结构化信息行在小屏改为上下两行（标签在上） */
+    .meta-list > div {
+        grid-template-columns: 1fr;
+        gap: var(--space-xs);
+    }
+}
+
+/* 尊重 reduced-motion：过渡限色彩且可关停（合同 §6） */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+    }
+}

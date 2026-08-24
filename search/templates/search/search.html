@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block body_class %}template-searchresults{% endblock %}
+
+{# §8.2：全站搜索页+?dept= 标题模式（H1 与 <title> 同文案，含"（筛选结果）" #}
+{# 后缀，禁门户化措辞）；非 dept 筛选态保持基础标题（其余维度无冻结模式）。 #}
+{% block title %}
+{% if search_filters.department %}站内搜索·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}站内搜索{% endif %}
+{% endblock title %}
+
+{# IA §10 #7：全站搜索页含无参数态一律 noindex；canonical 指向去参基础 URL（§10.1）。 #}
+{% block head_robots %}
+<meta name="robots" content="noindex">
+{% endblock head_robots %}
+{% block head_canonical %}
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'search' %}">
+{% endblock head_canonical %}
+
+{% block content %}
+{% include "includes/breadcrumb.html" with crumb_title="站内搜索" only %}
+<h1>
+    {% if search_filters.department %}站内搜索·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}站内搜索{% endif %}
+</h1>
+
+{# M3.4（§9）：五参数全 GET 承载（q/section/dept/type/tag，§9.1），服务端 #}
+{# 解析过滤（§21.3 非法值视同未提供）；完整筛选 UI（参数控件/分页）属 MB10， #}
+{# 本页为最小表单态+结果列表。 #}
+<form action="{% url 'search' %}" method="get" role="search">
+    <label for="id_q">搜索关键词</label>
+    <input type="search" id="id_q" name="q" value="{{ search_query|default_if_none:'' }}">
+    <button type="submit">搜索</button>
+</form>
+
+{% if search_results %}
+{# 结果列表＝板块页同一内容卡（IA §6.2 结构合同，M2 视觉 token 零新 CSS）。 #}
+<ul class="content-list">
+    {% for result in search_results %}
+    {% include "includes/content_card.html" with item=result only %}
+    {% endfor %}
+</ul>
+{% elif filter_active %}
+{# IA §11"筛选无匹配"空态：文案与动作区别于"全空"态；清除动作回退全部 #}
+{# （§9.2）；已选条件回显（解析后有效条件，§21.3 回退后的维度不回显）。 #}
+<div class="empty-state">
+    <p class="empty-title">没有符合当前条件的内容</p>
+    <p class="empty-hint">
+        已选条件：{% for label, value in search_filters.active_conditions %}{{ label }}「{{ value }}」{% if not forloop.last %}；{% endif %}{% endfor %}
+    </p>
+    <a href="{% url 'search' %}">清除搜索条件</a>
+</div>
+{% endif %}
+{# 无参数＝搜索表单态（IA §9.2 #1）：仅表单，不查全量、不渲染空态。 #}
+{% endblock content %}

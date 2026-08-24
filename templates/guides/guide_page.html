@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block body_class %}template-guidepage{% endblock %}
+
+{% block content %}
+{% with section_url="/"|add:page.section_slug|add:"/" %}
+{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
+{% endwith %}
+
+<article class="content-article">
+    <div class="page-head">
+        <h1>{{ page.title }}</h1>
+        <p class="content-meta">
+            {{ page.category }} · {{ page.department }} · 最后确认 {{ page.last_confirmed_on|date:"Y-m-d" }}
+        </p>
+    </div>
+
+    {% comment %}九字段逐项（CONTENT_MODEL §10.1 一字不差；补充说明可选）。{% endcomment %}
+    <dl class="meta-list guide-fields">
+        <div><dt>地点</dt><dd>{{ page.location }}</dd></div>
+        <div><dt>开放时间</dt><dd>{{ page.opening_hours|linebreaksbr }}</dd></div>
+        <div><dt>联系方式</dt><dd>{{ page.contact|linebreaksbr }}</dd></div>
+        {% if page.extra_notes %}<div><dt>补充说明</dt><dd>{{ page.extra_notes|linebreaksbr }}</dd></div>{% endif %}
+        <div><dt>责任来源或责任单位</dt><dd>{{ page.responsible_party }}</dd></div>
+        <div><dt>维护方式</dt><dd>{{ page.get_maintenance_mode_display }}</dd></div>
+        <div><dt>最后确认日期或更新时间</dt><dd>{{ page.last_confirmed_on|date:"Y-m-d" }}</dd></div>
+    </dl>
+</article>
+{% endblock content %}

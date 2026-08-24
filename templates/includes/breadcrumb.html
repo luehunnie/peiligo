@@ -1,0 +1,15 @@
+{% comment %}
+面包屑（IA §6.3，按 §4 方案 A 写死）：
+- 首页无面包屑（首页模板不引入本组件）；
+- 路径含板块、不含容器段——部门容器前台 404，永不出现（可点或纯文本均不出现）；
+- 除最后一段（当前页，纯文本 + aria-current）外，每段均为可点链接且指向 200 URL。
+用法（板块页）：{% include "includes/breadcrumb.html" with crumb_title=page.title only %}
+用法（内容页，A3.1）：{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
+{% endcomment %}
+<nav class="breadcrumb" aria-label="面包屑">
+    <ol>
+        <li><a href="/">首页</a></li>
+        {% if crumb_parent_title %}<li><a href="{{ crumb_parent_url }}">{{ crumb_parent_title }}</a></li>{% endif %}
+        {% if crumb_title %}<li><span aria-current="page">{{ crumb_title }}</span></li>{% endif %}
+    </ol>
+</nav>

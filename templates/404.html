@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}页面不存在{% endblock %}
+
+{% block body_class %}template-404{% endblock %}
+
+{% block content %}
+{% comment %}
+通用 404 页（IA §11）：提供站内搜索与五板块入口；同服务全部未知路径
+（含容器 URL 的 404）——不针对部门段做部门化引导，避免变相部门页观感
+（IA §11 末条；§3.2 的 404 语义不因 404 页文案改变）。
+{% endcomment %}
+<h1>页面不存在</h1>
+<p>你访问的地址不存在或已移动。可以试试：</p>
+<ul class="section-links">
+    <li><a href="{% url 'search' %}">站内搜索</a></li>
+    {% for section in nav_sections %}
+    <li><a href="/{{ section.slug }}/">{{ section.title }}</a></li>
+    {% endfor %}
+    <li><a href="/">返回首页</a></li>
+</ul>
+{% endblock content %}

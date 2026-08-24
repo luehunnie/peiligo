@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block body_class %}template-section{% endblock %}
+
+{# §8.2：板块页+?dept= 标题模式（H1 与 <title> 同文案，含"（筛选结果）" #}
+{# 后缀，禁门户化措辞）；非 dept 筛选态继承默认标题（seo_title/板块名）。 #}
+{% block title %}
+{% if search_filters.department %}{{ page.title }}·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}{{ block.super }}{% endif %}
+{% endblock title %}
+
+{# 筛选态 noindex+去参 canonical＝base.html 全局 request.GET 位点（IA §10 #6/§10.1，M2.2 已落）。 #}
+
+{% block content %}
+{% include "includes/breadcrumb.html" with crumb_title=page.title only %}
+
+{# 板块页头（合同 §5）：H1 + IA §2 一句话定位（冻结文案 include）； #}
+{# dept 筛选态 H1 换 §8.2 模式文案（部门筛选结果≠部门主页，§8.1）。 #}
+<div class="page-head">
+    <h1>
+        {% if search_filters.department %}{{ page.title }}·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}{{ page.title }}{% endif %}
+    </h1>
+    <p class="section-lede">{% include "includes/section_positioning.html" with slug=page.slug only %}</p>
+</div>
+
+{% comment %}
+板块默认列表与筛选态共用同一过滤层（IA §6.2＋§9；M3.4 起 q/dept/type/tag
+四参数生效，?section= 一律忽略——板块维度由路径唯一决定，§9.1）。列表仅列
+本板块内容页=第 4 层叶子，容器不是列表项、无列表标题；默认与筛选态排序
+同为发布时间倒序（§9.2 #4）。筛选 UI 控件与分页属 MB10/MB 阶段，本页仅
+服务端过滤渲染。本板块零内容且无筛选参数 → 渲染"全空"空态（IA §11 四态
+之一），不渲染列表、不造假条目、不渲染空业务区标题（合同 §4.4/§5）；
+携带筛选参数且结果为 0 → "筛选无匹配"空态（清除动作回退全部＝板块基础
+URL，§9.2；已选条件回显经 search_filters.active_conditions）。"载入中/
+出错+重试"属旧站 SPA 请求态，纯 SSR（ADR-0002）无客户端加载过程，
+服务端异常由 Django 500 页承载。
+{% endcomment %}
+{% if content_entries %}
+<ul class="content-list">
+    {% for item in content_entries %}
+    {% include "includes/content_card.html" with item=item only %}
+    {% endfor %}
+</ul>
+{% elif filter_active %}
+<div class="empty-state">
+    <p class="empty-title">没有符合当前条件的内容</p>
+    <p class="empty-hint">
+        已选条件：{% for label, value in search_filters.active_conditions %}{{ label }}「{{ value }}」{% if not forloop.last %}；{% endif %}{% endfor %}
+    </p>
+    <a href="/{{ page.slug }}/">清除筛选</a>
+</div>
+{% else %}
+<div class="empty-state">
+    <p class="empty-title">本板块暂无内容</p>
+    <p class="empty-hint">各部门发布内容后将在此展示。你可以先看看其他板块，或返回首页：</p>
+    <ul class="section-links">
+        {% for section in nav_sections %}
+        {% if section.slug != page.slug %}
+        <li><a href="/{{ section.slug }}/">{{ section.title }}</a></li>
+        {% endif %}
+        {% endfor %}
+        <li><a href="/">返回首页</a></li>
+    </ul>
+</div>
+{% endif %}
+{% endblock content %}

@@ -1,30 +1,22 @@
-node_modules/
-dist/
-.vite/
-
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.ruff_cache/
-.venv/
-venv/
-
+# M0.2 排除规则（口径与保真记录见 docs/decisions/M0-2-BASELINE-MANIFEST.md）
+# 秘密/环境边界（00_MASTER_PLAN §4.5）
 .env
 .env.*
-!.env.example
-
-.idea/
-.vscode/
+poc/
+__pycache__/
+*.sqlite3
+media/
+# 本地操作性排除（非基线内容）
 .DS_Store
-Thumbs.db
-
-# Local AI collaboration documents and reports
-docs/ai/
-
-# Local AI coding assistant state
-.codex/
-.claude/
-.cursor/
-.continue/
-.windsurf/
-.gemini/
+.local_backups/
+# 步骤 worktree 目录（00_MASTER_PLAN §4.4：各实现步骤独立 worktree；OR-1 须位于仓库内；
+# 由组内总控以基础设施变更登记，非业务产物——见 docs/decisions/ 目录台账）
+.worktrees/
+# M1 工程基座（Wagtail 骨架）本地工件
+.venv/
+.pytest_cache/
+.ruff_cache/
+staticfiles/
+*.egg-info/
+# 哑值样例入库（计划 03 S1：.env.example 无真实秘密）
+!.env.example

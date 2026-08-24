@@ -1,0 +1,5 @@
+{% load wagtailimages_tags %}
+{% comment %}图片块（CONTENT_MODEL §11.1）：插图经 Wagtail 图片库治理。{% endcomment %}
+<figure class="block-image">
+    {% image self width-1120 alt=self.default_alt_text %}
+</figure>

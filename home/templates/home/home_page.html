@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block body_class %}template-homepage{% endblock %}
+
+{% block content %}
+{% comment %}
+首页信息优先级扩展位（IA §7.1，顺序冻结=PRD §9 四层，区块自上而下=优先级）：
+① 紧急或重要提示（站点级配置，ADR-0005 #14）——插入于本页最顶部（h1 之上）；
+② 推荐位/置顶位（FeaturedItem Snippet，ADR-0005 #13，MB8）——紧急提示之下、最新通知之上；
+③ 最新且仍有效的通知（自动列表）；④ 近期校园活动（自动列表）。
+①–④ 依赖 M3 模型（站点级配置/FeaturedItem/Notice/活动结构化字段）：
+到位前本模板不查询、不渲染任何数据区（无数据不得显示假内容，任务边界），
+届时按上述顺序在下方 Hero 之前插入各区块；空数据区块整体不渲染（§7.1）。
+{% endcomment %}
+<section class="hero">
+    <p class="eyebrow">校园信息与资源入口</p>
+    <h1>{{ page.title }}</h1>
+    <p class="hero-lede">按五大板块汇集校园通知、活动、学习资料、软件与指南，帮你快速找到需要的信息。</p>
+</section>
+
+{# 首页搜索工作台（合同 §4.2）：首屏主任务，GET 到现有 /search/，服务端搜索。 #}
+<section class="search-bench" aria-labelledby="search-bench-title">
+    <h2 id="search-bench-title">站内搜索</h2>
+    <form action="{% url 'search' %}" method="get" role="search">
+        <label for="home-search-input">搜索关键词</label>
+        <div class="search-controls">
+            <input type="search" id="home-search-input" name="query" placeholder="搜索通知、活动、资料、软件或指南">
+            <button type="submit">搜索</button>
+        </div>
+        <p class="search-hint">搜索覆盖全部板块的公开内容页面。</p>
+    </form>
+</section>
+
+<section aria-labelledby="section-entries-title">
+    <h2 id="section-entries-title">五大板块</h2>
+    {# IA §7.1 层 4：五板块固定入口网格（真实板块页查询，顺序=§2 #1–#5； #}
+    {# 容器不是入口、永不进入，IA §6.2）。定位=IA §2 一句话定位（冻结文案）。 #}
+    <ul class="section-grid">
+        {% for section in section_entries %}
+        <li>
+            <a href="{% pageurl section %}">
+                <h3>{{ section.title }}</h3>
+                <p class="card-desc">{% include "includes/section_positioning.html" with slug=section.slug only %}</p>
+                <span class="card-go">进入板块 →</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {# 非业务数据的站点反馈引导（合同 §4.4）：一行次级说明，不冒充内容区。 #}
+    <p class="site-note">
+        本站内容持续更新；发现内容错误或链接失效，欢迎
+        {% with feedback_subject=page.title|default:"页面反馈" %}
+        <a href="mailto:{{ feedback_email }}?subject={{ feedback_subject|urlencode }}&amp;body={{ request.build_absolute_uri|urlencode }}">联系我们</a>。
+        {% endwith %}
+    </p>
+</section>
+{% endblock content %}
