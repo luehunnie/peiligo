@@ -160,8 +160,15 @@ class T14AdminFactoryTests(TestCase):
         fi = FeaturedItem.objects.filter(content=w["page_b_live"]).first()
         self.assertIsNotNone(fi, f"新建 FeaturedItem HTTP {resp.status_code}")
         self.assertTrue(fi.enabled)
-        self.assertEqual(fi.start_at.strftime("%Y-%m-%d %H:%M"), "2026-09-01 09:00")
-        self.assertEqual(fi.end_at.strftime("%Y-%m-%d %H:%M"), "2026-10-01 09:00")
+        # 墙钟钟面断言（M5.1 §4.4②）：读回值经 localtime 按当前时区（Asia/Shanghai）
+        # 渲染钟面——表单提交钟面→DB aware UTC→localtime 读回往返一致，消除对
+        # TIME_ZONE 取值的隐式依赖（裸 strftime 渲染 UTC 钟面，切时区后必红）。
+        self.assertEqual(
+            timezone.localtime(fi.start_at).strftime("%Y-%m-%d %H:%M"), "2026-09-01 09:00"
+        )
+        self.assertEqual(
+            timezone.localtime(fi.end_at).strftime("%Y-%m-%d %H:%M"), "2026-10-01 09:00"
+        )
 
     def test_edit_site_settings(self):
         """⑤ 改 SiteSettings 紧急提示与反馈邮箱（M-E1 正向侧）。"""
