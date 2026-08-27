@@ -160,7 +160,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+# 业务时区＝钟面层口径（管理员输入/前台显示；PUBLISH_ARCHIVE_SCHEDULING
+# §4.2/§4.4）：调度判定层为 aware 绝对时刻比较，不受本值影响；USE_TZ
+# 保持 True（aware 不变式前提），非 DB schema 项、零迁移。
+TIME_ZONE = "Asia/Shanghai"
 
 USE_I18N = True
 
