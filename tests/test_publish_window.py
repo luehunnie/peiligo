@@ -96,3 +96,48 @@ class ForbiddenWindowTests(PublishWindowBase):
         from .helpers import make_guide
 
         self._assert_forbidden(make_guide, "guide", "pw-g")
+
+
+class PairWindowTests(PublishWindowBase):
+    """PA-12（M5.1 §5.4）：go_live_at 与 expire_at 同时非空时须
+    ``go_live_at < expire_at``——严于官方 admin 表单（官方仅拒 ``>``、相等
+    放行）；clean 层是脚本/API 等非表单路径的唯一全路径闸口。"""
+
+    def _notice(self, slug, go_live_at, expire_at):
+        page = make_notice(self.containers["chronicle"], slug=slug)
+        page.go_live_at = go_live_at
+        page.expire_at = expire_at
+        return page
+
+    def test_go_live_after_expire_rejected(self):
+        page = self._notice("pw-pair-gt", future(days=8), future(days=7))
+        with self.assertRaises(ValidationError) as ctx:
+            page.full_clean()
+        self.assertIn("go_live_at", ctx.exception.error_dict)
+
+    def test_go_live_equal_expire_rejected(self):
+        """相等组合官方放行、本项目判非法（封死"上线即已过期"窗口）。"""
+        moment = future(days=7)
+        page = self._notice("pw-pair-eq", moment, moment)
+        with self.assertRaises(ValidationError) as ctx:
+            page.full_clean()
+        self.assertIn("go_live_at", ctx.exception.error_dict)
+
+    def test_go_live_before_expire_accepted(self):
+        page = self._notice("pw-pair-ok", future(days=7), future(days=8))
+        page.full_clean()  # 不抛即通过
+
+    def test_article_pair_rule_applies(self):
+        from .helpers import make_article
+
+        page = make_article(self.containers["chronicle"], slug="pw-pair-a")
+        moment = future(days=7)
+        page.go_live_at = future(days=8)
+        page.expire_at = moment
+        with self.assertRaises(ValidationError) as ctx:
+            page.full_clean()
+        self.assertIn("go_live_at", ctx.exception.error_dict)
+        page.go_live_at = moment  # 同刻起止＝相等仍拒（逐模型同口径）
+        with self.assertRaises(ValidationError) as ctx:
+            page.full_clean()
+        self.assertIn("go_live_at", ctx.exception.error_dict)
