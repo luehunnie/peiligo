@@ -1,0 +1,963 @@
+{
+  "db": "peiligo_m4_t16",
+  "django": "5.2.17",
+  "wagtail": "7.4.2.final.1",
+  "peiligo_file": "/Users/chenjunxian/orca/workspaces/peiligo/a4-3-permission-tests/src/peiligo/__init__.py",
+  "guard": "before_delete_page + before_bulk_action（运行时注册，OQ1 口径）",
+  "case_verdicts": {
+    "T01": true,
+    "T02": true,
+    "T03": true,
+    "T04": true,
+    "T05": true,
+    "T06": true,
+    "T07": true,
+    "T08": true,
+    "T09": true,
+    "T10": true,
+    "T11": true,
+    "T12": true,
+    "T13": true,
+    "T14": true,
+    "T15": true,
+    "T16": true
+  },
+  "passed": 16,
+  "total": 16,
+  "p4": {
+    "hook_bypassed": true,
+    "escalation": false
+  },
+  "results": [
+    {
+      "case": "T01",
+      "item": "创建 noticepage@chronicle 成功（草稿）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-notice owner=A（add 附带 ownership）",
+      "ok": true,
+      "detail": "owner_id=38"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-notice 修订历史记录创建者与时间",
+      "ok": true,
+      "detail": "rev#144 user_id=38 at=2026-08-27 07:41:49.827981+00:00"
+    },
+    {
+      "case": "T01",
+      "item": "创建 noticepage@events 成功（草稿）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-event-notice owner=A（add 附带 ownership）",
+      "ok": true,
+      "detail": "owner_id=38"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-event-notice 修订历史记录创建者与时间",
+      "ok": true,
+      "detail": "rev#145 user_id=38 at=2026-08-27 07:41:49.890909+00:00"
+    },
+    {
+      "case": "T01",
+      "item": "创建 articlepage@chronicle 成功（草稿）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-article owner=A（add 附带 ownership）",
+      "ok": true,
+      "detail": "owner_id=38"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-article 修订历史记录创建者与时间",
+      "ok": true,
+      "detail": "rev#146 user_id=38 at=2026-08-27 07:41:49.950909+00:00"
+    },
+    {
+      "case": "T01",
+      "item": "创建 materialpage@materials 成功（草稿）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-material owner=A（add 附带 ownership）",
+      "ok": true,
+      "detail": "owner_id=38"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-material 修订历史记录创建者与时间",
+      "ok": true,
+      "detail": "rev#147 user_id=38 at=2026-08-27 07:41:50.017327+00:00"
+    },
+    {
+      "case": "T01",
+      "item": "创建 softwaretoolpage@software 成功（草稿）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-software owner=A（add 附带 ownership）",
+      "ok": true,
+      "detail": "owner_id=38"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-software 修订历史记录创建者与时间",
+      "ok": true,
+      "detail": "rev#148 user_id=38 at=2026-08-27 07:41:50.104452+00:00"
+    },
+    {
+      "case": "T01",
+      "item": "创建 guidepage@guide 成功（草稿）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-guide owner=A（add 附带 ownership）",
+      "ok": true,
+      "detail": "owner_id=38"
+    },
+    {
+      "case": "T01",
+      "item": "t16-a-guide 修订历史记录创建者与时间",
+      "ok": true,
+      "detail": "rev#149 user_id=38 at=2026-08-27 07:41:50.157505+00:00"
+    },
+    {
+      "case": "T01",
+      "item": "草稿 t16-a-notice 前台 404（N13）",
+      "ok": true,
+      "detail": "anon GET 前台 URL"
+    },
+    {
+      "case": "T01",
+      "item": "草稿 t16-a-article 前台 404（N13）",
+      "ok": true,
+      "detail": "anon GET 前台 URL"
+    },
+    {
+      "case": "T01",
+      "item": "草稿不入默认搜索（N13）",
+      "ok": true,
+      "detail": "needle=slug（查询词回显不构成命中）"
+    },
+    {
+      "case": "T02",
+      "item": "A 编辑自己页面成功（新修订落库＋受控标签选用）",
+      "ok": true,
+      "detail": "HTTP 302，修订 1->2"
+    },
+    {
+      "case": "T02",
+      "item": "修订记录操作者与时间（PRD §5）",
+      "ok": true,
+      "detail": "rev#150 user_id=38 at=2026-08-27 07:41:50.389545+00:00"
+    },
+    {
+      "case": "T02",
+      "item": "A 编辑总管理员代建页成功（edit 覆盖子树内任意归属）",
+      "ok": true,
+      "detail": "HTTP 302，修订 1->2"
+    },
+    {
+      "case": "T03",
+      "item": "A 发布自己页面成功（无需审批，M-A5）",
+      "ok": true,
+      "detail": "HTTP 302，live=True"
+    },
+    {
+      "case": "T03",
+      "item": "发布动作在 PageLogEntry 留痕（操作者/时间）",
+      "ok": true,
+      "detail": "action=wagtail.publish，user=A"
+    },
+    {
+      "case": "T03",
+      "item": "发布后前台 200",
+      "ok": true,
+      "detail": "GET /chronicle/t16-dept-a/t16-a-notice/"
+    },
+    {
+      "case": "T03",
+      "item": "发布后默认搜索命中",
+      "ok": true,
+      "detail": "needle=slug（结果链接出现）"
+    },
+    {
+      "case": "T03",
+      "item": "A 下线自己页面成功（内容与修订保留，M-A6）",
+      "ok": true,
+      "detail": "HTTP 302，live=False，修订数=3"
+    },
+    {
+      "case": "T03",
+      "item": "下线后前台 404（N13）",
+      "ok": true,
+      "detail": "GET /chronicle/t16-dept-a/t16-a-notice/"
+    },
+    {
+      "case": "T03",
+      "item": "下线后默认搜索不再出现（N13）",
+      "ok": true,
+      "detail": "needle=slug（结果链接消失）"
+    },
+    {
+      "case": "T04",
+      "item": "前置：活动通知已发布",
+      "ok": true,
+      "detail": "live=True"
+    },
+    {
+      "case": "T04",
+      "item": "publish_scheduled 后通知转为 expired（M-A7）",
+      "ok": true,
+      "detail": "live=False，expired=True"
+    },
+    {
+      "case": "T04",
+      "item": "前台 404（退出前台，N13）",
+      "ok": true,
+      "detail": "GET /events/t16-dept-a/t16-a-event-notice/"
+    },
+    {
+      "case": "T04",
+      "item": "默认搜索不再出现（N13）",
+      "ok": true,
+      "detail": "needle=slug（结果链接消失）"
+    },
+    {
+      "case": "T04",
+      "item": "内容与修订保留在库",
+      "ok": true,
+      "detail": "页面在库，修订数=2（前=2）"
+    },
+    {
+      "case": "T04",
+      "item": "部门账号仍可在后台查看（M-A1）",
+      "ok": true,
+      "detail": "A GET 编辑表单"
+    },
+    {
+      "case": "T05",
+      "item": "A GET B 容器（学习资料）创建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T05",
+      "item": "A POST 向 B 容器创建 MaterialPage 被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T05",
+      "item": "B 子树无越权新增页面（slug 不存在）",
+      "ok": true,
+      "detail": "slug=t16-b-hijack 不存在"
+    },
+    {
+      "case": "T06",
+      "item": "A GET B 页面编辑表单被拒（后台入口即拒）",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T06",
+      "item": "A POST 编辑 B 页面被拒（title/修订/日志零变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T06",
+      "item": "B 页面内容与修订历史零变更（PRD §23 场景 1）",
+      "ok": true,
+      "detail": "title='T16唯一·B部门已发布通知'，live=True"
+    },
+    {
+      "case": "T07",
+      "item": "A 经 action-publish 发布 B 草稿被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T07",
+      "item": "B 草稿保持草稿（live/expired 零变更）",
+      "ok": true,
+      "detail": "live=False，expired=False"
+    },
+    {
+      "case": "T07",
+      "item": "A 下线 B 已发布页被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T07",
+      "item": "B 页保持 live（状态零变更）",
+      "ok": true,
+      "detail": "live=True，expired=False"
+    },
+    {
+      "case": "T08",
+      "item": "单条路径被双钩子守卫拦截（before_delete_page）且零库变更",
+      "ok": true,
+      "detail": "HTTP 302，页面仍在，零库变更（含修订与日志）"
+    },
+    {
+      "case": "T08",
+      "item": "批量路径被守卫拦截（before_bulk_action）且零库变更",
+      "ok": true,
+      "detail": "HTTP 302，两页均在，零库变更（含修订与日志）"
+    },
+    {
+      "case": "T09",
+      "item": "A 删除 B 页面被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T09",
+      "item": "A 删除 B 容器被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T09",
+      "item": "A 删除板块页（校园活动）被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T09",
+      "item": "A 移动 B 容器：选目标步骤被拒（can_move=can_delete 对外部门为零）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T09",
+      "item": "A 直达 move_confirm 移动 B 容器被拒（动作层权限复检）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T09",
+      "item": "树结构零变更（path/depth/numchild 全不变）",
+      "ok": true,
+      "detail": "全部拒绝断言快照含 path/depth/numchild，diff 均为空"
+    },
+    {
+      "case": "P4",
+      "item": "P4-a A 非递归复制板块页（改 slug 造伪板块）被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "P4",
+      "item": "P4-a 结论：部门账号不可达复制面 → 不构成部门越权（总管理员侧 IA 治理项留档）",
+      "ok": true,
+      "detail": "can_copy()=can_edit() 对板块页为 False；伪板块仅总管理员可造（A3.1 留档原口径）"
+    },
+    {
+      "case": "P4",
+      "item": "P4-b1 A 批量移动自己页面到 B 容器被拒（can_move_to 复检 add 权限）",
+      "ok": true,
+      "detail": "HTTP 200，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "P4",
+      "item": "P4-b2 A 批量移动自己页面到板块页被拒",
+      "ok": true,
+      "detail": "HTTP 200，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "P4",
+      "item": "P4-b3 批量移动绕过 before_move_page（§7.2 复检被跳过）——复现留档",
+      "ok": true,
+      "detail": "违约详情：{'event_start_at': ['校园活动板块下活动必须填写开始时间'], 'event_location': ['线下活动必须填写活动地点']}；单页动线同操作被既有钩子拒（下方对照）"
+    },
+    {
+      "case": "P4",
+      "item": "P4-b3 探测后树结构/重定向面已还原（页面字段+计数+redirects 全等）",
+      "ok": true,
+      "detail": "pages/counts/redirects 全等；page_log +2（两次 move 的探测留痕，预期内）"
+    },
+    {
+      "case": "P4",
+      "item": "P4-b3 对照：同一移动单页动线被 before_move_page 拒（§7.2 复检生效）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更"
+    },
+    {
+      "case": "P4",
+      "item": "P4 总结论：两路径均未构成部门账号越权（b3 为内容模型完整性绕过，另行留档）",
+      "ok": true,
+      "detail": "a=不可达；b1/b2=权限层拒；b3=hook 绕过但目标在自有授权容器内（非权限边界突破）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 部门词表列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 部门词表新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建部门词表被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 编辑部门词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改部门词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删部门词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 受控标签列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 受控标签新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建受控标签被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 编辑受控标签既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改受控标签既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删受控标签既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 学科词表列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 学科词表新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建学科词表被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 编辑学科词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改学科词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删学科词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 资料类型词表列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 资料类型词表新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建资料类型词表被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 编辑资料类型词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改资料类型词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删资料类型词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 适用平台词表列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 适用平台词表新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建适用平台词表被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 编辑适用平台词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改适用平台词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删适用平台词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 指南类别词表列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 指南类别词表新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建指南类别词表被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 编辑指南类别词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改指南类别词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删指南类别词表既有项被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 推荐位列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A GET 推荐位新建表单被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 新建推荐位（置顶）被拒（N06）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 改既有推荐位被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T10",
+      "item": "A POST 删既有推荐位被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T11",
+      "item": "A GET 设置编辑 URL 被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T11",
+      "item": "A POST 改紧急提示与反馈邮箱被拒（设置值零变更，N03）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T12",
+      "item": "A GET 用户列表被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T12",
+      "item": "A POST 新建用户被拒（用户数零变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T12",
+      "item": "A GET 编辑自己用户档案被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T12",
+      "item": "A POST 把自己加入总管理员组被拒（组归属零变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T12",
+      "item": "A 的组归属零变更（仍恰在部门组）",
+      "ok": true,
+      "detail": "groups=['t16-dept-a']"
+    },
+    {
+      "case": "T12",
+      "item": "A GET 编辑部门组（提权面）被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T12",
+      "item": "A POST 改部门组权限挂载被拒（GPP 零变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T12",
+      "item": "A GET 编辑总管理员组被拒",
+      "ok": true,
+      "detail": "HTTP 302（非 200）+ 零库变更"
+    },
+    {
+      "case": "T13",
+      "item": "A 向本部门集合上传图片成功（M-F1）",
+      "ok": true,
+      "detail": "HTTP 302，collection=18"
+    },
+    {
+      "case": "T13",
+      "item": "A 构造 POST 向 B 集合上传：B 集合与素材零变更（N08）",
+      "ok": true,
+      "detail": "HTTP 302；请求 collection=19（B）未被服务端采纳，新增 1 项素材全部落回集合 A（唯一授权集合）"
+    },
+    {
+      "case": "T13",
+      "item": "A 编辑 B 集合内素材被拒（零库变更）",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T13",
+      "item": "A POST 新建集合被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T13",
+      "item": "A POST 改名/移动 B 集合被拒",
+      "ok": true,
+      "detail": "HTTP 302，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T13",
+      "item": "A POST 删除 B 集合被拒",
+      "ok": true,
+      "detail": "HTTP 404，零库变更（含修订/日志/树结构）"
+    },
+    {
+      "case": "T13",
+      "item": "集合结构与素材零变更（快照含 images/gcp/collection 计数）",
+      "ok": true,
+      "detail": "上述各条拒绝断言快照 diff 均为空"
+    },
+    {
+      "case": "T14",
+      "item": "总管理员登录后台 200（is_superuser=False，纯组权限）",
+      "ok": true,
+      "detail": "GET /admin/"
+    },
+    {
+      "case": "T14",
+      "item": "① 创建部门岗位账号成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "① 用户操作留痕＝记录性核查：wagtailusers 无 DB 级用户审计日志",
+      "ok": true,
+      "detail": "LogEntry 0 条；Wagtail 7.4.2 用户增删改仅走 Python logging——审计缺口留报告修订建议"
+    },
+    {
+      "case": "T14",
+      "item": "① 停用账号成功（is_active=False）",
+      "ok": true,
+      "detail": "HTTP 302，is_active=False"
+    },
+    {
+      "case": "T14",
+      "item": "① 重置密码后新凭据可登录（重置生效）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "① 强制改密机制＝记录性核查：Wagtail 7.4.2 核心无首登强制改密开关",
+      "ok": true,
+      "detail": "落 M4 正式实现清单（ Django auth 密码过期/自定义 Miniprogram 外机制需后续批次裁决）"
+    },
+    {
+      "case": "T14",
+      "item": "② 新建 Department 词表项成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "② 板块下建对应容器成功（M-C2）",
+      "ok": true,
+      "detail": "HTTP 302，slug=t16-dept-c"
+    },
+    {
+      "case": "T14",
+      "item": "③ 新增学科词表项成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "③ 新增资料类型词表项成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "③ 新增适用平台词表项成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "③ 新增指南类别词表项成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "④ 新建 FeaturedItem 成功（起止窗口＋启用）",
+      "ok": true,
+      "detail": "HTTP 302，FeaturedItem 总数=2（含种子 1 条）"
+    },
+    {
+      "case": "T14",
+      "item": "④ 置顶生效窗口＝起止时间字段值（PRD §9）",
+      "ok": true,
+      "detail": "start=2026-09-01 09:00:00+00:00，end=2026-10-01 09:00:00+00:00，enabled=True"
+    },
+    {
+      "case": "T14",
+      "item": "⑤ 改 SiteSettings 紧急提示成功",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "⑥ 管理员在部门 A 子树代建页成功（owner=admin）",
+      "ok": true,
+      "detail": "HTTP 302"
+    },
+    {
+      "case": "T14",
+      "item": "⑥ 管理员编辑代建页成功",
+      "ok": true,
+      "detail": "HTTP 302，修订 1->2"
+    },
+    {
+      "case": "T15",
+      "item": "① 管理员跨部门编辑 B 页面成功（M-B4）",
+      "ok": true,
+      "detail": "HTTP 302，修订 1->2"
+    },
+    {
+      "case": "T15",
+      "item": "② 管理员下线 B 页面成功",
+      "ok": true,
+      "detail": "HTTP 302，live=False"
+    },
+    {
+      "case": "T15",
+      "item": "② 下线后前台 404、内容保留",
+      "ok": true,
+      "detail": "GET /chronicle/t16-dept-b/t16-b-live/ → 404；页面与修订在库"
+    },
+    {
+      "case": "T15",
+      "item": "③ 管理员单条永久删除测试数据页成功（页面与修订移出库）",
+      "ok": true,
+      "detail": "HTTP 302，页面删除=True，修订删除=True"
+    },
+    {
+      "case": "T15",
+      "item": "③ 管理员批量永久删除放行（镜像 T08 双路径）",
+      "ok": true,
+      "detail": "HTTP 302，2 页已删"
+    },
+    {
+      "case": "T16",
+      "item": "① 前置：文章已发布（live 素材就位）",
+      "ok": true,
+      "detail": "live=True"
+    },
+    {
+      "case": "T16",
+      "item": "① 仅已发布内容前台可见（N13）",
+      "ok": true,
+      "detail": "实测状态码：{'live': 200, 'draft': 404, 'unpublished': 404, 'expired': 404}"
+    },
+    {
+      "case": "T16",
+      "item": "① 默认搜索：已发布命中、草稿/下线/到期不出现（N13）",
+      "ok": true,
+      "detail": "四态各查一次（needle=slug）"
+    },
+    {
+      "case": "T16",
+      "item": "② 容器 URL 404（含 URL 直达）",
+      "ok": true,
+      "detail": "GET /chronicle/t16-dept-b/"
+    },
+    {
+      "case": "T16",
+      "item": "③ 容器不入 sitemap（板块页在）",
+      "ok": true,
+      "detail": "sitemap.xml 内容比对"
+    },
+    {
+      "case": "T16",
+      "item": "③ 容器不入前台导航（首页 HTML 无容器链接）",
+      "ok": true,
+      "detail": "首页 HTML 比对"
+    },
+    {
+      "case": "T16",
+      "item": "④ 未登录访问 /admin/ 重定向登录页",
+      "ok": true,
+      "detail": "HTTP 302 → /admin/login/?next=/admin/"
+    },
+    {
+      "case": "T16",
+      "item": "④ 错误凭据登录不泄露账号存在性（统一失败页）",
+      "ok": true,
+      "detail": "HTTP 200（登录页重渲染）"
+    },
+    {
+      "case": "T16",
+      "item": "⑤ R3 型账号（零组零权限）登录后不可达后台（N09）",
+      "ok": true,
+      "detail": "HTTP 302 → /admin/login/?next=/admin/"
+    },
+    {
+      "case": "T16",
+      "item": "⑤ superuser 规约在场：全程零 superuser 账号（M-G5/N10 记录性）",
+      "ok": true,
+      "detail": "is_superuser 账号数=0；守卫 break-glass 分支仅故障恢复留痕用"
+    },
+    {
+      "case": "T16",
+      "item": "⑥ 部门账号后台首页 200",
+      "ok": true,
+      "detail": "GET /admin/"
+    },
+    {
+      "case": "T16",
+      "item": "⑥ 浏览器树根级可见项（OQ-2 记录：可见≠可操作，操作面由 T05–T13 拒绝断言为准）",
+      "ok": true,
+      "detail": "HTTP 200，titles=[]"
+    }
+  ]
+}
