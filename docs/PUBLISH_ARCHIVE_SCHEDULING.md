@@ -149,7 +149,7 @@ E9（expired → live 立即重发布）/E11（离线 → scheduled 重新预约
 ### 4.4 最小正式修复方案（实现留 B 阶段/下一阶段）
 
 - **修改**：`src/peiligo/settings/base.py` 单行 `TIME_ZONE = "UTC"` → `"Asia/Shanghai"`；`USE_TZ = True` **不动**（aware 不变式的前提）。非 DB schema 项，**零迁移**。`LANGUAGE_CODE` 的 i18n 决策不属本文范围，不扩围。
-- **不破坏现有生命周期的测试证明思路**：①既有测试全量使用 aware 时刻（`timezone.now()`/`future()`）与 `mock.patch("django.utils.timezone.now")` 推进，**无任何墙钟表示断言**——修复后在 `TIME_ZONE="Asia/Shanghai"` 下复跑全量测试套件，期望全绿（调度比较与钟面表示解耦的直接推论）；②补一条表示层等价断言（PA-19）：同一绝对时刻（如 `2026-01-01T16:00:00+00:00` ＝北京时间 `2027-01-02 00:00`）在两种 `TIME_ZONE` 配置下 E3/E7 判定与 `CURRENT_DEFAULT` 成员关系完全一致；③表单输入回归：Admin 保存 `expire_at` 后 DB 值的绝对时刻与表单钟面＋Asia/Shanghai 偏移一致。
+- **不破坏现有生命周期的测试证明思路（2026-08-28 评审修正前提）**：①既有测试**除一处外**全量使用 aware 时刻（`timezone.now()`/`future()`）与 `mock.patch("django.utils.timezone.now")` 推进，调度类断言与钟面表示解耦；**例外＝墙钟钟面断言一处**：`tests/test_permissions_admin_boundary.py:163-164`（`test_create_featured_item`）对 FeaturedItem `start_at`/`end_at` 做 `strftime("%Y-%m-%d %H:%M")` 钟面等值比较——表单 `DateTimeField.to_python` 逐支经 `from_current_timezone` 按当前时区把提交的 naive 钟面转为 aware（`django/forms/fields.py:543-561`＋`django/forms/utils.py:215-227`），落库 aware UTC，ORM 读回 aware UTC，裸 `strftime` 渲染 UTC 钟面：`TIME_ZONE="UTC"` 下两钟面恰好相等所以现绿；切 Asia/Shanghai 后提交钟面按 +08:00 解析、读回 UTC 钟面为 "01:00"，两行断言**必红**；②该测试的同步调整步骤（随时区修复一并执行，实现阶段动作，本文不改测试代码）：两行读回断言改为 `timezone.localtime(fi.start_at).strftime("%Y-%m-%d %H:%M")`（`end_at` 同法），或等价改为与 `datetime(2026, 9, 1, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai"))` 的 aware 绝对时刻等值比较——断言语义不变（仍验证表单→DB→读回钟面往返一致），仅消除对 `TIME_ZONE` 取值的隐式依赖；③调整后在 `TIME_ZONE="Asia/Shanghai"` 下复跑全量测试套件，期望全绿（调度比较与钟面表示解耦的推论，前提＝②已执行）；④补一条表示层等价断言（PA-19）：同一绝对时刻（如 `2026-01-01T16:00:00+00:00` ＝北京时间 `2027-01-02 00:00`）在两种 `TIME_ZONE` 配置下 E3/E7 判定与 `CURRENT_DEFAULT` 成员关系完全一致；⑤表单输入回归：Admin 保存 `expire_at` 后 DB 值的绝对时刻与表单钟面＋Asia/Shanghai 偏移一致。
 - 该修复的执行时点与批次归属实现阶段排期（本文只登记方案与证明思路，不改 settings——M5.1 禁改代码）。
 
 ## 5. Featured/推荐位交互与边界用例表
@@ -161,7 +161,7 @@ E9（expired → live 立即重发布）/E11（离线 → scheduled 重新预约
 - 模型：`home/models.py:86-146`（`content` FK CASCADE→Page、`start_at`/`end_at`/`enabled`，clean 成对校验 `end ≥ start`），migration `home/migrations/0005_featureditem_sitesettings.py`；
 - 展示有效性判定：`is_on_display()`（`home/models.py:136-146`）＝**四条件合取**：`enabled` ∧ `start_at ≤ now ≤ end_at` ∧ 所指页 `lifecycle_state == live`（∈ CURRENT_DEFAULT）——即 CONTENT_MODEL §15.4 语义冻结的落地实现；
 - 管理与测试：仅总管理员管理（M4 权限，`tests/test_permissions_admin_boundary.py:148-161` N06）；字段/窗口/级联测试在案（`tests/test_taxonomy_snippets.py:67-95`、`tests/test_deletion_policy.py:149-192`）；
-- **前台消费尚未实装**：`templates/home/home_page.html:10-12` 仅占位注释（"推荐位/置顶位……MB8"），`HomePage.get_context` 不查询 FeaturedItem（`home/models.py:40-54`）——首页渲染属 B 阶段（MB8）。
+- **前台消费尚未实装**：`home/templates/home/home_page.html:10-12` 仅占位注释（"推荐位/置顶位……MB8"），`HomePage.get_context` 不查询 FeaturedItem（`home/models.py:40-54`）——首页渲染属 B 阶段（MB8）。
 
 据此走设计契约"**已存在 → 冻结交互规则**"分支：以下 5.2 冻结项对现存模型成立、对 MB8 前台消费构成实现契约。
 
@@ -192,7 +192,7 @@ E9（expired → live 立即重发布）/E11（离线 → scheduled 重新预约
 | B09 | 修改 `expire_at`（live 页，改晚/改早/改过去） | 新值经 clean 未来性强制；发布修订后旧时刻作废以新值为准；改过去被拒 | PA-09 |
 | B10 | 取消 `expire_at` | Article 清空合法转常青；Notice 必填被拒；三类常青强制空不变 | PA-10 |
 | B11 | 已到期内容重新发布/重新设期（E9/E11） | `expired` 复位、Notice 新未来有效期强制；重设期按新值生效 | PA-11 |
-| B12 | `go_live_at ≥ expire_at` 组合 | 官方无此校验（admin 零 `expire_at` 引用，§5.4）；项目语义判非法，校验归属＝clean 层扩展 | PA-12 |
+| B12 | `go_live_at ≥ expire_at` 组合 | 官方 admin 表单拒 `>`（相等放行，仅覆盖表单路径，§5.4）；项目语义更严判非法（含相等），校验归属＝clean 层扩展（补脚本/API 路径） | PA-12 |
 | B13 | 已发布内容设置未来 `expire_at`（首发即带） | 同 B06：S2 属性、到点前可见 | PA-06 |
 | B14 | `publish_scheduled` 重跑（同刻连续两次） | 第二次零状态变更（幂等三重保证） | PA-13 |
 | B15 | 单次运行中项失败后下一周期 | 已处理项保持、失败/积压项自动补执行（工作集重推导） | PA-14 |
@@ -202,9 +202,9 @@ E9（expired → live 立即重发布）/E11（离线 → scheduled 重新预约
 
 ### 5.4 `go_live_at ≥ expire_at` 非法组合的校验归属（裁决）
 
-- **官方语义**：Wagtail 7.4.2 admin 对该组合**无任何校验**（`wagtail/admin/` 全目录检索 `expire_at` 零命中，亲证）；命令层也不拒绝——后果是 B03 发布后对象携过去 `expire_at` 转 live，最早下一次运行才被 E7 下线（"上线即已过期"窗口态，最长约 1 小时）。
+- **官方语义（2026-08-28 评审修正，源码亲证）**：Wagtail 7.4.2 admin 表单**存在**该校验——`WagtailAdminDraftStateFormMixin.clean`（`wagtail/admin/forms/models.py:234-258`）在表单提交时校验两条：①`go_live_at`/`expire_at` 同时非空且 `go_live_at > expire_at` 时对两字段 `add_error`（"Go live date/time must be before expiry date/time"）——**严格大于才拒，相等放行**；②`expire_at < timezone.now()` 时报错（"Expiry date/time must be in the future."）——严格过去才拒（等于当下放行），对 `go_live_at` 本身无未来性要求。该 mixin 由 `wagtail/admin/panels/base.py:47-48` 注入**全部 `DraftStateMixin` 模型**的 admin 表单（页面编辑表单即含）；错误时机＝admin 表单提交（`clean()` 内），模型层与命令层（`publish_scheduled`）不复检。官方口径的残留缺口：相等组合可经 admin 提交——到点发布时 `expire_at` 已成过去，下一次运行即 E7 下线（"上线即已过期"窗口经相等路径可达，最长约 1 小时）；脚本/API 等非表单路径完全绕过该校验。
 - **产品语义**：该组合对 NoticePage 无意义（发布即为立即过期），属无效配置。
-- **校验归属裁决**：归**项目 clean 层**（`notices/lifecycle.py` `clean_publish_window` 扩展：`go_live_at` 与 `expire_at` 同时非空时须 `go_live_at < expire_at`），与 §16.2 未来性同一闸口（发布动作经同一校验链）；**实现留 B 阶段**，本文冻结语义与断言（PA-12）。不归属 admin 表单定制、不归属任务层兜底。
+- **校验归属裁决（修正后）**：归**项目 clean 层**（`notices/lifecycle.py` `clean_publish_window` 扩展：`go_live_at` 与 `expire_at` 同时非空时须 `go_live_at < expire_at`），与 §16.2 未来性同一闸口（发布动作经同一校验链）；**实现留 B 阶段**，本文冻结语义与断言（PA-12）。保留理由（修正后）：官方校验仅覆盖 admin 表单路径——脚本（shell/数据脚本）、API、未来后台定制路径不经过该表单，项目 clean 层是唯一全路径闸口。**口径差异**：PA-12 严于官方（官方相等放行，本项目须严格 `<`），以更严口径同时封死经 admin 相等路径触达的"上线即已过期"窗口。不归属 admin 表单定制、不归属任务层兜底。
 
 ## 附录 A：断言清单（PA-xx，B 阶段测试预写；可增不可减）
 
@@ -221,14 +221,14 @@ E9（expired → live 立即重发布）/E11（离线 → scheduled 重新预约
 | PA-09 | 修改 `expire_at` | 新值须过 clean 未来性；发布修订后旧时刻作废；live 页对象级生效（未发布修订不影响现值） | §7.1/§7.2 |
 | PA-10 | 取消 `expire_at` | Article 可清空转常青；Notice 必填不可取消；Material/SoftwareTool/Guide 强制空 | §7.1/§7.2/§7.4–§7.6 |
 | PA-11 | 到期重发布/重设期（E9/E11） | publish 原子置 `expired=False`；Notice 新未来有效期经 clean 强制；重设期按新值生效 | §7.1/§8 |
-| PA-12 | `go_live_at ≥ expire_at` | 判非法并经 clean 层拒绝（`go_live_at < expire_at`）；官方无此校验，归属项目 clean（§5.4） | §7.1 |
+| PA-12 | `go_live_at ≥ expire_at` | 判非法并经 clean 层拒绝（`go_live_at < expire_at`，严于官方"仅拒 `>`、相等放行"）；官方校验仅 admin 表单路径，全路径闸口归项目 clean（§5.4） | §7.1 |
 | PA-13 | 命令幂等 | 同刻重跑第二次零状态变更：live=F 不入过期集、unpublish 短路、已发布修订 `approved_go_live_at` 已清 | §7.1 |
 | PA-14 | 失败补偿 | 单项失败中断本次运行但不回滚已处理项；下期工作集重推导自动补执行全部积压（无下限过滤） | §7.1 |
 | PA-15 | 推荐位窗口 | `is_on_display` ＝四条件合取；起止闭区间（含两端）；窗口外不展示（＝PS-03 别名） | §9 |
 | PA-16 | 推荐位不泄漏不可见内容 | 所指页 ∉ CURRENT_DEFAULT（S0/S1/S3/S4）即不展示：未到 `go_live_at` 不得提前公开、expired/offline 不得残留默认前台 | §9/§8 |
 | PA-17 | 推荐位安全降级 | 引用不可见内容的推荐项被跳过：不占位、不报错、不泄漏标题摘要；全无效时区块整体不渲染（IA §7.1） | §9 |
 | PA-18 | 推荐位数量 | 展示有效项 ≤ 槽位固定常量（V1 默认建议 6，项目负责人确认；站点级配置留痕）（＝PS-04 别名） | §9/§8 |
-| PA-19 | 时区不变式 | 全部时间边界 timezone-aware，禁 naive；`TIME_ZONE` 取值不影响 E3/E7 判定与 CURRENT_DEFAULT 成员（绝对时刻等价）；Asia/Shanghai 修复后全量既有测试全绿 | §16 |
+| PA-19 | 时区不变式 | 全部时间边界 timezone-aware，禁 naive；`TIME_ZONE` 取值不影响 E3/E7 判定与 CURRENT_DEFAULT 成员（绝对时刻等价）；Asia/Shanghai 修复后全量既有测试全绿（前提＝`test_permissions_admin_boundary.py:163-164` 墙钟断言同步调整，§4.4） | §16 |
 | PA-20 | 调度比较语义 | `publish_scheduled` 两相均为严格 `<`（`publish_scheduled.py:46/92`）；比较对象为 aware 绝对时刻 | §7.1 |
 | PA-21 | 作用域封闭 | FeaturedItem/SiteSettings 不在命令工作集（非 `DraftStateMixin`）；展示窗口为请求时计算，无任务依赖 | §9 |
 | PA-22 | 到点窗口验收口径 | 到点→生效 ≤1 小时＋单次运行时长；production 每小时周期调用（独立 cron/任务容器，B6 落地留痕） | §7.1 |
@@ -253,7 +253,7 @@ E9（expired → live 立即重发布）/E11（离线 → scheduled 重新预约
 | §5.1–5.2 Featured 交互冻结 | §9（推荐位/置顶条款）、§8（仅总管理员/邮箱申请） |
 | §5.2 数量固定 | §9；IA §7.2；02 §7 S5.1（默认 6 建议值） |
 | §5.3 边界用例表 | §7.1/§7.2/§8/§9、§23（自动化测试口径） |
-| §5.4 非法组合校验归属 | §7.1（有效期语义推论）；官方无校验亲证 |
+| §5.4 非法组合校验归属 | §7.1（有效期语义推论）；官方 admin 表单校验亲证（§5.4 修正） |
 | 附录 A 断言 PA-01–PA-30 | 逐行标注（PRD 无对应条款者为计划/契约引源） |
 
 ## 附录 C：PS-01–PS-05 别名映射（02 S5.1 必含断言消歧）
