@@ -74,6 +74,11 @@ def clean_publish_window(page, errors, policy):
     不得为过去（§16.2）；常青内容误配到期致静默消失（§16.1 强制空——其
     退场方式＝E8 手动下线，PRD §8）。E9/E10/E11 重发布/重预约经同一
     clean 自然强制新有效期（§16.2 落实层说明）。
+
+    M5.1（§5.4/PA-12）扩展：``go_live_at`` 与 ``expire_at`` 同时非空时须
+    ``go_live_at < expire_at``（严于官方 admin 表单"仅拒 ``>``、相等放行"，
+    封死经相等路径可达的"上线即已过期"窗口）。官方校验仅覆盖表单路径，
+    本 clean 是全路径闸口（脚本/API/后台定制同经此校验）。
     """
     expire_at = page.expire_at
     if policy == EXPIRE_FORBIDDEN:
@@ -85,6 +90,9 @@ def clean_publish_window(page, errors, policy):
         return
     if expire_at is not None and expire_at <= timezone.now():
         errors["expire_at"] = ["有效期必须晚于当前时刻（CONTENT_MODEL §16.2）"]
+    go_live_at = page.go_live_at
+    if go_live_at is not None and expire_at is not None and go_live_at >= expire_at:
+        errors["go_live_at"] = ["预约发布时间必须早于到期时间（PUBLISH_ARCHIVE_SCHEDULING §5.4）"]
 
 
 def current_default_pages():
