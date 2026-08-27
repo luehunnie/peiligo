@@ -1,4 +1,5 @@
-"""页面移动/复制/删除路径的内容模型硬约束兜底（CONTENT_MODEL §1.4/§4/§7.2/§17.4）。
+"""页面移动/复制/删除路径的内容模型硬约束兜底（CONTENT_MODEL §1.4/§4/§7.2/§17.4）
+与「永久删除仅总管理员」双钩子只拒绝守卫（ROLE_PERMISSION_MATRIX §3.4）。
 
 板块白名单与部门一致性在创建/编辑经 ``clean()`` 生效；树内移动与递归
 复制不经编辑表单（wagtail 递归子页 ``save(clean=False)`` 绕过 clean），
@@ -10,6 +11,14 @@ wagtail/admin/views/pages/delete.py）与 ``before_bulk_action``（批量删除
 钩子，返回响应即在事务内取消整个动作，wagtail/admin/views/bulk_action/
 base_bulk_action.py）。直接 ORM ``delete()`` 属产品外路径，删除默认走
 下线/到期而非删除（§17.1）。
+
+M4.4 增设权限面守卫（矩阵 §3.4 关闭措施，M4.2 PoC/M4.3 T08 已验证的
+最小方案）：Wagtail 页面树权限无独立 delete 类型，``change``@容器附带
+子树内任意页删除面（PagePermissionTester.can_delete 对 change 放行），
+而 PRD §8 要求永久删除仅总管理员——故以同两条钩子（单条+批量）拒绝
+非特权用户的一切页面永久删除。守卫 fail-closed：特权判定
+（superuser 或总管理员组成员，departments.permissions）只用于放行，
+从不新增授权；非页面模型的批量动作不在守卫面。
 """
 
 from django.contrib import messages
@@ -27,6 +36,7 @@ from departments.models import (
     clean_content_page,
     department_clash_exists,
 )
+from departments.permissions import is_privileged
 
 # 五类内容页（§1.4）：移动目标必须仍是本部门容器，且板块语义不变。
 CONTENT_PAGE_CLASSES = (
@@ -219,3 +229,52 @@ def refuse_nonempty_structure_page_bulk_deletion(request, action_type, objects, 
         if _is_nonempty_structure_page(obj):
             return _cancel_nonempty_structure_deletion(request, obj)
     return None
+
+
+# ---------------------------------------------------------------------------
+# M4.4（矩阵 §3.4）「永久删除仅总管理员」只拒绝守卫——单条+批量双钩子，
+# 缺一不可（批量动线 DeleteBulkAction.execute_action 直调 page.delete()
+# 绕过单页钩子）。与上方内容模型守卫共存：任一钩子返回响应即在
+# transaction.atomic() 内短路返回并回滚（"零库变更"语义）。
+# ---------------------------------------------------------------------------
+
+
+@hooks.register("before_delete_page")
+def refuse_non_admin_page_deletion(request, page):
+    """权限面守卫——单页删除动线：非特权用户删除任何页面一律拒绝。
+
+    覆盖矩阵 M-A8/N02（部门岗位账号对任何对象无永久删除权，含自己
+    创建/拥有的页面）与 M-B7/M-C5 横向面（外部门/结构对象本就无
+    can_delete，此处为纵深防御）。特权用户（superuser 或总管理员组，
+    R1 走组权限行权）放行后仍须过 Wagtail 默认 can_delete——守卫从不
+    新增授权。
+    """
+    if is_privileged(request.user):
+        return None
+    messages.error(
+        request,
+        f"「{page.title}」未删除：永久删除仅限总管理员（PRD §8；ROLE_PERMISSION_MATRIX §3.4）。",
+    )
+    return HttpResponseRedirect(reverse("wagtailadmin_explore", args=[page.get_parent().id]))
+
+
+@hooks.register("before_bulk_action")
+def refuse_non_admin_bulk_page_deletion(request, action_type, objects, bulk_action):
+    """权限面守卫——批量删除动线：非特权用户的页面批量删除整批取消。
+
+    仅拦 ``delete`` 且批内全为 Page 的动作；词表等非页面模型的批量
+    删除不在本守卫面（其模型级权限只授总管理员组，矩阵 §3.2）。
+    返回响应即在事务内取消整个动作（含同批其余页面）。
+    """
+    if action_type != "delete":
+        return None
+    if not objects or not all(isinstance(o, Page) for o in objects):
+        return None
+    if is_privileged(request.user):
+        return None
+    messages.error(
+        request,
+        f"批量删除已取消：永久删除仅限总管理员（PRD §8；ROLE_PERMISSION_MATRIX §3.4，"
+        f"涉及 {len(objects)} 页）。",
+    )
+    return HttpResponseRedirect(reverse("wagtailadmin_home"))

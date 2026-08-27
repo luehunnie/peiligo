@@ -30,6 +30,10 @@ class HomeTests(WagtailPageTestCase):
         """
         root_page = Page.get_first_root_node()
         Site.objects.create(hostname="testsite", root_page=root_page, is_default_site=True)
+        # 建站会写入进程级 site root paths 缓存，事务回滚不回滚缓存——用例
+        # 结束即清理，避免后续测试读到已回滚的 Site（如 wagtailadmin_home
+        # 的 get_site_for_user 会按缓存 id 直查 Site 表）
+        self.addCleanup(Site.clear_site_root_paths_cache)
         self.homepage = HomePage(title="Home")
         root_page.add_child(instance=self.homepage)
 
