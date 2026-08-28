@@ -92,13 +92,18 @@ class MaterialPage(SectionContextMixin, LifecycleStateMixin, Page):
     字段纯推导（§14）。
     """
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "学习资料页"
+        verbose_name_plural = "学习资料页"
+
     parent_page_types = ["departments.DepartmentContainerPage"]  # 唯一父级（§1.4）
     subpage_types = []  # 叶子（§1.4）
     ALLOWED_SECTIONS = {"materials"}  # §1.4 板块级限制
     base_form_class = ParentContextPageForm
 
     summary = models.TextField("摘要")
-    body = StreamField(CONTENT_BLOCKS, min_num=1, use_json_field=True)
+    body = StreamField(CONTENT_BLOCKS, min_num=1, use_json_field=True, verbose_name="正文")
     discipline = models.ForeignKey(
         Discipline, on_delete=models.PROTECT, verbose_name="学科·专业方向"
     )
@@ -158,12 +163,17 @@ class SoftwareToolPage(SectionContextMixin, LifecycleStateMixin, Page):
     expire_at clean 强制空（§16.1）；生命周期五状态零字段纯推导（§14）。
     """
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "软件与工具页"
+        verbose_name_plural = "软件与工具页"
+
     parent_page_types = ["departments.DepartmentContainerPage"]
     subpage_types = []
     ALLOWED_SECTIONS = {"software"}
     base_form_class = ParentContextPageForm
 
-    body = StreamField(SOFTWARE_TOOL_BLOCKS, min_num=1, use_json_field=True)
+    body = StreamField(SOFTWARE_TOOL_BLOCKS, min_num=1, use_json_field=True, verbose_name="正文")
     platforms = ParentalManyToManyField(Platform, blank=False, verbose_name="适用平台")
     source_url = models.URLField("来源链接或第三方网盘链接")
     license_note = models.TextField("授权或费用说明")

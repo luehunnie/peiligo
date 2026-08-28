@@ -49,6 +49,11 @@ class GuidePage(SectionContextMixin, LifecycleStateMixin, Page):
     生命周期五状态零字段纯推导（§14）。
     """
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "校园指南页"
+        verbose_name_plural = "校园指南页"
+
     parent_page_types = ["departments.DepartmentContainerPage"]  # 唯一父级（§1.4）
     subpage_types = []  # 叶子（§1.4）
     ALLOWED_SECTIONS = {"guide"}  # §1.4 板块级限制
