@@ -504,6 +504,46 @@ form[role="search"] button:hover {
     color: var(--text-secondary);
 }
 
+/* ------------------------------------------------------------------ */
+/* M5.2 到期归档：板块页头归档入口 / expired 徽标与横幅                  */
+/*（PUBLISH_ARCHIVE_SCHEDULING §6.1/§6.3——徽标为可见文字，非仅灰化） */
+/* ------------------------------------------------------------------ */
+
+/* 板块页头「历史归档」入口（页内入口，§6.1 B 阶段裁定） */
+.page-head .archive-entry {
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* expired 条目「已过期」文字徽标（归档视图与搜索结果同款，§7.1） */
+.badge-expired {
+    display: inline-block;
+    margin-left: var(--space-xs);
+    padding: 1px var(--space-xs);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    line-height: var(--line-height-tight);
+    color: var(--text-secondary);
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    vertical-align: 2px;
+}
+
+/* expired 页页首「已过期」横幅（§6.3 载体①：原 URL 放行渲染的标注位） */
+.expired-banner {
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--text-secondary);
+    border-radius: var(--radius-sm);
+}
+
 /* 全空态：居中白色虚线卡（DIRECT_REUSE 旧站 empty-state） */
 .empty-state {
     margin-top: var(--space-xl);

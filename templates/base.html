@@ -66,6 +66,14 @@
         </header>
 
         <main id="main-content" class="wrap">
+        {# M5.2（§6.3 载体①）：expired 页原 slug URL 放行渲染，页首「已过期」 #}
+        {# 横幅（非 expired 页 page.expired 恒 False；无 page 语境的自定义视图 #}
+        {# 模板中该条件静默为假，不渲染）。 #}
+        {% if page.expired %}
+        <div class="expired-banner" role="status">
+            此内容已过期，归档保留供查阅；最新信息请以发布部门口径为准。
+        </div>
+        {% endif %}
         {% block content %}{% endblock %}
         </main>
 

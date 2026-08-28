@@ -529,6 +529,7 @@ S1 判定注记（对象级 `go_live_at` 残留语义；Wagtail 7.4.2 源码亲�
 | **CURRENT_DEFAULT**（当前有效集） | 状态 ∈ {S2 live} 的内容页（draft/scheduled 未到点/expired/unpublished 一律不含） | 前台路由（非本集具名 URL＝404）、首页、各板块默认列表——**V1 全部前台位置消费此集** | V1 即生效（本文冻结语义；模板/queryset 随 B 阶段前台落地） |
 | **HISTORICAL**（历史归档集） | CURRENT_DEFAULT ∪ {S3 expired}；expired 条目须标注"已过期" | 各板块"历史归档"视图 | **M5.2**（`PUBLISH_ARCHIVE_SCHEDULING.md` §6/§7 总表） |
 | **ARCHIVE-SEARCH**（归档搜索口径） | 站内搜索默认包含 expired 通知并标注 | 搜索结果 | **M5.2**（同上 §7）；索引字段映射归 M3.4（§20–§24，本文零预设） |
+| **差异登记：HISTORICAL 消费位的具名 URL 放行**（M5.2 载体①补记行，§6.3-4 义务兑现） | HISTORICAL 同谓词（S2 ∪ S3）——五类内容页路由叶子判定对 S3 放行渲染（页首「已过期」横幅），S0/S1/S4 具名 URL 仍 404 | expired 内容页具名 URL（`PUBLISH_ARCHIVE_SCHEDULING.md` §6.3 载体①；B 阶段裁定随 arch/m5.2 实现留痕——commit 与测试注释） | **M5.2 已落地**（`LifecycleStateMixin.route` 覆写；与 CURRENT_DEFAULT 行"非本集具名 URL＝404"的字面差异即本行登记对象，该行语义不动） |
 
 **R4 张力处置（PRD §7.1 第三句 vs Wagtail 默认 live-only——显式登记，禁止假装已解决）**：PRD §7.1"到期后自动退出首页和默认列表，但保留在历史归档及站内搜索中"（PRD §8"通知到期自动归档"同义）在 V1 拆为两层兑现——①**数据保留层（即时成立，本文冻结）**：expired＝带 `set_expired` 的 unpublish（E7），内容、全部修订、slug/URL 全保留、可随时重新发布（E9），"保留"自 V1 第一天为真（PS-24）；②**查询可见层（未解决，M5.2 契约）**：归档视图与"搜索含 expired"是视图级自定义（自定义 queryset 包含 `expired`＋标注——审计 §3.3"注意张力"/风险 R4：漏做即违反 PRD §7.1 验收），**在 M5.2 落地前，本仓库任何前台/搜索实现与文档不得声称已提供历史归档查询**；V1 现状＝CURRENT_DEFAULT 全覆盖，到期即前台不可见。该缺口在此登记为 M5.2 的输入，**本文不关闭它**（PS-26）。unpublished 恒不入三口径（PS-25；M5.2 §7 同口径，本文先冻结语义）。
 

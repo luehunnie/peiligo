@@ -17,6 +17,7 @@
 from departments.models import Department
 from django.db.models import Q
 from guides.models import GuideCategory, GuidePage
+from notices.lifecycle import VISIBILITY_CURRENT_DEFAULT, VISIBILITY_HISTORICAL
 from notices.models import ArticlePage, NoticePage, Tag
 from resources.models import Discipline, MaterialPage, MaterialType, Platform, SoftwareToolPage
 
@@ -202,11 +203,30 @@ def _current_default_search_queryset(model):
     return model.objects.live().filter(expired=False)
 
 
-def _per_type_queryset(model, filters):
+def _historical_search_queryset(model):
+    """ARCHIVE-SEARCH/HISTORICAL＝§16.4 放宽谓词 ``Q(live) ∪ Q(expired)``
+    （M5.2 §7.1，S2 ∪ S3 状态中性——过期通知与过期文章同入，§7.1 类型
+    口径裁决；FilterField("expired") 已声明，零结构变更/零新增索引字段）。
+    与 ``_current_default_search_queryset`` 同源的逐类型形态（§6.2-2）；
+    消费位＝/search/ 搜索入口与板块归档视图，板块默认列表入口不消费
+    （§7 入口绑定义务，PA-31 守门）。"""
+    return model.objects.filter(Q(live=True) | Q(expired=True))
+
+
+def _visibility_queryset(model, visibility):
+    """入口绑定的可见性谓词分发（§7）：默认 CURRENT_DEFAULT（保守缺省——
+    未显式绑定口径的调用方不得意外放宽），HISTORICAL 仅由搜索入口与
+    归档视图显式传入。"""
+    if visibility == VISIBILITY_HISTORICAL:
+        return _historical_search_queryset(model)
+    return _current_default_search_queryset(model)
+
+
+def _per_type_queryset(model, filters, visibility=VISIBILITY_CURRENT_DEFAULT):
     """filter-first 组合执行（§21.6）：全部维度过滤＋可见性谓词先施加，
     再检索。板块维度＝path 路径区间（§20.1 表 A FilterField("path")：
     ``path__startswith`` 即板块子树路径区间；§21.1 板块维度语义）。"""
-    queryset = _current_default_search_queryset(model)
+    queryset = _visibility_queryset(model, visibility)
     if filters.section is not None:
         queryset = queryset.filter(path__startswith=filters.section.path)
     if filters.department is not None:
@@ -222,17 +242,23 @@ def _per_type_queryset(model, filters):
     return queryset
 
 
-def search_pages(filters):
+def search_pages(filters, visibility=VISIBILITY_CURRENT_DEFAULT):
     """按筛选状态返回五类内容页结果（§21.1 逐类型查询＋合并）。
 
     type 已提供 → 仅查该类型；否则五类型各查一次（事实 3）。合并排序键
     ＝-first_published_at（§21.6，各类型内已保序，Python 稳定合并）。
     返回逐类型 specific 实例列表（渲染直接消费）。
+
+    ``visibility``＝入口绑定（§7 补充口径，M5.2）：板块默认列表入口
+    （SectionPage，含 q 筛选态）缺省 CURRENT_DEFAULT；/search/ 搜索入口
+    传 HISTORICAL（ARCHIVE-SEARCH：expired 默认命中并标注，§7.1）；
+    板块归档视图传 HISTORICAL（§6.1）。共用代码层不固定口径、由入口
+    显式绑定，expired 不得经共用层泄入默认列表（PA-31）。
     """
     models = (filters.page_type,) if filters.page_type else SEARCHABLE_PAGE_MODELS
     merged = []
     for model in models:
-        merged.extend(_per_type_queryset(model, filters))
+        merged.extend(_per_type_queryset(model, filters, visibility))
     # 降序稳定排序：同刻并列保持类型顺序（notice→…→guide）。
     merged.sort(
         key=lambda page: (page.first_published_at is not None, page.first_published_at),
