@@ -34,6 +34,11 @@ SECTIONS = [
 class HomePage(Page):
     """首页（第 1 层，全站唯一实例；挂载约束 IA §5）。"""
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "首页"
+        verbose_name_plural = "首页"
+
     parent_page_types = ["wagtailcore.Page"]  # 仅站点根（Wagtail Root）
     subpage_types = ["home.SectionPage"]  # 仅五个一级板块页
 
@@ -59,6 +64,11 @@ class SectionPage(Page):
 
     类型名为工作名，正式类型清单与命名由 M3.1 终判（IA §5 表头注）。
     """
+
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "板块页"
+        verbose_name_plural = "板块页"
 
     parent_page_types = ["home.HomePage"]  # 仅首页
     subpage_types = ["departments.DepartmentContainerPage"]  # 仅部门容器

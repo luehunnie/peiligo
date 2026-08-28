@@ -20,6 +20,9 @@
         {% if search_filters.department %}{{ page.title }}·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}{{ page.title }}{% endif %}
     </h1>
     <p class="section-lede">{% include "includes/section_positioning.html" with slug=page.slug only %}</p>
+    {# M5.2（§6.1 入口呈现＝页内入口裁定）：板块页头历史归档入口—— #}
+    {# 含已过有效期内容，expired 条目带「已过期」徽标。 #}
+    <p class="archive-entry"><a href="/{{ page.slug }}/archive/">{{ page.title }}·历史归档</a>（含已过有效期内容）</p>
 </div>
 
 {% comment %}

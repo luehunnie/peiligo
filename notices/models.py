@@ -222,6 +222,11 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pag
     生命周期五状态零字段纯推导（§14，LifecycleStateMixin）。
     """
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "通知页"
+        verbose_name_plural = "通知页"
+
     parent_page_types = ["departments.DepartmentContainerPage"]  # 唯一父级（§1.4）
     subpage_types = []  # 叶子（§1.4：内容页均为叶子，树深固定四层）
     ALLOWED_SECTIONS = {"chronicle", "events"}  # §1.4 板块级限制
@@ -229,7 +234,7 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pag
     base_form_class = ParentContextPageForm
 
     summary = models.TextField("摘要")
-    body = StreamField(CONTENT_BLOCKS, min_num=1, use_json_field=True)
+    body = StreamField(CONTENT_BLOCKS, min_num=1, use_json_field=True, verbose_name="正文")
     department = models.ForeignKey(
         "departments.Department",
         on_delete=models.PROTECT,
@@ -283,13 +288,18 @@ class ArticlePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pa
     如填写则须未来，§16.2）；生命周期五状态零字段纯推导（§14）。
     """
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "文章页"
+        verbose_name_plural = "文章页"
+
     parent_page_types = ["departments.DepartmentContainerPage"]
     subpage_types = []
     ALLOWED_SECTIONS = {"chronicle", "events"}
     base_form_class = ParentContextPageForm
 
     summary = models.TextField("摘要")
-    body = StreamField(CONTENT_BLOCKS, min_num=1, use_json_field=True)
+    body = StreamField(CONTENT_BLOCKS, min_num=1, use_json_field=True, verbose_name="正文")
     department = models.ForeignKey(
         "departments.Department",
         on_delete=models.PROTECT,

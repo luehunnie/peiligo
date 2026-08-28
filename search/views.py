@@ -14,7 +14,14 @@ from search import services
 def search(request):
     filters = services.resolve_search_filters(request.GET)
     # 无参数（解析后无任何有效维度）＝表单态，不查全量（IA §9.2 #1）。
-    results = services.search_pages(filters) if filters.filter_active else []
+    # 入口绑定（M5.2 §7/§7.1）：搜索入口＝ARCHIVE-SEARCH（HISTORICAL 同
+    # 谓词）——expired 默认命中，结果条目经内容卡带「已过期」标注；无
+    # 用户开关（§21.4 零新增公开参数）。
+    results = (
+        services.search_pages(filters, visibility=services.VISIBILITY_HISTORICAL)
+        if filters.filter_active
+        else []
+    )
     return TemplateResponse(
         request,
         "search/search.html",

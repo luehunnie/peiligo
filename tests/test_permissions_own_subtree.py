@@ -263,8 +263,10 @@ class T04ExpiryArchiveTests(TestCase):
         self.assertFalse(page.live, "到期自动下线（M-A7）")
         self.assertTrue(page.expired, "expired 标记置位")
         anon = Client()
-        self.assertEqual(anon.get(page.url).status_code, 404, "前台 404（N13）")
-        self.assertFalse(search_hit(anon, "A到期活动通知", "a-exp-notice"), "默认搜索消失（N13）")
+        # M5.2 §7.2 登记差异：expired 具名 URL 放行渲染（载体①）＋搜索纳入
+        # （ARCHIVE-SEARCH）；默认列表退出断言见 test_current_default.py。
+        self.assertEqual(anon.get(page.url).status_code, 200, "expired URL 放行（M5.2 载体①）")
+        self.assertTrue(search_hit(anon, "A到期活动通知", "a-exp-notice"), "搜索命中（M5.2）")
         self.assertEqual(rev_count(page.pk), revisions_before, "内容与修订保留在库")
         # 部门账号后台仍可见（M-A1）
         client = login_client(w["user_a"])

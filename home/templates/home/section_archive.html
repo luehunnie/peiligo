@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block body_class %}template-sectionarchive{% endblock %}
+
+{% block title %}{{ section.title }}·历史归档{% endblock %}
+
+{% comment %}
+M5.2 板块历史归档视图（PUBLISH_ARCHIVE_SCHEDULING §6.1；MB9）。消费
+HISTORICAL 集（live ∪ expired）：live 与 expired 条目同序混排、发布时间
+倒序、无降权；expired 条目经内容卡带「已过期」徽标（与搜索标注同语义
+同文案，§7.1）。自定义列表视图＝IA §10 #7–#8 家族（/search/ 同款）：
+一律 noindex＋canonical 指向去参基础 URL——归档成员随 E7/E9 小时级变动，
+不构成独立收录单元。
+{% endcomment %}
+{% block head_robots %}
+<meta name="robots" content="noindex">
+{% endblock head_robots %}
+{% block head_canonical %}
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}/{{ section.slug }}/archive/">
+{% endblock head_canonical %}
+
+{% block content %}
+{% with section_url="/"|add:section.slug|add:"/" %}
+{% include "includes/breadcrumb.html" with crumb_parent_title=section.title crumb_parent_url=section_url crumb_title="历史归档" only %}
+{% endwith %}
+
+<div class="page-head">
+    <h1>{{ section.title }}·历史归档</h1>
+    <p class="section-lede">
+        本板块内容按发布时间倒序留存，含已过有效期的条目。
+        <a href="/{{ section.slug }}/">返回{{ section.title }}</a>
+    </p>
+</div>
+
+{% if archive_entries %}
+<ul class="content-list">
+    {% for item in archive_entries %}
+    {% include "includes/content_card.html" with item=item only %}
+    {% endfor %}
+</ul>
+{% else %}
+<div class="empty-state">
+    <p class="empty-title">本板块暂无历史内容</p>
+    <p class="empty-hint">各部门发布内容后，历史记录将在此留存。</p>
+    <a href="/{{ section.slug }}/">返回{{ section.title }}</a>
+</div>
+{% endif %}
+{% endblock content %}

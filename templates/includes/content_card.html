@@ -4,13 +4,16 @@
 meta → 标题 → 摘要 → 来源）。传入 item＝五类内容页 specific 实例；
 摘要位按类型取值：通知/文章/资料＝summary，软件＝授权或费用说明，
 指南＝地点。筛选/分页属 M3.4/MB 阶段，本卡为纯链接卡。
+M5.2（§6.1/§7.1 标注义务）：expired 条目带可见「已过期」文字徽标——
+仅归档视图与搜索结果（HISTORICAL/ARCHIVE-SEARCH 口径）会传入 expired
+条目；板块默认列表（CURRENT_DEFAULT）结构性不含，徽标自然不出现。
 {% endcomment %}
 <li>
     <a href="{% pageurl item %}">
         <p class="content-meta">
             {{ item.first_published_at|date:"Y-m-d" }} · {{ item.department }}{% if item.event_status %} · {{ item.event_status }}{% endif %}
         </p>
-        <h3>{{ item.title }}</h3>
+        <h3>{{ item.title }}{% if item.expired %} <span class="badge-expired">已过期</span>{% endif %}</h3>
         <p class="card-desc">
             {% if item.summary %}{{ item.summary }}{% elif item.license_note %}{{ item.license_note }}{% else %}{{ item.location }}{% endif %}
         </p>
