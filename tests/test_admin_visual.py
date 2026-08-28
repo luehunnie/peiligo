@@ -68,6 +68,13 @@ class BrandingTests(AdminVisualBase):
         self.assertIn("密码", html)
         self.assertIn("plg-brand__mark", html)
 
+    def test_dashboard_search_submit_value_is_chinese(self):
+        """AVR③-fix D4：sr-only 搜索提交按钮 value 中文化（上游硬编码无 trans）。"""
+        client = self.login()
+        html = client.get(reverse("wagtailadmin_home")).content.decode()
+        self.assertIn('value="搜索"', html)
+        self.assertNotIn('value="Search"', html)
+
 
 class LocaleResidualTests(TestCase):
     """§9 i18n 残留：项目级 zh_Hans 目录逐 msgid 补译（LOCALE_PATHS 优先合并）。"""
@@ -114,6 +121,48 @@ class LocaleResidualTests(TestCase):
                 '11 个页面<span class="w-sr-only">（Peiligo 内）</span>',
             )
 
+    def test_avr3_fix_defects_translated(self):
+        """AVR③-fix D1/D4：explorer root 横幅、分页统计、升级横幅逐 msgid 补译。"""
+        cases = [
+            # D1：explorer root 层提示横幅（explorable_index_results.html）
+            (
+                "The root level is where you can add new sites to your Wagtail"
+                " installation. Pages created here will not be accessible at any"
+                " URL until they are associated with a site.",
+                "根层级用于为 Wagtail 安装实例添加新站点。在此创建的页面在关联站点之前，"
+                "将无法通过任何 URL 访问。",
+            ),
+            (
+                "If you just want to add pages to an existing site, create them"
+                " as children of the homepage instead.",
+                "如果只是想向现有站点添加页面，请改为在首页下创建子页面。",
+            ),
+            (
+                "Pages created here will not be accessible at any URL. To add"
+                " pages to an existing site, create them as children of the"
+                " homepage.",
+                "在此创建的页面将无法通过任何 URL 访问。"
+                "若要向现有站点添加页面，请在首页下创建子页面。",
+            ),
+            # D1：分页统计（_page_title_column_header.html 三个 scope 变体）
+            (
+                "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s",
+                "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s",
+            ),
+            (
+                "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s"
+                " across entire site.",
+                "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s"
+                "（整站范围）。",
+            ),
+            # D4：升级提示横幅（home/upgrade_notification.html）
+            ("Wagtail upgrade available", "Wagtail 有可用升级"),
+            ("Read the release notes.", "阅读版本说明。"),
+        ]
+        with translation.override("zh-hans"):
+            for msgid, expected in cases:
+                self.assertEqual(translation.gettext(msgid), expected, msg=f"未补译：{msgid!r}")
+
 
 class AdminCssSelfChecks(TestCase):
     """§8/§11 CSS 结构自检：四象限齐全 + 禁 !important + :root 不越权。"""
@@ -131,6 +180,19 @@ class AdminCssSelfChecks(TestCase):
             self.css.count("--w-color-secondary-75:"), 4, "四象限各钉一次 secondary-75"
         )
         self.assertEqual(self.css.count("--w-color-secondary-hue:"), 4)
+
+    def test_avr3_fix_dark_info_token_and_title_converged(self):
+        """AVR③-fix D2/D3：深色象限各钉一行 info-50；编辑器标题字号收敛一条规则。"""
+        self.assertEqual(
+            self.css.count("--w-color-info-50:"),
+            2,
+            "info-50 须在两个深色象限各钉一次（.w-theme-dark 与 system+深色 OS）",
+        )
+        title_rule = re.search(
+            r"\.w-panel\.title:nth-child\(-n\+2\) :is\([^)]*\)[^{}]*\{[^}]*\}", self.css
+        )
+        self.assertIsNotNone(title_rule, "D3：须有编辑器标题字号收敛规则")
+        self.assertIn("font-size: 1.5rem", title_rule.group(0))
 
     def test_no_important_and_root_holds_only_brand_tokens(self):
         rules = re.sub(r"/\*.*?\*/", "", self.css, flags=re.S)  # 只查规则区，头注提及该禁令本身

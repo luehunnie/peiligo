@@ -1,6 +1,6 @@
 {% extends "wagtailadmin/generic/base.html" %}
 {% load wagtailadmin_tags i18n %}
-{# AVR②（契约 §5 仪表盘标题）。上游：Wagtail 7.4.2 wagtailadmin/home.html（56 行）。唯一改动：branding_welcome 块由 {{ site_name }} 改为固定标题“Peiligo 内容管理”（WAGTAIL_SITE_NAME 保持纯“Peiligo” 供前台 site_brand，故不借 settings 承载中文标题）。升级 7.4.x 时请与上游重新 diff；其余逐行保持上游原样。 #}
+{# AVR②（契约 §5 仪表盘标题）+ AVR③-fix D4。上游：Wagtail 7.4.2 wagtailadmin/home.html（56 行）。改动两处：① branding_welcome 块由 {{ site_name }} 改为固定标题“Peiligo 内容管理”（WAGTAIL_SITE_NAME 保持纯“Peiligo” 供前台 site_brand，故不借 settings 承载中文标题）；② 仪表盘搜索 sr-only 提交按钮 value="Search" → “搜索”（上游硬编码无 trans，读屏用户可感知的唯一英文残留）。升级 7.4.x 时请与上游重新 diff；其余逐行保持上游原样。 #}
 
 {% block extra_css %}
     {{ block.super }}
@@ -29,7 +29,7 @@
                     {% for field in search_form %}
                         {% formattedfield field=field sr_only_label=True icon="search" %}
                     {% endfor %}
-                    <div class="submit w-sr-only"><input type="submit" value="Search" class="button" /></div>
+                    <div class="submit w-sr-only"><input type="submit" value="搜索" class="button" /></div>
                 </form>
 
             </div>

@@ -16,6 +16,8 @@
  *   4. 仪表盘（§5）：内容列 ≤75rem 左对齐、概览紧凑化、搜索宽度
  *   5. 页面浏览器（§6）：选中行 3px 品牌导轨
  *   6. 可达性地板（§10）：focus-visible、reduced-motion、窄屏
+ *   7. 登录页品牌（§3）
+ *   8. 编辑器标题输入（AVR③-fix D3）：标题字段超大字号收敛
  *
  * 主题切换用 Wagtail 内置开关（/admin/account/ 偏好），本文件零 JS。
  * 品牌色对比度（契约 §10 AA）：浅色 #2F7A6E 对 #F5F7FA = 4.73:1；
@@ -107,6 +109,12 @@
     --w-color-secondary-100: var(--plg-brand-text-dark);
 
     --w-color-surface-page: var(--plg-canvas-dark);
+
+    /* AVR③-fix D2：info-50 原语（hsl 三件套）上游仅在 :root 定义、深色象限
+       不重映射，致 .help-info 横幅（explorer root 提示）在深色下呈浅蓝卡片。
+       此处按深色令牌体系直钉为品牌深底（与 secondary-50 同值），横幅文字
+       走深色主题上下文墨色，对比度 ≈12:1；图标 info-100 为装饰性，不受影响。 */
+    --w-color-info-50: var(--plg-brand-tint-deep);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -118,6 +126,8 @@
         --w-color-secondary-75: #82c3b2;
         --w-color-secondary-100: var(--plg-brand-text-dark);
         --w-color-surface-page: var(--plg-canvas-dark);
+        /* AVR③-fix D2：system+深色 OS 象限同钉（见 .w-theme-dark 注）。 */
+        --w-color-info-50: var(--plg-brand-tint-deep);
     }
 }
 
@@ -272,4 +282,18 @@
 .login-logo .plg-brand__name {
     color: var(--w-color-secondary);
     font-size: 1.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* 8. 编辑器标题输入（AVR③-fix D3，契约 §7“不用夸张超大标题输入”）      */
+/*    Wagtail 7.4.2 core.css 对前两个 .w-panel.title 的输入钉 1.875rem */
+/*    /800（约 30px 全宽），与表单其余字段密度失衡；此处一条受控规则    */
+/*    收敛回标准 title 字段档（1.5rem/700，即 core 的 :where 基线）。   */
+/*    选择器与上游逐字一致（同特异性 + 晚加载即胜出，零 !important）；  */
+/*    颜色仍走 --w-color-text-context 令牌，深/浅主题对比度不变。       */
+/* ------------------------------------------------------------------ */
+
+.w-panel.title:nth-child(-n+2) :is(input, textarea, .Draftail-Editor .public-DraftEditor-content) {
+    font-size: 1.5rem;
+    font-weight: 700;
 }

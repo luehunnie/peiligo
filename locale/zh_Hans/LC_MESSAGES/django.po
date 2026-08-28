@@ -79,3 +79,43 @@ msgstr[0] "%(total)s 张图片<span class=\"w-sr-only\">（%(site_name)s 内）<
 msgid "%(total)s Document <span class=\"w-sr-only\">created in %(site_name)s</span>"
 msgid_plural "%(total)s Documents <span class=\"w-sr-only\">created in %(site_name)s</span>"
 msgstr[0] "%(total)s 个文档<span class=\"w-sr-only\">（%(site_name)s 内）</span>"
+
+# ── AVR③-fix D1（03-glm-review-report §4）上游 zh_Hans 缺口补译 ──────────
+# wagtail/admin/templates/wagtailadmin/pages/explorable_index_results.html
+# （explorer root 层提示横幅整段英文；“现在配置一个站点。”链接上游已译，不重）。
+# 前两条为有 add_site 权限（超管）所见版本，第三条为无权限版本。
+msgid "The root level is where you can add new sites to your Wagtail installation. Pages created here will not be accessible at any URL until they are associated with a site."
+msgstr "根层级用于为 Wagtail 安装实例添加新站点。在此创建的页面在关联站点之前，将无法通过任何 URL 访问。"
+
+msgid "If you just want to add pages to an existing site, create them as children of the homepage instead."
+msgstr "如果只是想向现有站点添加页面，请改为在首页下创建子页面。"
+
+msgid "Pages created here will not be accessible at any URL. To add pages to an existing site, create them as children of the homepage."
+msgstr "在此创建的页面将无法通过任何 URL 访问。若要向现有站点添加页面，请在首页下创建子页面。"
+
+# wagtail/admin/templates/wagtailadmin/pages/listing/_page_title_column_header.html
+# （分页统计「1-1 of 1 页面」中英混排；三个 scope 变体一并补齐，
+# %(model_name)s 为模型中文名（如“页面”），沿用本文件中文紧贴占位符的口径）。
+#, python-format
+msgid "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s"
+msgstr "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s"
+
+#, python-format
+msgid "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s across entire site."
+msgstr "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s（整站范围）。"
+
+#, python-format
+msgid "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s in '<span class=\"w-title-ellipsis\">%(title)s</span>'."
+msgstr "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s（在“<span class=\"w-title-ellipsis\">%(title)s</span>”内）。"
+
+# ── AVR③-fix D4：wagtail/admin/templates/wagtailadmin/home/upgrade_notification.html
+# （dev 超管可见的升级提示横幅；“关闭”上游已译，不重）。
+msgid "Wagtail upgrade available"
+msgstr "Wagtail 有可用升级"
+
+#, python-format
+msgid "Your version: <strong>%(current_version)s</strong>. New version: <strong data-w-upgrade-target=\"latestVersion\"></strong>."
+msgstr "当前版本：<strong>%(current_version)s</strong>。最新版本：<strong data-w-upgrade-target=\"latestVersion\"></strong>。"
+
+msgid "Read the release notes."
+msgstr "阅读版本说明。"
