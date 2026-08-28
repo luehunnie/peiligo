@@ -158,7 +158,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+# M5.1（admin 中文化）：产品级简体中文——Django admin 与 Wagtail admin
+# 均自带 zh_Hans 翻译（USE_I18N=True 前提下激活）；展示层口径，
+# 非业务语义，零迁移。
+LANGUAGE_CODE = "zh-hans"
 
 # 业务时区＝钟面层口径（管理员输入/前台显示；PUBLISH_ARCHIVE_SCHEDULING
 # §4.2/§4.4）：调度判定层为 aware 绝对时刻比较，不受本值影响；USE_TZ

@@ -166,6 +166,11 @@ class DepartmentContainerPage(Page):
     子页＝五类内容页白名单（§1.4 挂载表终态；容器下不得再建容器）。
     """
 
+    # M5.1 admin 中文化：后台展示层类型名（列表/新建选择器/历史）。
+    class Meta:
+        verbose_name = "部门容器"
+        verbose_name_plural = "部门容器"
+
     parent_page_types = ["home.SectionPage"]  # 仅板块页下，不嵌套容器
     subpage_types = [
         "notices.NoticePage",
