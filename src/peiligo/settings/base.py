@@ -212,7 +212,18 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
 
 # Wagtail settings
 
-WAGTAIL_SITE_NAME = "peiligo"
+# AVR②（ADMIN_VISUAL_RECOVERY_CONTRACT §3）：品牌名统一为大小写规范的
+# “Peiligo”（禁造中文品牌名）。该值同时供前台 site_brand 使用，故仅改
+# 大小写；后台标题“Peiligo 内容管理”由 templates/wagtailadmin/home.html
+# 覆盖承担，不在此塞中文。
+WAGTAIL_SITE_NAME = "Peiligo"
+
+# AVR②：Wagtail 7.4.2 zh_Hans 目录缺少的少量 admin 文案（定时发布弹窗、
+# 锁定开关说明、“被引用 N 次”）经项目级目录覆盖补译（Django 官方
+# LOCALE_PATHS 逐 msgid 合并，优先于应用内目录；见 locale/zh_Hans/）。
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
 
 # A3.1（CONTENT_MODEL §13）：受控 Snippet/设置模型默认主键取 BigAutoField
 # （Django 官方推荐口径），消除 models.W042；不影响既有表与历史 migration。
