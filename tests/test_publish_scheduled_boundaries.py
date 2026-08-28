@@ -231,7 +231,8 @@ class ExpireBoundaryTests(BoundaryBase):
         page = NoticePage.objects.get(pk=page.pk)
         self.assertEqual(page.lifecycle_state, LIFECYCLE_EXPIRED)
         self.assertFalse(page.in_current_default)
-        self.assertEqual(self.client.get(page.url).status_code, 404)
+        # M5.2 §7.2 登记差异：expired 具名 URL 由 404 放行渲染（载体①）。
+        self.assertEqual(self.client.get(page.url).status_code, 200)
         self.assertNotIn("B08到期页", self.client.get(self.section.url).content.decode())
         self.assertEqual(page.slug, "b08")  # slug/URL 零删除
         self.assertEqual(
@@ -292,18 +293,22 @@ class ExpireBoundaryTests(BoundaryBase):
         page.refresh_from_db()
         self.assertEqual(page.lifecycle_state, LIFECYCLE_EXPIRED)  # 按新值生效
 
-    def test_pa24_expired_404_no_archive_surface(self):
-        """PA-24：V1 现状＝到期即前台不可见；归档/历史搜索归 M5.2（PS-26），
-        不得声称已提供历史归档查询——URL 位点零 archive 留痕。"""
+    def test_pa24_expired_renders_archive_surface_registered(self):
+        """PA-24（M5.2 起口径翻转）：V1 期守门「到期 404＋URL 位点零
+        archive 留痕」由 M5.2 正式落地取代（§6.3 载体①/§6.1 归档视图）——
+        expired 原 URL 放行渲染；默认列表仍不含；archive 位点由零改在册
+        （section-archive，五板块归档视图）。"""
         page = make_notice(self.container, slug="pa24", title="PA24过期页", publish=True)
         set_expire_at(page, timezone.now() - HOUR)
         run_publish_scheduled_at(timezone.now())
         page.refresh_from_db()
-        self.assertEqual(self.client.get(page.url).status_code, 404)
+        self.assertEqual(self.client.get(page.url).status_code, 200)  # 载体①放行
         self.assertNotIn("PA24过期页", self.client.get(self.section.url).content.decode())
         names = set()
         _collect_url_names(get_resolver(), names)
-        self.assertEqual([n for n in names if "archive" in n], [])  # 无归档视图位点
+        self.assertEqual(
+            sorted(n for n in names if "archive" in n), ["section-archive"]
+        )  # M5.2 归档视图在册（唯一位点）
 
     def test_pa26_non_live_never_expires(self):
         """PA-26：draft/scheduled 页的 expire_at 永不触发转换（过期集自带

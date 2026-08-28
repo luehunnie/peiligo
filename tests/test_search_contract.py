@@ -1,8 +1,9 @@
 """M3.4 搜索契约行为测试（CONTENT_MODEL §21；批令 §18 清单）。
 
 断言面：§21 筛选四维＋组合＋非法值视同未提供（200 回退全量）；§21.5
-可见性四排除＋Expired（CURRENT_DEFAULT 同谓词 live∧¬expired）；IA §9
-URL 全 GET 可分享；IA §10 收录（noindex/去参 canonical/§8.2 筛选态标题）。
+可见性（draft/scheduled/unpublished 三排除＋板块默认列表 CURRENT_DEFAULT；
+M5.2 起 /search/ 入口升级 ARCHIVE-SEARCH 含 expired，§7.1/§7.2 登记）；
+IA §9 URL 全 GET 可分享；IA §10 收录（noindex/去参 canonical/§8.2 筛选态标题）。
 中文检索只测契约（整 token 命中——E2 simple 语义下 CJK 连续串成单
 token），不虚构分词质量。词表 M2M 名文本依赖 update_index 批量重建
 （发布期即时索引不捕捉 cluster M2M 变更——上游时机限制，登记见 impl
@@ -165,9 +166,17 @@ class FilterDimensionTests(SearchContractTestCase):
 
 
 class VisibilityTests(SearchContractTestCase):
-    """§21.5/PS-33：CURRENT_DEFAULT＝§16.4 同谓词 live∧¬expired。"""
+    """§21.5 可见性（M5.2 口径升级后）：
 
-    def test_four_exclusions_and_expired(self):
+    - draft/scheduled/unpublished 三排除不变（PS-25/PS-33 守门对象全部
+      保持，§7.2 对照表行 6）——搜索与板块默认列表双位置均不可见；
+    - expired 由排除改纳入（§7.2 行 6 登记的唯一差异，其 §21.5 行预告
+      授权）：板块默认列表仍不含（入口绑定＝CURRENT_DEFAULT，PA-31），
+      /search/ 搜索入口默认命中（ARCHIVE-SEARCH，PA-33——完整成对断言
+      见 test_archive_search.py）。
+    """
+
+    def test_three_exclusions_hold_in_both_entries(self):
         from tests.helpers import future
 
         container = self.notice.get_parent().specific
@@ -175,13 +184,20 @@ class VisibilityTests(SearchContractTestCase):
         scheduled = make_notice(container, slug="v-sched", title="预约态通知", schedule_at=future())
         unpublished = make_notice(container, slug="v-unpub", title="已下线通知", publish=True)
         unpublished.unpublish()
-        expired = make_notice(container, slug="v-exp", title="已到期通知", publish=True)
-        expire_page(expired)
-        for page in (draft, scheduled, unpublished, expired):
+        for page in (draft, scheduled, unpublished):
             with self.subTest(state=page.slug):
                 self.assertEqual(self._pks("/search/", {"q": page.title}), set())
                 self.assertNotIn(page.pk, self._pks("/chronicle/"))
         self.assertIn(self.notice.pk, self._pks("/chronicle/"))
+
+    def test_expired_excluded_from_default_list_only(self):
+        """M5.2 §7：expired 不入板块默认列表（CURRENT_DEFAULT 入口绑定），
+        但经 /search/ 入口命中（ARCHIVE-SEARCH 同谓词放宽）。"""
+        container = self.notice.get_parent().specific
+        expired = make_notice(container, slug="v-exp", title="已到期通知", publish=True)
+        expire_page(expired)
+        self.assertNotIn(expired.pk, self._pks("/chronicle/"))
+        self.assertIn(expired.pk, self._pks("/search/", {"q": "已到期通知"}))
 
 
 class SeoTests(SearchContractTestCase):

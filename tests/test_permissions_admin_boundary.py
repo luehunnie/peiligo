@@ -363,21 +363,28 @@ class T16BoundaryTests(TestCase):
         }
 
     def test_frontend_four_states(self):
-        """① 仅已发布内容前台可见（N13）。"""
+        """① 已发布内容前台可见；草稿/下线 404（N13）。M5.2 §7.2 登记差异：
+        expired 具名 URL 由 404 改放行渲染（载体①）——带「已过期」横幅。"""
         anon = Client()
         codes = {k: anon.get(p.url).status_code for k, p in self.states.items()}
         self.assertEqual(codes["live"], 200, f"实测：{codes}")
-        for key in ("draft", "unpublished", "expired"):
+        for key in ("draft", "unpublished"):
             self.assertEqual(codes[key], 404, f"{key} 前台 404（N13）；实测：{codes}")
+        response = anon.get(self.states["expired"].url)
+        self.assertEqual(response.status_code, 200, "expired 载体①放行（M5.2）")
+        self.assertContains(response, "已过期")
 
     def test_search_only_live(self):
-        """① 默认搜索：已发布命中，草稿/下线/到期不出现（N13）。"""
+        """① 搜索：已发布命中；草稿/下线不出现（N13）。M5.2 §7.2 登记差异：
+        /search/ 升级 ARCHIVE-SEARCH——expired 默认命中（PA-33）。"""
         anon = Client()
         live = self.states["live"]
         self.assertTrue(search_hit(anon, live.title, live.slug))
-        for key in ("draft", "unpublished", "expired"):
+        for key in ("draft", "unpublished"):
             page = self.states[key]
-            self.assertFalse(search_hit(anon, page.title, page.slug), f"{key} 不入默认搜索（N13）")
+            self.assertFalse(search_hit(anon, page.title, page.slug), f"{key} 不入搜索（N13）")
+        expired = self.states["expired"]
+        self.assertTrue(search_hit(anon, expired.title, expired.slug), "expired 入搜索（M5.2）")
 
     def test_container_url_404(self):
         """② 未登录直达容器 URL → 404（ADR-0004 决策 2）。"""

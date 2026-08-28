@@ -1,9 +1,13 @@
 """A3.2（M3.3）CURRENT_DEFAULT 前台可见性测试（CONTENT_MODEL §16.4；PS-24/25）。
 
-§16.4 默认视图＝S2 恰一类：路由层（Page.route 非 live → Http404）、
-板块默认列表（content_entries）、sitemap.xml 三消费位同口径；到期页
-不物理删除——内容/修订/URL 保留（PS-24），E9 重发布即恢复可见。
-HISTORICAL/ARCHIVE-SEARCH 属 M5.2 契约（PS-26），不在本文件。
+§16.4 默认视图＝S2 恰一类：路由层、板块默认列表（content_entries）、
+sitemap.xml 三消费位同口径；到期页不物理删除——内容/修订/URL 保留
+（PS-24），E9 重发布即恢复可见。
+
+M5.2 口径升级（PUBLISH_ARCHIVE_SCHEDULING §6.3/§7.2"显式登记差异"）：
+expired 具名 URL 由 404 改放行渲染（载体①，差异登记＝CONTENT_MODEL
+§16.4 补记行）——本文件路由断言随之更新；S0/S1/S4 三态 404 不变。
+HISTORICAL/ARCHIVE-SEARCH 归档/搜索侧断言见 test_archive_search.py。
 """
 
 import datetime as dt
@@ -12,6 +16,7 @@ from unittest import mock
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
+from notices.lifecycle import current_default_pages
 from notices.models import NoticePage
 from wagtail.models import Revision
 
@@ -65,15 +70,21 @@ class VisibilityBase(TestCase):
 
 
 class RouteVisibilityTests(VisibilityBase):
-    """PS-25：CURRENT_DEFAULT 之外四态路由层 404（Page.route 非 live 不可达）。"""
+    """PS-25：非 CURRENT_DEFAULT 态路由层判定。M5.2 载体①后口径＝
+    S0/S1/S4 具名 URL 404；S3（expired）放行渲染＋页首「已过期」横幅
+    （§6.3 语义不变式；完整载体断言见 test_archive_search.py）。"""
 
-    def test_only_live_served_others_404(self):
+    def test_draft_scheduled_unpublished_404_expired_renders(self):
         pages = self._one_of_each_state("rt")
         for key, page in pages.items():
             with self.subTest(state=key):
                 response = self.client.get(page.url)
                 if key == "live":
                     self.assertEqual(response.status_code, 200)
+                elif key == "expired":
+                    # M5.2 §6.3 载体①：expired 页原 slug URL 放行渲染。
+                    self.assertEqual(response.status_code, 200)
+                    self.assertContains(response, "已过期")
                 else:
                     self.assertEqual(response.status_code, 404)
 
@@ -143,9 +154,16 @@ class ExpiredRetentionTests(VisibilityBase):
 
     def test_expired_republish_restores_visibility(self):
         page = expire_page(make_notice(self.container, slug="ps24-re", publish=True))
-        self.assertEqual(self.client.get(page.url).status_code, 404)
+        # M5.2 载体①：expired 期原 URL 放行渲染（带横幅、仍非默认列表）。
+        response = self.client.get(page.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "已过期")
+        self.assertNotIn(page.pk, set(current_default_pages().values_list("pk", flat=True)))
         page.expire_at = future(days=7)  # §16.2：重发布须给新有效期
         page.publish(page.save_revision())  # E9
         page.refresh_from_db()
-        self.assertEqual(self.client.get(page.url).status_code, 200)
+        response = self.client.get(page.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "已过期")  # E9 即时回 CURRENT_DEFAULT
+        self.assertIn(page.pk, set(current_default_pages().values_list("pk", flat=True)))
         self.assertEqual(Revision.objects.filter(object_id=page.pk).count(), page.revisions.count())
