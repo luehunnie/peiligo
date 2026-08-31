@@ -98,6 +98,7 @@
 - **expected**：独立可见 Orca Session `G2-B-freeze-evidence`（GLM-5.3）＋独立复核会话 `G2-B-freeze-review`＋可选 `G2-B-final-review`（GPT-5.6 Sol/Codex）。
 - **actual**：本环境无 Orca Run/task 派发机制（G2-A 轮已实证：`orchestration dispatch` 需既有终端句柄、`worker-start` 需 Run/task，均不可用；MAX_ACTIVE_SESSION=1）。本会话执行冻结检查；独立复核由 **fresh-context 独立 GLM 子会话**承担（不继承实现上下文，对齐 00 §4.6 独立审查精神）；GPT/Codex 最终复核视本环境可用性执行，不可用则如实记录为未执行。
 - **independence preserved: YES**（实现面=本会话；复核面=无实现上下文的独立会话；G2-A 同模式已运行一轮并被接受）。
+- **GPT/Codex 最终复核已执行**（2026-09-01，codex-cli 0.151.0 `exec --sandbox read-only`，材料全内联、禁扫描仓库/写码/改文件/跑测试；经内联代理）：**VERDICT: FIX**——但 ARCHITECTURE_COMPLETE / DOMAIN_COMPLETE / HUMAN_PARAMETERS_COMPLETE 均 YES、UNRESOLVED_DESIGN_DECISIONS＝0、IMPLEMENTATION_GAPS_BLOCK_FREEZE＝NO、POST_G2_MODE＝READ_ONLY_GAP_AUDIT_FIRST；FIX 事由唯一＝门条件⑧治理残留（M0.3–M0.7 未执行、D8 未裁决）「须由项目负责人完成治理处置并签收后方可转 PASS」——与本文件 §6/§8 呈报一致，即 Human 签收动作本身，**无新增待修文档项**。
 
 ## 8. G2_MECHANICAL_RESULT（00 §15 ＋ 02 §10 通过条件逐条）
 
