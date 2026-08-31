@@ -9,6 +9,7 @@
 | 依赖 | M3.2（附件字段）、M4.1（账号与权限，含 M4.2/M4.3/M4.4 实证回写） |
 | 允许修改范围 | 本文件（新建）；不改任何代码与 settings |
 | 状态口径 | 本文档是**设计基线 + 现状审计**，不是实现报告——凡未实现的控制一律如实标注（见 §0.1），实现一律留 B 阶段 |
+| G2-A 更新 | 2026-08-31 项目负责人 23 项参数确认落档（Q1–Q23 全表＝`docs/G2_HUMAN_DECISIONS.md`；本文 §13 逐行更新确认状态，相关小节加注）；实现状态四值标签（§0.1）不因此改变——未实现项仍如实标注 |
 
 ## 0. 状态口径与权限边界（阅读前提）
 
@@ -47,6 +48,8 @@
 
 Wagtail 管理后台仅允许从校园网或学校 VPN 访问；管理后台必须使用 HTTPS、登录限速和强密码策略。矩阵 §3.5 定性：这些是**环境配置而非组权限**，不进入权限组模型；矩阵 §6 T16 仅验证"未登录访问 /admin/ 被重定向到登录页"（已 PASS，POC_PERMISSION_REPORT ②）。
 
+> **Human 决策（2026-08-31，Q4）**：后台访问**允许公网访问，V1 不要求校园网或 IP 白名单**——上文"仅允许从校园网或 VPN 访问"的网段限制要求在 V1 被该决策取代；SB-01/SEC-23（后台网段边界）随之关闭（见 §13#4、§12、§14）。HTTPS、登录限速、强密码策略三项要求不变。
+
 ### 1.2 两方案对比与推荐
 
 | 方案 | 机制 | 优点 | 缺点/风险 |
@@ -55,6 +58,8 @@ Wagtail 管理后台仅允许从校园网或学校 VPN 访问；管理后台必�
 | B. Django 中间件 | 自定义中间件按 `REMOTE_ADDR` 网段白名单拦截后台路径 | 配置入仓、可测试 | 须正确处理反代场景的 `X-Forwarded-For`（见 §1.3）；应用层代码一旦有豁免路径即失效 |
 
 **推荐**：**A 为主、B 为可选纵深**。生产部署在校园内反代之后（PRD §16 容器化部署），反代 ACL 是天然边界；若项目负责人确认反代不可控，再落 B（中间件）作为唯一防线。两方案都要求网段清单（校园网 + VPN CIDR）先经项目负责人确认（§13 待确认参数表）。
+
+> **Human 决策（2026-08-31，Q4）后更新**：V1 允许公网访问后台、不要求校园网/IP 白名单 → 方案 A/B 的网段清单前提已消解，**V1 不实施后台网段限制**（A/B 两方案均不落地；上文推荐保留为历史设计记录，如未来决策收紧再启用）。
 
 ### 1.3 `X-Forwarded-For` 信任链注意事项（方案 B 落地前置）
 
@@ -91,12 +96,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ```
 
 - 校验位置：Django 表单（后台建号/改密）统一执行；被拒即 ValidationError 回显（SB-02 验证基础）。
-- 注记：`MinimumLengthValidator` 未显式传 `min_length`，取默认 8——是否提高（建议 10–12）入 §13 待确认；`NumericPasswordValidator` 仅禁纯数字，强度主力是前三者（框架口径）。
+- 注记：`MinimumLengthValidator` 未显式传 `min_length`，取默认 8——**Human 已确认（2026-08-31，Q2）：最低密码长度＝12 字符**（§13#3；B 阶段显式接线）；继续使用 Django / Wagtail 原生账号机制（Q2 同确认）；`NumericPasswordValidator` 仅禁纯数字，强度主力是前三者（框架口径）。
 
 ### 2.3 登录限速
 
-- PRD §5 要求登录限速；02 S7.1 指定候选方案 **django-axes**，参数建议〔默认 **5 次失败 / 15 分钟锁定**，标记确认——项目负责人确认后入 §13〕。
-- 设计要点：`AXES_FAILURE_LIMIT=5`、`AXES_COOLOFF_TIME=15 分钟`、锁定键建议 `username + ip_address` 组合（兼顾撞库与爆破）；django-axes 以 `AXES_MIDDLEWARE`＋认证后端追加方式接入，与 Wagtail admin 登录视图兼容，无需改 Wagtail 核心。注意：失败计数依赖可还原客户端 IP——与 §1.3 X-Forwarded-For 信任链结论联动（反代场景须传可信 IP，否则限速可被伪造头绕过）。
+- PRD §5 要求登录限速；02 S7.1 指定候选方案 **django-axes**。**Human 已确认（2026-08-31，Q3）**：登录失败处理＝**15 分钟内连续失败 10 次 → 临时限制 15 分钟；成功登录后失败计数清零**（原建议 5 次/15 分钟由本确认值取代；§13#2）。
+- 设计要点：参数取值随 **Q3 确认（2026-08-31）**更新——`AXES_FAILURE_LIMIT=10`（15 分钟窗口内连续失败 10 次）、`AXES_COOLOFF_TIME=15 分钟`（临时限制时长），成功登录后失败计数清零（**原示例值 `AXES_FAILURE_LIMIT=5` 已被 Q3 确认值取代**；axes 各参数与「失败窗口／锁定时长／计数清零」语义的精确映射随 B 阶段接入留痕）；锁定键建议 `username + ip_address` 组合（兼顾撞库与爆破）；django-axes 以 `AXES_MIDDLEWARE`＋认证后端追加方式接入，与 Wagtail admin 登录视图兼容，无需改 Wagtail 核心。注意：失败计数依赖可还原客户端 IP——与 §1.3 X-Forwarded-For 信任链结论联动（反代场景须传可信 IP，否则限速可被伪造头绕过）。
 - 现状：requirements 无 axes 依赖、settings 无配置 → **`NOT_IMPLEMENTED`**（断言 SB-03/SEC-15）。
 
 ### 2.4 密码重置后强制改密
@@ -131,10 +136,10 @@ AUTH_PASSWORD_VALIDATORS = [
 | SESSION_COOKIE_SECURE | False | 未配置 | **`NOT_IMPLEMENTED`**（生产须 True）★ |
 | CSRF_COOKIE_HTTPONLY | False | 未配置 | `SATISFIED`（框架口径：默认 False，CSRF token 需前端可读） |
 | CSRF_COOKIE_SECURE | False | 未配置 | **`NOT_IMPLEMENTED`**（生产须 True） |
-| SESSION_COOKIE_AGE | 2 周 | 未配置 | `NEEDS_VERIFICATION`（后台会话时长是否缩短，§13） |
+| SESSION_COOKIE_AGE | 2 周 | 未配置 | `NEEDS_VERIFICATION`（后台会话时长是否缩短，§13）→ **Human 已确认（2026-08-31，Q6）：24 小时**；主动退出立即结束；修改密码等重要账号变更后，相关 Session 应结束（B 阶段接线） |
 | SECURE_SSL_REDIRECT | False | 未配置 | **`NOT_IMPLEMENTED`**（§1.4） |
-| SECURE_HSTS_SECONDS | 0 | 未配置 | **`NOT_IMPLEMENTED`**（生产建议 ≥ 1 年，先短后长） |
-| SECURE_PROXY_SSL_HEADER | None | 未配置 | `NEEDS_VERIFICATION`（仅与可信反代联动配置，§1.3） |
+| SECURE_HSTS_SECONDS | 0 | 未配置 | **`NOT_IMPLEMENTED`**（**Human 已确认（2026-08-31，Q5）：最终生产目标 1 年；初次上线先用较短周期，确认 HTTPS、证书和反向代理稳定后再提升到 1 年**——先短后长） |
+| SECURE_PROXY_SSL_HEADER | None | 未配置 | `NEEDS_VERIFICATION`（仅与可信反代联动配置，§1.3）→ **Human 已确认（2026-08-31，Q10）：生产反代＝Caddy（TLS 终结于反代）**；具体接线值部署阶段定 |
 | SECURE_CONTENT_TYPE_NOSNIFF | True | 未配置 | `SATISFIED` |
 | SECURE_REFERRER_POLICY | `"same-origin"` | 未配置 | `SATISFIED` |
 | SECURE_CROSS_ORIGIN_OPENER_POLICY | `"same-origin"` | 未配置 | `SATISFIED` |
@@ -142,7 +147,7 @@ AUTH_PASSWORD_VALIDATORS = [
 | DEBUG（dev） | — | `dev.py:4` `DEBUG = True` | 开发态预期（不部署） |
 | ALLOWED_HOSTS（production） | — | env 必填（`production.py:10`） | `SATISFIED`（dev 为 `["*"]`，仅开发态） |
 
-★ production cookie 安全配置（SESSION/CSRF `_COOKIE_SECURE` 等）＝四项特别如实标注之一：当前 production.py **只设置了 DEBUG/SECRET_KEY/ALLOWED_HOSTS/静态后端**，cookie 与 `SECURE_*` 一族**全部未接线** → 生产部署清单必须补齐（§12/§14；断言 SEC-07/08 已达标项靠 Django 默认，SEC-24 未达标）。
+★ production cookie 安全配置（SESSION/CSRF `_COOKIE_SECURE` 等）＝四项特别如实标注之一：当前 production.py **只设置了 DEBUG/SECRET_KEY/ALLOWED_HOSTS/静态后端**，cookie 与 `SECURE_*` 一族**全部未接线** → 生产部署清单必须补齐（§12/§14；断言 SEC-07/08 已达标项靠 Django 默认，SEC-24 未达标）。**生产 cookie 目标已由 Human 确认（2026-08-31，Q16）：Session Cookie `SameSite=Lax`（Django 默认已符）＋ `Secure=True` ＋ `HttpOnly=True`，HTTPS only**——部署接线按此四项执行。
 
 ### 3.3 CSP 基线方向
 
@@ -166,7 +171,7 @@ V1 不引入复杂 CSP（服务端模板＋Wagtail admin 脚本域需先行验�
 - **目标白名单（02 S7.1 §4 冻结，来源 PRD §11"PDF、Office 文档和常见图片"）**：`pdf / doc / docx / xls / xlsx / ppt / pptx / png / jpg / webp`。本文不扩充、不删减。
 - **现状**（`base.py:248-262`，官方模板默认值，尚未按 PRD 对齐）：
   - `WAGTAILDOCS_EXTENSIONS = csv, docx, key, odt, pdf, pptx, rtf, txt, xlsx, zip`——**超出** PRD 白名单（csv/txt/zip/key/odt），且**缺少** doc/xls/ppt；图片不走 wagtaildocs（经 wagtailimages 图片库治理，PRD §7.7/CM §11.1）。
-  - `WAGTAILDOCS_MAX_UPLOAD_SIZE = 10MB`；02 S7.1 建议默认 **20MB〔标记确认〕**——两值不一致 → 入 §13 待确认参数表。
+  - `WAGTAILDOCS_MAX_UPLOAD_SIZE = 10MB`；02 S7.1 建议默认 **20MB〔标记确认〕**——两值不一致 → 入 §13 待确认参数表。**Human 已确认（2026-08-31，Q1）：单个附件最大 20 MiB**（MB 阶段 settings 对齐）。
   - 定性：**`PARTIAL`**（存在白名单机制，但集合未按 PRD 收窄；本轮不改 settings，MB 阶段对齐；断言 SEC-17）。
 - 附件块（DocumentChooserBlock）与 `NoticePage.attachments`/`MaterialPage.attachments` 等字段均最终经 wagtaildocs 统一上传面——白名单是**单一收口点**（`base.py` WAGTAILDOCS 配置），无旁路上传入口（证据：blocks.py AttachmentBlock 注释"上传策略＝全站 WAGTAILDOCS 配置"）。
 
@@ -193,7 +198,7 @@ V1 不引入复杂 CSP（服务端模板＋Wagtail admin 脚本域需先行验�
 
 | 规则 | 设计 | 现状 |
 | --- | --- | --- |
-| 长度上限 | 存储名 ≤ 255 字节（文件系统约束）；超限截断保留扩展名；具体阈值入 §13 | `PARTIAL` |
+| 长度上限 | 存储名 ≤ 255 字节（文件系统约束）；超限截断保留扩展名；具体阈值入 §13（2026-08-31 G2-A 分类＝工程默认，随实现落地，见 §13#7） | `PARTIAL` |
 | 禁路径形式 | 拒绝 `../`、绝对路径、盘符前缀（路径穿越） | Django `Storage.get_valid_name()` 对路径分隔符做基础清洗 → `PARTIAL`（框架基础在，无显式拒绝测试） |
 | 控制字符 | 剥离控制字符与全空格畸形名 | 同上（`PARTIAL`） |
 | 展示名与存储名分离 | Wagtail Document `title`（展示，可中文）与 `file`（存储名，由 storage 去重生成）天然分离 | `SATISFIED`（框架机制；`notices` 等页面引用 Document 经选择器而非文件名） |
@@ -261,7 +266,7 @@ PRD §11：禁止上传密码、个人敏感信息、成绩名单等不应公开
 | R-05 | M4-SECURITY-REVIEW 遗留 #4 | 用户/组管理无 DB 级审计 | **开放（低）**——上游现状；§6.1 处置留裁决 |
 | R-06 | M4-SECURITY-REVIEW 遗留 #5 | 无首登/重置后强制改密开关 | **承接**——机制设计 §2.4；NOT_IMPLEMENTED（SB-04） |
 | R-07 | M4 报告 P4-b3 | 批量移动绕 `before_move_page` 钩子 | **开放（低，非越权）**——定性为内容模型完整性绕过（M4.3 ③-6）；正式实现补 move 批量守卫 |
-| R-08 | 上游审计 U5 | 生产反代/证书条件未知 | **开放（外部）**——§1 两方案落地、HTTPS/HSTS、`SECURE_PROXY_SSL_HEADER` 均依赖该项确认（§13） |
+| R-08 | 上游审计 U5 | 生产反代/证书条件未知 | **收窄（2026-08-31）**——反代形态已确认＝Caddy（Q10），§1 网段方案已随 Q4 撤销；域名/证书等部署条件仍待提供（PP-19 `DEFERRED_DEPLOYMENT_DETAIL`） |
 
 ---
 
@@ -269,7 +274,7 @@ PRD §11：禁止上传密码、个人敏感信息、成绩名单等不应公开
 
 | 基线主题 | PRD 要求 | 其他引源 | 本文章节 | 断言 | 现状 |
 | --- | --- | --- | --- | --- | --- |
-| 后台仅校园网/VPN | PRD §5 | 矩阵 §3.5；02 S7.1 §1 | §1 | SB-01/SEC-23 | NOT_IMPLEMENTED |
+| 后台仅校园网/VPN | PRD §5 | 矩阵 §3.5；02 S7.1 §1 | §1 | SB-01/SEC-23 | NOT_IMPLEMENTED → 2026-08-31 Human 决策（Q4）V1 公网访问，本行要求随决策关闭（§1.1/§13#4） |
 | 后台 HTTPS | PRD §5 | 02 S7.1 §1 | §1.4/§3.2 | SEC-24 | NOT_IMPLEMENTED |
 | 登录限速 | PRD §5 | 02 S7.1 §2 | §2.3 | SB-03/SEC-15 | NOT_IMPLEMENTED |
 | 强密码策略 | PRD §5 | 02 S7.1 §2 | §2.2 | SB-02/SEC-14 | SATISFIED |
@@ -392,7 +397,7 @@ PRD §11：禁止上传密码、个人敏感信息、成绩名单等不应公开
 ### 10-6 文件上传
 
 - 来源：已登录后台用户（wagtaildocs 文档库/附件块；wagtailimages 图片库/图片块）。
-- 允许格式：PRD §11 白名单（§4.1 目标集）；大小上限待确认（§13）。
+- 允许格式：PRD §11 白名单（§4.1 目标集）；大小上限＝**20 MiB（Human 2026-08-31 确认，Q1；§13）**。
 - 校验位置：wagtaildocs 扩展名白名单（①层）＋生产可加的魔数钩子（③层，§4.2）；图片面 Willow 解码校验。
 - 异常处理：白名单外/超限/魔数不符→上传拒绝报错。
 - 现状：`PARTIAL`（①层机制在但集合未对齐 PRD；③层未实现；上限两值冲突待确认）。
@@ -421,7 +426,7 @@ PRD §11：禁止上传密码、个人敏感信息、成绩名单等不应公开
 - 校验位置：Django `authenticate`＋SessionMiddleware；登录成功框架自动轮换 session key（会话固定防护，框架内建）；权限判定走矩阵（§0.2）。
 - 异常处理：认证失败统一报错；未登录访问后台 302 登录页（T16）；限速未接入（§2.3）。
 - 现状：`SATISFIED`（框架面）＋`NOT_IMPLEMENTED`（限速/强制改密增量）。
-- 后续验证：SB-03/SB-04；会话 cookie 属性断言（SEC-07/08）；会话超时策略确认（§13）。
+- 后续验证：SB-03/SB-04；会话 cookie 属性断言（SEC-07/08）；会话超时策略＝**24 小时（Human 2026-08-31 确认，Q6；§13）**。
 
 ### 10-9 management command
 
@@ -458,22 +463,22 @@ PRD §11：禁止上传密码、个人敏感信息、成绩名单等不应公开
 
 | CONTROL | STATUS | EVIDENCE | FUTURE_ACTION |
 | --- | --- | --- | --- |
-| AUTH_PASSWORD_VALIDATORS 四校验器 | `SATISFIED` | `base.py:142-155` | min_length 参数确认（§13） |
+| AUTH_PASSWORD_VALIDATORS 四校验器 | `SATISFIED` | `base.py:142-155` | min_length＝12 接线（Human 2026-08-31 确认，Q2；§13#3） |
 | CSRF 全站覆盖 | `SATISFIED` | `base.py:78`；csrf_exempt 零命中 | 无 token POST 回归断言（B 阶段） |
 | Session Cookie HttpOnly/SameSite | `SATISFIED` | Django 5.2 global_settings 默认实证（§3.2） | 部署环境响应头复测 |
-| ★ production cookie 安全配置（SESSION/CSRF `_COOKIE_SECURE`、`SECURE_*` 一族） | `NOT_IMPLEMENTED` | `production.py` 仅 DEBUG/SECRET_KEY/ALLOWED_HOSTS/静态后端 | 部署阶段接线＋`SECURE_PROXY_SSL_HEADER` 随反代确认（§1.3/§13） |
+| ★ production cookie 安全配置（SESSION/CSRF `_COOKIE_SECURE`、`SECURE_*` 一族） | `NOT_IMPLEMENTED` | `production.py` 仅 DEBUG/SECRET_KEY/ALLOWED_HOSTS/静态后端 | 部署阶段接线（目标值已确认：SameSite=Lax＋Secure＋HttpOnly＋HTTPS only——Q16；HSTS 目标 1 年先短后长——Q5）；`SECURE_PROXY_SSL_HEADER` 随 Caddy 反代（Q10）部署接线（§1.3/§13） |
 | X-Frame-Options DENY | `SATISFIED` | `base.py:81`＋Django 默认 DENY | 无 |
 | production DEBUG=False / ALLOWED_HOSTS 外置 | `SATISFIED` | `production.py:3,10` | 部署环境 `check --deploy` 复核 |
 | ★ 附件 MIME＋魔数三级一致性校验 | `NOT_IMPLEMENTED` | `base.py:248-262` 仅扩展名＋大小；项目代码无魔数检测 | B 阶段钩子实现（§4.2；复用依赖内 filetype，不加扫描基础设施）；SB-05 随之可测 |
 | 附件扩展名白名单（PRD 对齐） | `PARTIAL` | `base.py:248-259` 为官方模板默认集（csv/txt/zip/key/odt 超界；doc/xls/ppt 缺） | MB 阶段按 §4.1 目标集收窄 settings |
-| 上传大小上限 | `PARTIAL` | `base.py:262` 10MB vs 02 计划默认 20MB | §13 确认后统一 |
+| 上传大小上限 | `PARTIAL` | `base.py:262` 10MB vs 02 计划默认 20MB | 20 MiB（Human 2026-08-31 确认，Q1）；MB 阶段统一 settings |
 | 文件名规则（长度/路径/控制字符/分离） | `PARTIAL` | storage 基础清洗（§4.4） | B 阶段显式校验＋样本断言 |
 | ★ 外链确认跳转页 | `NOT_IMPLEMENTED` | `urls.py` 无跳转路由；CM §11.4 设计冻结 | B 阶段实现（ADR-0005 #5 载体）＋§14 Gap 闭环；SB-06/PRD §23 必测 |
 | 外链 scheme 白名单（http/https） | `PARTIAL` | URLField 存在；URLValidator 默认 scheme 集未收窄 | B 阶段字段收窄＋§10-7 规则断言 |
-| 登录限速（django-axes） | `NOT_IMPLEMENTED` | requirements 无 axes | B 阶段接入；参数 §13 确认 |
+| 登录限速（django-axes） | `NOT_IMPLEMENTED` | requirements 无 axes | B 阶段接入；参数已确认（Q3：15 分钟内连续失败 10 次→临时限制 15 分钟；成功登录后计数清零） |
 | 重置/首登强制改密 | `NOT_IMPLEMENTED` | M4-SECURITY-REVIEW 遗留 #5 | B 阶段按 §2.4 设计实现 |
-| 后台网络边界（校园网/VPN） | `NOT_IMPLEMENTED` | 代码/settings 无 IP 限制（§1.2） | 部署阶段反代 ACL（推荐）或中间件；网段 §13 确认 |
-| HTTPS 强制/HSTS/CSP | `NOT_IMPLEMENTED` | §3.2 默认关闭；§3.3 方向已定 | 部署接线＋G3 复测 |
+| 后台网络边界（校园网/VPN） | `NOT_IMPLEMENTED` | 代码/settings 无 IP 限制（§1.2） | **2026-08-31 Human 决策（Q4）：V1 公网访问、不要求校园网/IP 白名单 → 本控制随决策关闭**（历史设计记录保留 §1.2） |
+| HTTPS 强制/HSTS/CSP | `NOT_IMPLEMENTED` | §3.2 默认关闭；§3.3 方向已定 | 部署接线（HSTS 先短后长、目标 1 年——Q5）＋G3 复测 |
 | 权限默认拒绝＋部门隔离＋高权限矩阵 | `SATISFIED` | ADR-0004 Accepted；POC 16/16；M4 安全评审 PASS | T 系列随 MB 回归 |
 | 受控标签三道闸 | `SATISFIED` | `notices/models.py:64-88` | T10 回归 |
 | StreamField/RichText 白名单 | `SATISFIED` | `notices/blocks.py` | 反射断言（B 阶段） |
@@ -492,18 +497,18 @@ STATUS 计数（27 行）：`SATISFIED` 14 ／ `PARTIAL` 4 ／ `NOT_IMPLEMENTED`
 
 ## 13. 安全待确认参数表（集中）
 
-> 大小上限未定等参数集中于此（增量 D/F）；确认人＝项目负责人；M7.2 待确认参数表互见（本表仅安全项）。
+> 大小上限未定等参数集中于此（增量 D/F）；确认人＝项目负责人；M7.2 待确认参数表互见（本表仅安全项）。**2026-08-31 G2-A 更新**：项目负责人已对 23 项项目参数逐项确认（Human Confirmed Date＝2026-08-31；全表 Q1–Q23＝`docs/G2_HUMAN_DECISIONS.md`；NFR §12 为全文唯一集中表并集），本表新增末列状态，**`G2_PENDING_PARAMETERS = 0`**。部署阶段细节（CPU/RAM/IP/具体磁盘路径/具体 PVE VM·CT/具体 NAS/对象存储厂商）统一 `DEFERRED_DEPLOYMENT_DETAIL`，不计入 G2 待确认参数。
 
-| # | 参数 | 建议默认 | 现状 | 关联 |
-| --- | --- | --- | --- | --- |
-| 1 | 附件大小上限 | 20MB（02 S7.1 建议，标记确认） | 10MB（`base.py:262` 模板默认） | §4.1 |
-| 2 | django-axes 限速参数 | 5 次 / 15 分钟（标记确认） | 未安装 | §2.3；SB-03 |
-| 3 | `MinimumLengthValidator.min_length` | 8（现状）→ 建议 10–12 | 未显式配置 | §2.2 |
-| 4 | 校园网＋VPN 网段清单 | 待校方提供（上游 U5） | 无 | §1.2/§1.3；SB-01 |
-| 5 | HSTS 秒数（先短后长策略） | 建议 1 年（成熟后） | 0 | §3.2；SEC-24 |
-| 6 | 后台会话时长（SESSION_COOKIE_AGE） | 建议缩短至 ≤ 1 天（后台面） | 2 周（Django 默认） | §3.2 |
-| 7 | 存储文件名长度上限 | 255 字节截断保留扩展名 | 未显式 | §4.4 |
-| 8 | 生产反代形态（TLS 终结位置） | 决定 `SECURE_PROXY_SSL_HEADER` 与限速 IP 口径 | 待校方环境（U5） | §1.3/§3.2 |
+| # | 参数 | 建议默认 | 现状 | 关联 | G2-A 状态（2026-08-31） |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 附件大小上限 | 20MB（02 S7.1 建议，标记确认） | 10MB（`base.py:262` 模板默认） | §4.1 | `HUMAN_CONFIRMED`＝**20 MiB**（Q1；MB 阶段 settings 对齐） |
+| 2 | django-axes 限速参数 | 5 次 / 15 分钟（标记确认） | 未安装 | §2.3；SB-03 | `HUMAN_CONFIRMED`＝**15 分钟内连续失败 10 次→临时限制 15 分钟；成功登录后失败计数清零**（Q3） |
+| 3 | `MinimumLengthValidator.min_length` | 8（现状）→ 建议 10–12 | 未显式配置 | §2.2 | `HUMAN_CONFIRMED`＝**12 字符**（Q2；继续 Django/Wagtail 原生账号机制） |
+| 4 | 校园网＋VPN 网段清单 | 待校方提供（上游 U5） | 无 | §1.2/§1.3；SB-01 | `HUMAN_CONFIRMED`＝**允许公网访问，V1 不要求校园网/IP 白名单**——无需网段清单（Q4；SB-01/SEC-23 随决策关闭） |
+| 5 | HSTS 秒数（先短后长策略） | 建议 1 年（成熟后） | 0 | §3.2；SEC-24 | `HUMAN_CONFIRMED`＝**最终生产目标 1 年；初次上线先用较短周期，HTTPS/证书/反代稳定后提升**（Q5） |
+| 6 | 后台会话时长（SESSION_COOKIE_AGE） | 建议缩短至 ≤ 1 天（后台面） | 2 周（Django 默认） | §3.2 | `HUMAN_CONFIRMED`＝**24 小时**；主动退出立即结束；改密等重要账号变更后相关 Session 结束（Q6） |
+| 7 | 存储文件名长度上限 | 255 字节截断保留扩展名 | 未显式 | §4.4 | `DEFERRED_DEPLOYMENT_DETAIL`＝工程默认（255 字节截断保留扩展名）随实现落地；非 Human 政策参数（Q1–Q23 未含） |
+| 8 | 生产反代形态（TLS 终结位置） | 决定 `SECURE_PROXY_SSL_HEADER` 与限速 IP 口径 | 待校方环境（U5） | §1.3/§3.2 | `HUMAN_CONFIRMED`＝**Caddy（TLS 终结于反代）**（Q10）；`SECURE_PROXY_SSL_HEADER` 具体接线值部署阶段定 |
 
 ---
 
@@ -514,10 +519,10 @@ STATUS 计数（27 行）：`SATISFIED` 14 ／ `PARTIAL` 4 ／ `NOT_IMPLEMENTED`
 | Gap | 承接阶段 | 阻断断言 |
 | --- | --- | --- |
 | 外链确认跳转页（PRD §7.5 四要素） | B 阶段（MB） | SB-06/SEC-21；PRD §23 必测 |
-| production cookie/`SECURE_*` 接线 | 部署阶段（G3 前复核） | SEC-24（部分）；SB-01 部署验证 |
-| 附件三级校验＋白名单 PRD 对齐＋上限 | MB | SB-05/SEC-17/SEC-18 |
-| 登录限速、强制改密 | MB | SB-03/SB-04 |
-| 后台网络边界（反代 ACL/中间件） | 部署阶段 | SB-01 |
+| production cookie/`SECURE_*` 接线 | 部署阶段（G3 前复核） | SEC-24（部分）；目标值已确认（Q16 cookie 四项、Q5 HSTS、Q6 会话 24h、Q10 Caddy） |
+| 附件三级校验＋白名单 PRD 对齐＋上限 | MB | SB-05/SEC-17/SEC-18（上限值已确认＝20 MiB，Q1） |
+| 登录限速、强制改密 | MB | SB-03/SB-04（限速参数已确认，Q3） |
+| ~~后台网络边界（反代 ACL/中间件）~~ | 部署阶段 | SB-01——**2026-08-31 撤销：Human Q4 确认 V1 公网访问、不要求校园网/IP 白名单，本 Gap 随决策关闭** |
 | 异常登录监控、CI Secret Store | B6/MB15 | SEC-30 |
 | 曾暴露令牌轮换（治理动作） | 项目负责人 | —（非代码） |
 | 用户/组管理 DB 级审计裁决（R-05） | 项目负责人裁决 | — |
