@@ -101,7 +101,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ### 2.3 登录限速
 
 - PRD §5 要求登录限速；02 S7.1 指定候选方案 **django-axes**。**Human 已确认（2026-08-31，Q3）**：登录失败处理＝**15 分钟内连续失败 10 次 → 临时限制 15 分钟；成功登录后失败计数清零**（原建议 5 次/15 分钟由本确认值取代；§13#2）。
-- 设计要点：`AXES_FAILURE_LIMIT=5`、`AXES_COOLOFF_TIME=15 分钟`、锁定键建议 `username + ip_address` 组合（兼顾撞库与爆破）；django-axes 以 `AXES_MIDDLEWARE`＋认证后端追加方式接入，与 Wagtail admin 登录视图兼容，无需改 Wagtail 核心。注意：失败计数依赖可还原客户端 IP——与 §1.3 X-Forwarded-For 信任链结论联动（反代场景须传可信 IP，否则限速可被伪造头绕过）。
+- 设计要点：参数取值随 **Q3 确认（2026-08-31）**更新——`AXES_FAILURE_LIMIT=10`（15 分钟窗口内连续失败 10 次）、`AXES_COOLOFF_TIME=15 分钟`（临时限制时长），成功登录后失败计数清零（**原示例值 `AXES_FAILURE_LIMIT=5` 已被 Q3 确认值取代**；axes 各参数与「失败窗口／锁定时长／计数清零」语义的精确映射随 B 阶段接入留痕）；锁定键建议 `username + ip_address` 组合（兼顾撞库与爆破）；django-axes 以 `AXES_MIDDLEWARE`＋认证后端追加方式接入，与 Wagtail admin 登录视图兼容，无需改 Wagtail 核心。注意：失败计数依赖可还原客户端 IP——与 §1.3 X-Forwarded-For 信任链结论联动（反代场景须传可信 IP，否则限速可被伪造头绕过）。
 - 现状：requirements 无 axes 依赖、settings 无配置 → **`NOT_IMPLEMENTED`**（断言 SB-03/SEC-15）。
 
 ### 2.4 密码重置后强制改密
