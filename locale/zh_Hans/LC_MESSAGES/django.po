@@ -1,0 +1,121 @@
+# AVR②（ADMIN_VISUAL_RECOVERY_CONTRACT §9 i18n 残留）：Wagtail 7.4.2 自带
+# zh_Hans 目录缺失的少量 admin 文案，经项目级 LOCALE_PATHS 目录逐 msgid 补译
+# （Django 官方目录合并机制：LOCALE_PATHS 优先于应用内目录，仅覆盖此处列出的
+# msgid，其余沿用 Wagtail 自带翻译）。升级 Wagtail 小版本后请复核：若上游
+# 已补译某 msgid，可删除对应条目（不删也不冲突，项目侧仍优先）。
+#
+# 修改后编译：msgfmt --check-format -o django.mo django.po
+msgid ""
+msgstr ""
+"Project-Id-Version: peiligo AVR②\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# wagtail/admin/views/home.py（仪表盘搜索占位）
+msgid "Search all pages…"
+msgstr "搜索所有页面…"
+
+# wagtail/admin/templates/wagtailadmin/panels/publishing/schedule_publishing_panel.html
+# （定时发布弹窗：副标题与两条帮助文案——契约 §9 指名的“定时弹窗英文帮助”）
+msgid "Choose when this page should go live and/or expire"
+msgstr "选择此页面的上线时间和/或下线时间"
+
+msgid "Choose when this %(model_name)s should go live and/or expire"
+msgstr "选择此%(model_name)s的上线时间和/或下线时间"
+
+msgid "This publishing schedule will only take effect after you select the \"Schedule to publish\" option"
+msgstr "此发布时间表只有在选择“定时发布”选项后才会生效"
+
+msgid "Anyone with editing permissions can create schedules"
+msgstr "拥有编辑权限的用户都可以创建时间表"
+
+msgid "But only those with publishing permissions can make them effective."
+msgstr "但只有拥有发布权限的用户才能使其生效。"
+
+# 发布对话框单选项（同一弹窗内的残留英文）
+msgid "Publish now"
+msgstr "立即发布"
+
+msgid "Schedule to publish"
+msgstr "定时发布"
+
+# wagtail/admin/ui/side_panels.py（侧栏“被引用 N 次”——契约 §9 指名）
+#, python-format
+msgid "Referenced %(count)s time"
+msgid_plural "Referenced %(count)s times"
+msgstr[0] "被引用 %(count)s 次"
+
+# wagtail/admin/templates/wagtailadmin/shared/side_panels/includes/status/locked.html
+# （锁定开关说明——契约 §9 指名；en-dash 为 U+2013，须与上游逐字一致）
+#, python-format
+msgid "Anyone can edit this %(model_name)s – lock it to prevent others from editing"
+msgstr "任何人都可以编辑此%(model_name)s——锁定可防止其他人编辑"
+
+#, python-format
+msgid "Anyone can edit this %(model_name)s"
+msgstr "任何人都可以编辑此%(model_name)s"
+
+# wagtail/admin/templates/wagtailadmin/home/account_summary.html（帐号区链接）
+#, python-format
+msgid "Wagtail %(current_version)s editor guide"
+msgstr "Wagtail %(current_version)s 编辑指南"
+
+# 仪表盘站点概览（pages/images/documents 三条计数链接；中文无复数形态，
+# 单复数同译。sr-only 供读屏用户，保留 span 结构与上游一致）
+#, python-format
+msgid "%(total)s Page <span class=\"w-sr-only\">created in %(site_name)s</span>"
+msgid_plural "%(total)s Pages <span class=\"w-sr-only\">created in %(site_name)s</span>"
+msgstr[0] "%(total)s 个页面<span class=\"w-sr-only\">（%(site_name)s 内）</span>"
+
+#, python-format
+msgid "%(total)s Image <span class=\"w-sr-only\">created in %(site_name)s</span>"
+msgid_plural "%(total)s Images <span class=\"w-sr-only\">created in %(site_name)s</span>"
+msgstr[0] "%(total)s 张图片<span class=\"w-sr-only\">（%(site_name)s 内）</span>"
+
+#, python-format
+msgid "%(total)s Document <span class=\"w-sr-only\">created in %(site_name)s</span>"
+msgid_plural "%(total)s Documents <span class=\"w-sr-only\">created in %(site_name)s</span>"
+msgstr[0] "%(total)s 个文档<span class=\"w-sr-only\">（%(site_name)s 内）</span>"
+
+# ── AVR③-fix D1（03-glm-review-report §4）上游 zh_Hans 缺口补译 ──────────
+# wagtail/admin/templates/wagtailadmin/pages/explorable_index_results.html
+# （explorer root 层提示横幅整段英文；“现在配置一个站点。”链接上游已译，不重）。
+# 前两条为有 add_site 权限（超管）所见版本，第三条为无权限版本。
+msgid "The root level is where you can add new sites to your Wagtail installation. Pages created here will not be accessible at any URL until they are associated with a site."
+msgstr "根层级用于为 Wagtail 安装实例添加新站点。在此创建的页面在关联站点之前，将无法通过任何 URL 访问。"
+
+msgid "If you just want to add pages to an existing site, create them as children of the homepage instead."
+msgstr "如果只是想向现有站点添加页面，请改为在首页下创建子页面。"
+
+msgid "Pages created here will not be accessible at any URL. To add pages to an existing site, create them as children of the homepage."
+msgstr "在此创建的页面将无法通过任何 URL 访问。若要向现有站点添加页面，请在首页下创建子页面。"
+
+# wagtail/admin/templates/wagtailadmin/pages/listing/_page_title_column_header.html
+# （分页统计「1-1 of 1 页面」中英混排；三个 scope 变体一并补齐，
+# %(model_name)s 为模型中文名（如“页面”），沿用本文件中文紧贴占位符的口径）。
+#, python-format
+msgid "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s"
+msgstr "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s"
+
+#, python-format
+msgid "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s across entire site."
+msgstr "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s（整站范围）。"
+
+#, python-format
+msgid "%(start_index)s-%(end_index)s of %(items_count)s %(model_name)s in '<span class=\"w-title-ellipsis\">%(title)s</span>'."
+msgstr "第 %(start_index)s-%(end_index)s 项，共 %(items_count)s 个%(model_name)s（在“<span class=\"w-title-ellipsis\">%(title)s</span>”内）。"
+
+# ── AVR③-fix D4：wagtail/admin/templates/wagtailadmin/home/upgrade_notification.html
+# （dev 超管可见的升级提示横幅；“关闭”上游已译，不重）。
+msgid "Wagtail upgrade available"
+msgstr "Wagtail 有可用升级"
+
+#, python-format
+msgid "Your version: <strong>%(current_version)s</strong>. New version: <strong data-w-upgrade-target=\"latestVersion\"></strong>."
+msgstr "当前版本：<strong>%(current_version)s</strong>。最新版本：<strong data-w-upgrade-target=\"latestVersion\"></strong>。"
+
+msgid "Read the release notes."
+msgstr "阅读版本说明。"

@@ -1,13 +1,32 @@
 /*
- * M5.1 admin 保守美化（注入点：home/wagtail_hooks.py insert_global_admin_css）。
+ * admin.css —— AVR②（ADMIN_VISUAL_RECOVERY_CONTRACT §2–§8）admin 视觉恢复。
  *
- * 只做字体栈微调，不重设计、不动布局与导航：
- * Wagtail admin 默认 --w-font-sans 为纯西文栈（core.css :host,:root 定义），
- * 中文界面下 CJK 字形全靠浏览器兜底。这里在原西文段之后追加简体中文
- * 系统字体，保证中英混排一致、跨平台取到黑体系（PingFang SC / 微软雅黑
- * / Noto Sans CJK SC），与前台 peiligo.css 的中文优先栈同口径。
- * 西文字形仍由原栈优先渲染，admin 视觉基线不变。
+ * 注入点：home/wagtail_hooks.py 的 insert_global_admin_css（本文件在
+ * Wagtail core.css 之后加载，同特异性下后者让位；禁 Python 补丁/大段模板
+ * 复制/成批 !important，见契约 §11）。
+ *
+ * 分层结构：
+ *   0. 字体栈（M5.1 既有口径，CJK 优先兜底，不动）
+ *   1. --plg-* 品牌令牌（契约 §2 调色板的落点，全文件唯一取色来源）
+ *   2. 主题令牌映射（§8）：走 Wagtail 官方 --w-* 变量体系，按
+ *      .w-theme-light / .w-theme-dark / .w-theme-system(+prefers-color-scheme)
+ *      四象限覆写——浅色只写 .w-theme-light 与“system+浅色OS”，深色反之，
+ *      不用裸 :root（本文件后加载，裸 :root 会压过 core 的 .w-theme-dark）。
+ *   3. 侧栏（§4）：品牌字标 .sidebar-custom-branding / 激活项导轨
+ *   4. 仪表盘（§5）：内容列 ≤75rem 左对齐、概览紧凑化、搜索宽度
+ *   5. 页面浏览器（§6）：选中行 3px 品牌导轨
+ *   6. 可达性地板（§10）：focus-visible、reduced-motion、窄屏
+ *   7. 登录页品牌（§3）
+ *   8. 编辑器标题输入（AVR③-fix D3）：标题字段超大字号收敛
+ *
+ * 主题切换用 Wagtail 内置开关（/admin/account/ 偏好），本文件零 JS。
+ * 品牌色对比度（契约 §10 AA）：浅色 #2F7A6E 对 #F5F7FA = 4.73:1；
+ * 深色次级文本 ≈4.95:1、深色按钮 #35816F 对白字 = 4.63:1。
  */
+
+/* ------------------------------------------------------------------ */
+/* 0. 字体栈（M5.1）                                                    */
+/* ------------------------------------------------------------------ */
 
 :root {
     --w-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
@@ -15,4 +34,266 @@
         "Microsoft YaHei", "Source Han Sans SC", "Noto Sans CJK SC",
         "Noto Sans SC", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
         "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* ------------------------------------------------------------------ */
+/* 1. 品牌令牌（契约 §2）                                               */
+/* ------------------------------------------------------------------ */
+
+:root {
+    /* 运营轨青绿：唯一强调色（按钮/链接/导轨/激活底） */
+    --plg-brand: #2f7a6e; /* 浅色主题动作色（hsl 170.4 44.4% 33.1%） */
+    --plg-brand-strong: #1f534a; /* 深一档：浅色侧栏激活文字 */
+    --plg-brand-dark: #35816f; /* 深色主题按钮面（对白字 4.63:1） */
+    --plg-brand-text-dark: #54a290; /* 深色主题链接/文字（对 #202322 ≈4.9:1） */
+    --plg-brand-tint: #e7f1ee; /* 浅色侧栏激活底 */
+    --plg-brand-tint-deep: #12332d; /* 深色主题 outline-hover 底 */
+    --plg-ink: #262626; /* 浅色侧栏标签墨色（对白 13.6:1） */
+    --plg-canvas-light: #f5f7fa; /* 浅色内容画布 */
+    --plg-canvas-dark: #202322; /* 深色内容画布（近黑，微绿倾向） */
+    --plg-rail: 3px; /* 运营轨宽：侧栏激活项/选中行/焦点 */
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. 主题令牌映射（§8）                                                */
+/*    动作色只改 secondary 色族的三原语（hue/sat/light），100/400/600   */
+/*    派生档随核心 calc 自动重算；50 与 75 两档原式为 sat∓37.5/47%，    */
+/*    在本品牌低饱和（≈44%/42%）下会减成负值、钳为灰，故按主题直钉：   */
+/*    50=淡青底，75=浅色选中行底 / 深色链接悬停。                        */
+/* ------------------------------------------------------------------ */
+
+/* 2a. 浅色主题（显式选择浅色，或 system + 浅色 OS） */
+.w-theme-light {
+    --w-color-secondary-hue: 170.4;
+    --w-color-secondary-saturation: 44.4%;
+    --w-color-secondary-lightness: 33.1%;
+    --w-color-secondary-50: #eaf4f1;
+    --w-color-secondary-75: #d8eae5;
+
+    /* 内容画布与头带：画布 #F5F7FA、头带留白形成层次 */
+    --w-color-surface-page: var(--plg-canvas-light);
+    --w-color-surface-header: #ffffff;
+
+    /* 侧栏翻白（§4）：面/激活底/标签三枚菜单令牌 + 白底下不可用的
+       文字投影由 §3b 组件层移除。 */
+    --w-color-surface-menus: #ffffff;
+    --w-color-surface-menu-item-active: var(--plg-brand-tint);
+    --w-color-text-label-menus-default: var(--plg-ink);
+    --w-color-text-label-menus-active: var(--plg-brand-strong);
+}
+
+@media (prefers-color-scheme: light) {
+    .w-theme-system {
+        --w-color-secondary-hue: 170.4;
+        --w-color-secondary-saturation: 44.4%;
+        --w-color-secondary-lightness: 33.1%;
+        --w-color-secondary-50: #eaf4f1;
+        --w-color-secondary-75: #d8eae5;
+        --w-color-surface-page: var(--plg-canvas-light);
+        --w-color-surface-header: #ffffff;
+        --w-color-surface-menus: #ffffff;
+        --w-color-surface-menu-item-active: var(--plg-brand-tint);
+        --w-color-text-label-menus-default: var(--plg-ink);
+        --w-color-text-label-menus-active: var(--plg-brand-strong);
+    }
+}
+
+/* 2b. 深色主题（显式选择深色，或 system + 深色 OS）：
+   近黑面板为 Wagtail 默认，仅换画布与青绿色族。 */
+.w-theme-dark {
+    --w-color-secondary-hue: 165.8;
+    --w-color-secondary-saturation: 41.8%;
+    --w-color-secondary-lightness: 35.7%;
+    --w-color-secondary-50: var(--plg-brand-tint-deep);
+    --w-color-secondary-75: #82c3b2;
+    --w-color-secondary-100: var(--plg-brand-text-dark);
+
+    --w-color-surface-page: var(--plg-canvas-dark);
+
+    /* AVR③-fix D2：info-50 原语（hsl 三件套）上游仅在 :root 定义、深色象限
+       不重映射，致 .help-info 横幅（explorer root 提示）在深色下呈浅蓝卡片。
+       此处按深色令牌体系直钉为品牌深底（与 secondary-50 同值），横幅文字
+       走深色主题上下文墨色，对比度 ≈12:1；图标 info-100 为装饰性，不受影响。 */
+    --w-color-info-50: var(--plg-brand-tint-deep);
+}
+
+@media (prefers-color-scheme: dark) {
+    .w-theme-system {
+        --w-color-secondary-hue: 165.8;
+        --w-color-secondary-saturation: 41.8%;
+        --w-color-secondary-lightness: 35.7%;
+        --w-color-secondary-50: var(--plg-brand-tint-deep);
+        --w-color-secondary-75: #82c3b2;
+        --w-color-secondary-100: var(--plg-brand-text-dark);
+        --w-color-surface-page: var(--plg-canvas-dark);
+        /* AVR③-fix D2：system+深色 OS 象限同钉（见 .w-theme-dark 注）。 */
+        --w-color-info-50: var(--plg-brand-tint-deep);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. 侧栏（§3 品牌 + §4 导航）                                         */
+/* ------------------------------------------------------------------ */
+
+/* 3a. Peiligo 字标：青绿方章 + 品牌名（替换默认居中大边距鸟标容器） */
+.sidebar-custom-branding {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 14px 16px 6px;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.sidebar-custom-branding:hover {
+    color: var(--w-color-text-label-menus-active);
+}
+
+.plg-brand__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--plg-brand);
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.plg-brand__name {
+    font-size: 1.05rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+}
+
+/* 折叠态：仅留方章，居中 */
+.sidebar--slim .sidebar-custom-branding {
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.sidebar--slim .plg-brand__name {
+    display: none;
+}
+
+/* 3b. 激活菜单项：导轨色随 border 令牌自动变青绿；浅色白底下撤掉
+       核心为深底准备的文字投影（两处选择器与核心主题四象限同构） */
+.sidebar-menu-item--active {
+    font-weight: 600;
+}
+
+.w-theme-light .sidebar-menu-item--active,
+.w-theme-light.sidebar-menu-item--active {
+    text-shadow: none;
+}
+
+@media (prefers-color-scheme: light) {
+    .w-theme-system .sidebar-menu-item--active {
+        text-shadow: none;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. 仪表盘（§5）                                                      */
+/* ------------------------------------------------------------------ */
+
+/* 内容列封顶 75rem（1200px），靠左留白而非居中——工作台口径 */
+.w-dashboard {
+    max-width: 75rem;
+}
+
+/* 站点概览：紧凑计量条，数字等宽对齐 */
+.w-summary {
+    margin-top: 0.75rem;
+}
+
+.w-dashboard .w-summary li {
+    margin-bottom: 0.75rem;
+}
+
+.w-summary a {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 全局搜索：收窄为单字段宽度，视觉重量让位给标题 */
+.w-dashboard form[role="search"] {
+    max-width: 32rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. 页面浏览器（§6）：选中行 3px 品牌导轨（底色走核心 text-highlight  */
+/*    令牌，已随 §2 映射为淡青绿）                                      */
+/* ------------------------------------------------------------------ */
+
+.listing tbody tr.selected td:first-child {
+    box-shadow: inset var(--plg-rail) 0 0 0 var(--w-color-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. 可达性地板（§10）                                                 */
+/* ------------------------------------------------------------------ */
+
+/* 焦点可见：作用于工作区三大键盘区块，不动全站 */
+.w-dashboard :focus-visible,
+.listing :focus-visible,
+.sidebar-main :focus-visible {
+    outline: 2px solid var(--w-color-focus);
+    outline-offset: 2px;
+}
+
+/* 前庭/动效敏感：仅关闭本文件涉及的过渡 */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-menu-item,
+    .sidebar-custom-branding,
+    .button,
+    .listing tbody tr {
+        transition: none;
+    }
+}
+
+/* 窄屏（§5 验收含 375px）：收紧仪表盘水平留白与概览间距 */
+@media (max-width: 420px) {
+    .w-dashboard {
+        padding-inline: 1rem;
+    }
+
+    .w-dashboard .w-summary .w-summary__list {
+        column-gap: 1.25rem;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. 登录页品牌（§3）：默认 .login-logo 为 8rem 定宽容器，改为居中字标 */
+/* ------------------------------------------------------------------ */
+
+.login-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    width: auto;
+    margin-top: 2.5rem;
+}
+
+.login-logo .plg-brand__name {
+    color: var(--w-color-secondary);
+    font-size: 1.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* 8. 编辑器标题输入（AVR③-fix D3，契约 §7“不用夸张超大标题输入”）      */
+/*    Wagtail 7.4.2 core.css 对前两个 .w-panel.title 的输入钉 1.875rem */
+/*    /800（约 30px 全宽），与表单其余字段密度失衡；此处一条受控规则    */
+/*    收敛回标准 title 字段档（1.5rem/700，即 core 的 :where 基线）。   */
+/*    选择器与上游逐字一致（同特异性 + 晚加载即胜出，零 !important）；  */
+/*    颜色仍走 --w-color-text-context 令牌，深/浅主题对比度不变。       */
+/* ------------------------------------------------------------------ */
+
+.w-panel.title:nth-child(-n+2) :is(input, textarea, .Draftail-Editor .public-DraftEditor-content) {
+    font-size: 1.5rem;
+    font-weight: 700;
 }
