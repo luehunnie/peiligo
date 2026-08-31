@@ -118,3 +118,19 @@
 ## 9. POST_G2_MODE（§10）
 
 **READ_ONLY_GAP_AUDIT_FIRST**——下一阶段不得原样重跑 MB1–MB18：canonical 已实现 MB 计划的相当部分（工程基座 A1、结构/前台 IA A2.1–A2.3、内容模型 A3.1–A3.3、权限与安全 M4 系、搜索契约、T01–T16 16/16），原样重跑将重复开发已完成功能。正确顺序：先做**只读 Implementation Gap Audit**，逐项判定 DONE / PARTIAL / NOT_DONE / OBSOLETE（以本文件 §5 清单＋SB §12/§14、NFR §13 Mapping 为底册），然后只实现 PARTIAL / NOT_DONE 项。本轮不开始 Gap Audit、不进入实现。
+
+## 10. HUMAN_FINAL_SIGNOFF（2026-09-01 项目负责人签收落档）
+
+- **G2_HUMAN_SIGNOFF = PASS**；**日期 = 2026-09-01**（签收人＝项目负责人）。
+- **G2 Mechanical Result**（§8）：①–⑤⑦ 满足，⑥ 实质满足（字面取代已记录），⑧ 未满足（治理线 M0.3–M0.7 残留）——残留由本次签收逐项处置（下第 6–8 项），据此签收 PASS。
+- **Human 决策**（签收时逐项确认）：
+  1. Architecture / Domain / Permission / Publish / Search / Security / NFR 的当前冻结结果全部认可（§3 冻结矩阵：FROZEN 3 域＋FROZEN_WITH_IMPLEMENTATION_GAP 13 域；BLOCKED=0）。
+  2. ADR-0001～ADR-0006 当前 Accepted 状态认可（§2）；不重新打开任何 ADR。
+  3. 23/23 Human Parameters 已完成，**G2_PENDING_PARAMETERS = 0**（§4）。
+  4. 13 个 FROZEN_WITH_IMPLEMENTATION_GAP 领域不阻塞 G2（§3/§5：规则与验收已明确、实现未完）。
+  5. 当前 Implementation Gap 留给 Post-G2 Gap Audit 和后续实现，不要求在 G2 内完成。
+  6. **M0.3–M0.7 处置**：原计划治理路径视为已被后续 Rolling Implementation、M1–M7 正式成果和 G2 Governance Evidence 实质取代；不重新机械执行旧路径（门条件⑧就此处置完毕）。
+  7. **R-05 处置**（用户/组管理无 DB 级审计，SB §7/§14 登记）：不作为 G2 blocker；登记为 Post-G2 Gap Audit 待核治理/实现项，由 Audit 判定 DONE / PARTIAL / NOT_DONE / OBSOLETE。
+  8. **历史凭据轮换处置**（SB §14 登记的曾暴露令牌）：登记为生产上线前必须确认完成的治理事项；不阻塞 G2；本文件不记录任何真实凭据内容。
+  9. **Post-G2 模式正式冻结：READ_ONLY_GAP_AUDIT_FIRST**（§9）；不得重新机械执行旧 MB1–MB18。
+- 本节仅落档 Human 认可与处置：不修改任何技术判定、不改 23 参数、不重开 ADR、生产代码零变化。

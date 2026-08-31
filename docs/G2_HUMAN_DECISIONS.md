@@ -29,3 +29,5 @@
 | Q23 | 严重故障恢复目标 RTO ≤4 小时（前提＝可用备份存在且基础设施正常） | HUMAN_CONFIRMED | 2026-08-31 | NFR §5.4/NF-05 |
 
 **计数**：`HUMAN_CONFIRMED` 23/23；`G2_PENDING_PARAMETERS = 0`（NFR §12 集中表：`HUMAN_CONFIRMED` 17 项＋`DEFERRED_DEPLOYMENT_DETAIL` 6 项，后者为部署阶段细节/工程默认，不计入 G2 待确认参数）。
+
+**G2 Final Signoff**: PASS — Date: 2026-09-01（详情见 `G2_FREEZE_EVIDENCE.md` §10，本表 23 参数不变）。
