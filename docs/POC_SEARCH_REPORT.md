@@ -1,6 +1,6 @@
 # 中文搜索真实数据 PoC 方案（POC_SEARCH_REPORT 方案章）
 
-- **状态**：方案章 v1（M6.1 产出）。§5 实验记录归 M6.2，§6–§7 结论归 M6.3——本批不写。
+- **状态**：方案章 v1（M6.1 产出）。§5 实验记录归 M6.2（2026-08-31 已录）；§6–§7 结论归 M6.3（2026-08-31 已录——D7 裁决与限制口径）。
 - **分支**：`arch/m6.1-search-plan`；基线 `origin/main@761b78b`。
 - **引源**：00_MASTER_PLAN §13 M6.1；02_ARCHITECTURE_DOMAIN_PLAN §8 S6.1（本步正式标准）；PRD §10/§11/§12/§14；CONTENT_MODEL §20/§21/§22/§23；上游审计 §3.4；ADR-0001。
 - **红线**：本批零依赖安装、零实验执行、零胜者预设、零独立搜索服务候选（Elasticsearch/OpenSearch/Meilisearch 类一律不列为候选）。
@@ -331,6 +331,45 @@ Debian 源 USTC http、PGDG 源 Aliyun http、SCWS/zhparser 宿主机预取 COPY
 收窄为仅 A 档完整串（10 条 2 字查询串为语料高频 gram，30 串全禁实证不可满足）；
 B/C 档串出现于合成页＝合法干扰面（锚点可达性由时间戳不变式保证，合成不进金标 expected）。
 
+## 6. 结论（D7 裁决；2026-08-31，M6.3 收口）
+
+本章逐字段转录 D7 裁决要点、给出机械映射声明与生产落地前提；本批为文档收口——零代码、零搜索配置、零依赖变更（M6 红线）。
+
+### 6.1 D7_SEARCH_DECISION 逐字段转录
+
+| 字段 | 值 |
+| --- | --- |
+| VERDICT | CLEAR_WINNER |
+| SELECTED | E1 |
+| RATIONALE（摘要） | E1 质量门两档均 30/30（100%），1000 档逐条 p50 最大 9.12ms，分别满足 §4.1 hit@10≥90% 与 §4.2 逐条 p50<1s；依证据包 §7/本报告 §4.4 首条"E1 达标→E1"机械裁决；§5.2–§5.3 数据完整支持门判定，未见内部矛盾（全文见裁决书，ADR-0006 决策节引用） |
+| RESIDUAL_RISKS | 转录为本报告 §7 限制与口径边界 |
+| 裁决会话 | M6.3-D7-search-decision（GPT 裁决会话，2026-08-31） |
+| 裁决输入白名单 | M6.3 证据压缩包＋本报告（§1–§5）；白名单外无输入 |
+| 裁决书 | `peiligo_restart/m6.3-D7-search-decision/M6.3-D7-decision.md`（驾驶舱工作区会话目录——裁决书路径约定；不入代码仓） |
+
+### 6.2 机械映射声明
+
+按 §4.4 冻结规则机械映射：**E1 双门达标（§4.1 hit@10＝30/30 于 200/1000 两门档；§4.2 1000 档逐条 p50 最大 9.12ms < 1s）→ E1**。无实验外判断；§4.4 第 2–4 分支未触发，独立搜索服务评估不触发。
+
+### 6.3 生产落地前提：PRODUCTION_IMPLEMENTATION_REQUIRED=YES
+
+生产库为 PostgreSQL（PRD 已定），`wagtail.search.backends.database` 后端按连接 vendor 分派实现（CM §20.0 事实 10）——**PG vendor 下走 FTS 路径＝E2 语义；E1 的 icontains 语义须在显式选择 fallback/DatabaseSearchBackend 才成立**（PoC 以 SQLite vendor 触发，§1.1、§8 D-5）。落地方案属后续实现阶段，本期不动代码；生产接线前须按 §7 限制补规模/并发验证与排序体验监测。
+
+### 6.4 ADR-0006 落盘（状态＝Proposed）
+
+已按 `docs/adr/_template.md` 五节结构落盘 `docs/adr/0006-chinese-search-backend.md`，状态＝**Proposed**——README §4 硬规则：ADR 状态变更决策人＝项目负责人或其书面授权，执行代理不得代决；转 Accepted 须经 G2 门项目负责人签字，本批不得写 Accepted。裁决书 ADR_STATUS=ACCEPTED_READY 释义＝"具备受理条件、待受理"；其 GLM_CLOSEOUT_INSTRUCTION 原文为"将 ADR-0006 写为 Accepted"，本批按 M6.3 收口契约硬性条款与 README §4 以 Proposed 落盘——Human 认可尚未发生。
+
+## 7. 限制与口径边界
+
+照录证据包 §9（残余风险与口径边界；该包无裁决权）：以下为 §6 结论的适用边界，不改变 §4 任一门判定。
+
+- **匹配语义与排序**：icontains 为子串匹配、无相关度排序；hit@10 为集合命中口径，未评排序质量（CM §20.2：E1 相关度排序缺失为结构性事实）。
+- **规模与并发**：E1 性能数字来自 PoC 单机环境（§5.5），生产规模、并发及完整长尾未测。
+- **语料构成**：5000 档真实语料比例 46.41%（Human 2026-08-31 选项 A 授权，§8 D-6⑧登记）；合成语料个别标题存在 gram 重复（评审观察项 OBS-4，不进金标）。
+- **分位口径**：p50/p95 为 30 条×20 次的中位/分位（§4.2 定义固定），非长尾全貌。
+- **未选方案侧记**：E3 zhparser 存在运维负担与扩展维护风险（§5.6）。
+- **转化声明**：以上限制转化为后续生产实现的验证与监测要求（见 §6.3 与 ADR-0006 后果节）。
+
 ## 8. 可追溯性表
 
 | 条目 | 本报告位置 | 引源 |
@@ -362,6 +401,10 @@ B/C 档串出现于合成页＝合法干扰面（锚点可达性由时间戳不�
 | 排序口径（`order_by_relevance=False`） | §4.1 | CM §21.6（V1 契约排序；保序旋钮） |
 | 决策规则（E1→E2→E3→升级） | §4.4 | 契约 §4；02 §8 S6.1 §4；PRD §10 决策门 4；CM §22 ⑤ |
 | 断言 SE-01/SE-02 | §9 | 02 §8 S6.1 测试要求；02 §2.4 |
+| M6.3 证据压缩包（9/9 组合数据摘要＋两门判定＋§4.4 规则要点；无裁决权） | §6.1/§7 | 证据包 `peiligo_restart/m6.3-search-evidence-compression/M6.3-evidence-packet.md`（驾驶舱工作区，不入代码仓）；授权＝M6.3 收口契约（证据压缩步骤产出） |
+| M6.3 GPT 裁决（D7_SEARCH_DECISION：VERDICT=CLEAR_WINNER／SELECTED=E1） | §6 | 裁决书路径约定＝`peiligo_restart/m6.3-D7-search-decision/M6.3-D7-decision.md`（驾驶舱工作区，不入代码仓）；授权＝D7 决策门＋§4.4 冻结规则机械裁决（00 §2.2 D7 行） |
+| OBS-1 勘误链（M6.2 执行评审 FAIL（OBS-1/3）→勘误 bc4c79c→复评 PASS 5/5） | §5.3（勘误后数字）/§8 D-6①注 | 证据包 §10 评审链转录（三评审独立会话；M6.2 评审亲跑复算，E1/E2/E3×200 hit@10 重跑全一致）；授权＝M6.2 评审处置记录 |
+| ADR-0006 落盘（Proposed，2026-08-31） | §6.4；`docs/adr/0006-chinese-search-backend.md` | `docs/adr/README.md` §2/§4（状态变更决策人＝项目负责人，代理不得代决；转 Accepted 待 G2 门签字）；授权＝M6.3 收口契约 §2.2 |
 
 **偏差与授权登记**：
 
