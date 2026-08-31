@@ -6,7 +6,7 @@
 | --- | --- |
 | 编号 | 0006 |
 | 日期 | 2026-08-31（首落盘） |
-| 状态 | Proposed（2026-08-31 由 M6.3 以 Proposed 落盘；待 G2 门项目负责人签收后转 Accepted——README §4 硬规则：ADR 状态变更决策人＝项目负责人或其书面授权，执行代理不得代决） |
+| 状态 | Accepted（2026-08-31 由 M6.3 以 Proposed 落盘；同日经 G2 门项目负责人签收由 Proposed 转 Accepted——2026-08-31 Human（项目负责人）M6 Human Gate 裁决签收＝G2 门通过：SELECTED=E1、独立搜索服务评估 NOT REQUIRED、接受已知限制（hit@10/性能已验证、细粒度排序质量未验证；生产反馈如出现排序/召回问题可重开本 ADR）。README §4：ADR 状态变更决策人＝项目负责人或其书面授权，本次变更即其签收） |
 | 关联决策 | D7（保留决策门。出处：00_MASTER_PLAN §2.2 D7 行＋§13 M6.1–M6.3；PRD §10 决策门 4；报告 §4.4 先验冻结决策规则。裁决书＝驾驶舱工作区 `peiligo_restart/m6.3-D7-search-decision/M6.3-D7-decision.md`，不入代码仓；裁决要点转录见 `docs/POC_SEARCH_REPORT.md` §6） |
 
 ## 背景
@@ -26,7 +26,7 @@ D7 裁决（GPT 会话 M6.3-D7-search-decision，2026-08-31）逐字段引用固
 
 **生产语义落地前提（PRODUCTION_IMPLEMENTATION_REQUIRED=YES）**：生产库为 PostgreSQL，`wagtail.search.backends.database` 在 PG vendor 下走 FTS 路径＝E2 语义（CM §20.0 事实 10）；E1 的 icontains 语义须在**显式选择 fallback/DatabaseSearchBackend** 才成立。落地方案属后续实现阶段——本 ADR 仅记录前提与验证义务，M6 不改任何生产代码/搜索配置/依赖；生产接线前须按报告 §7 限制补规模/并发验证与排序体验监测。
 
-**状态边界**：本 ADR 以 Proposed 落盘（README §4：代理不得代决）；转 Accepted 须经 G2 门项目负责人签字。裁决书 ADR_STATUS=ACCEPTED_READY 释义＝"具备受理条件、待受理"，不等于已 Accepted。
+**状态边界**：本 ADR 2026-08-31 以 Proposed 落盘（README §4：代理不得代决）；同日经 G2 门项目负责人签收由 Proposed 转 Accepted（变更注记见状态字段头）。裁决书 ADR_STATUS=ACCEPTED_READY 释义＝"具备受理条件、待受理"（裁决时点口径）——该受理已由 2026-08-31 G2 门签收完成。
 
 **一句话可检验**：按 §4.4 冻结规则机械选定 E1（Wagtail DB 后端 icontains）；其在生产 PostgreSQL 下成立的前提＝显式后端选择，生产接线属后续实现阶段并须验证（PRODUCTION_IMPLEMENTATION_REQUIRED=YES）。
 
@@ -62,7 +62,7 @@ D7 裁决（GPT 会话 M6.3-D7-search-decision，2026-08-31）逐字段引用固
 - **决策规则冻结条款**：裁决为报告 §4.4 先验冻结规则的机械映射（§3.3/§4 冻结声明——实验后未修改规则），无实验外判断；机械映射结论与 D7 裁决书一致（CLEAR_WINNER／E1）。不违反。
 - **PRD §20 V1 不做清单／扩围**：未引入独立搜索服务或任何不做项。不违反。
 - **"不修改 Wagtail 核心"（02 §0.2-2）**：E1 为 wagtail/modelsearch 官方后端机制；生产落地前提（显式后端选择）亦属官方配置面，不改核心。不违反。
-- **ADR 机制（README §4）**：本件以 Proposed 落盘，未代决任何状态变更；转 Accepted 留待 G2 门项目负责人签字。不违反。
+- **ADR 机制（README §4）**：本件以 Proposed 落盘，未代决任何状态变更；转 Accepted 已经 G2 门项目负责人签字（2026-08-31，见状态字段头变更注记）。不违反。
 - **秘密纪律（00 §4.5）／旧仓只读（OR-2）**：全文无秘密、无凭据，仅含路径与条款引用；无任何针对旧仓的读写安排。不违反。
 
 **结论：不违反任何一条，无豁免申请。**

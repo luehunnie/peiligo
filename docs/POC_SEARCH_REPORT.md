@@ -359,6 +359,8 @@ B/C 档串出现于合成页＝合法干扰面（锚点可达性由时间戳不�
 
 已按 `docs/adr/_template.md` 五节结构落盘 `docs/adr/0006-chinese-search-backend.md`，状态＝**Proposed**——README §4 硬规则：ADR 状态变更决策人＝项目负责人或其书面授权，执行代理不得代决；转 Accepted 须经 G2 门项目负责人签字，本批不得写 Accepted。裁决书 ADR_STATUS=ACCEPTED_READY 释义＝"具备受理条件、待受理"；其 GLM_CLOSEOUT_INSTRUCTION 原文为"将 ADR-0006 写为 Accepted"，本批按 M6.3 收口契约硬性条款与 README §4 以 Proposed 落盘——Human 认可尚未发生。
 
+Human 2026-08-31 M6 Human Gate 裁决认可（E1 确认、独立搜索服务评估不触发），ADR-0006 经 G2 门签收由 Proposed 转 Accepted——落档见 ADR-0006 状态注记与 adr/README。
+
 ## 7. 限制与口径边界
 
 照录证据包 §9（残余风险与口径边界；该包无裁决权）：以下为 §6 结论的适用边界，不改变 §4 任一门判定。
