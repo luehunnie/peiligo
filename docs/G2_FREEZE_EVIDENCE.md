@@ -25,10 +25,11 @@
 | ADR-0002 | Accepted（2026-08-18 G1） | 前端架构＝Wagtail 服务端模板；关键内容不依赖 JS；meta/noindex 由模板与页面机制控制 | YES——NFR §1.3/§2 与 ADR-0002 引用一致 |
 | ADR-0003 | Accepted（2026-08-18 G1＝D2 正式裁决） | 全新干净 Wagtail 骨架、settings 分层（base/dev/production/test）、不迁移旧数据 | YES——canonical `src/peiligo` 骨架与 settings 分层在库（SB §3.2/§5 引证） |
 | ADR-0004 | Accepted（2026-08-18 G1） | 部门权限容器树：容器＝权限挂载点＋路由分组，前台 404，任何部门不建主页 | YES——M4.3 T01–T16 16/16＋IA §3/§8 禁令对照逐维一致 |
-| ADR-0005 | Accepted（2026-08-18 G1） | 公开内容＝Page 树载体；受控数据（部门/词表/标签/推荐位/站点设置）＝Snippet·Settings，无公开独立 URL | YES——CM §13 与 IA §5 载体表一致 |
+| ADR-0005 | Accepted（2026-08-18 G1） | 公开内容＝Page 树载体；受控数据（部门/词表/标签/推荐位/站点设置）＝Snippet·Settings，无公开独立 URL | YES——CM §1.1 六类内容载体总表与 IA §5 载体表一致（受控数据侧详见 CM §13） |
 | ADR-0006 | Accepted（2026-08-31 M6.3 落盘、同日 G2 门项目负责人签收转 Accepted） | 中文搜索后端 SELECTED=E1（icontains 语义）；独立搜索服务评估 NOT REQUIRED；接受已知限制，生产正式接线后执行 §11.4 复验门方可视为生效 | YES——POC §6 D7 裁决逐字段转录、NFR §11 状态边界（选型 Accepted ≠ 实现已发生）自洽 |
 
 - 六份 ADR 状态变更决策人均为项目负责人/门记录（`docs/adr/README.md` §4 代理不得代决）；无状态互相覆盖而未说明；**无两个 Accepted ADR 对同一问题给出相反结论**。
+- ADR-0004 末行状态注记（`adr/0004:106`「本回写最终以独立审查复跑＋G2 门确认为准」）：本轮 G2-B 独立审查即该注记所指复核载体之一——§3 PERMISSION_MODEL 行分类（FROZEN）与 §8 条件②（T01–T16 16/16）复核已在案。
 - 本轮不改任何 ADR（不重新设计）。
 
 ## 3. FREEZE_MATRIX（§7；FROZEN＝规则明确且实现基本对齐；FROZEN_WITH_IMPLEMENTATION_GAP＝规则与验收明确、实现未完；BLOCKED＝存在必须由 Human 决定的设计问题）
@@ -69,7 +70,7 @@
 | 3 | MIME_VALIDATION / 4. FILE_SIGNATURE_VALIDATION | SB §4.2 层②无显式校验、层③魔数未接入（SEC-18 `NOT_IMPLEMENTED`） |
 | 5 | EXTERNAL_REDIRECT_CONFIRMATION | SB §12/§14：跳转页未实现（SB-06/SEC-21；PRD §23 必测） |
 | 6 | PRODUCTION_COOKIE_CONFIGURATION | SB §3.2 ★：`SESSION/CSRF _COOKIE_SECURE`、`SECURE_*` 一族未接线（目标值已确认 Q16/Q5/Q6/Q10） |
-| 7 | LOGIN_RATE_LIMIT | SB §2.3：axes 未安装（SEC-15 `NOT_IMPLEMENTED`；Q3 参数已确认） |
+| 7 | LOGIN_RATE_LIMIT / FORCE_PASSWORD_CHANGE | SB §2.3：axes 未安装（SEC-15 `NOT_IMPLEMENTED`；Q3 参数已确认）；SB §2.4/§9/§12/§14：重置/首登强制改密机制未实现（SB-04/SEC-16 `NOT_IMPLEMENTED`，SB §14 与限速同批挂 MB） |
 | 8 | HSTS_FINAL_CONFIGURATION | SB §3.2/§14：SEC-24 未达标（Q5 先短后长，目标 1 年） |
 | 9 | FEATURED_COUNT / EXPIRY_ALIGNMENT | IA §7.2：Q14（最多 3 条）/Q15（默认 30 天）已确认，随 MB8 配置留痕落地 |
 | 10 | PERFORMANCE_VALIDATION | NFR §1.6/§1.7：测量环境未建、NF-01/02/07/09 零实测 |
@@ -85,12 +86,12 @@
 | 24 | CI | SB §5/§12：CI 未建（MB15 承接：secret 扫描＋依赖检查） |
 | 25 | CONTAINER / CADDY FINALIZATION | NFR §1.1：Q10 架构基线已确认；生产容器/Caddy/域名证书（PP-19）部署阶段落实 |
 
-禁止凭想象增项：以上每项均有 SB/NFR/ADR/Mapping 正式出处；未发现列表之外的证据支持项。
+禁止凭想象增项：以上每项均有 SB/NFR/ADR/Mapping 正式出处；未发现列表之外的 `NOT_IMPLEMENTED` 证据支持项。另有 NFR §13 三个 `NEEDS_VERIFICATION` 领域（Browser/Responsive＝NF-15 交付线执行、Capacity＝PP-18 上线前盘点）属验证/盘点类而非实现缺口，随 §9 底册（NFR §13 全表）承接，不另列行。
 
 ## 6. ARCHITECTURE_DECISIONS_PENDING（§3-2/§9 交叉）
 
 - **未解决的产品/架构设计决策：0。**G2 门 D0–D9 十决策全部处置在案（M00 审查 §A2 核对：D7→M6.3/ADR-0006 已收口，其余按各门落点完成）；六个 ADR 全部 Accepted 且自洽（§2）。
-- **治理线残留（须 Human 在 G2 签收时处置，非设计阻塞）**：计划治理线步骤 **M0.3–M0.7**（AI_WORKFLOW＋D8 裁决、TASK_TEMPLATE、SECRETS_POLICY、CHANGE_MANAGEMENT、PHASE_GATES＋G2 治理确认包）在 canonical 与历史仓均无产物＝未执行（`docs/decisions/M0-2-BASELINE-MANIFEST.md:51` 明示 D8 未裁决；`docs/governance/` 不存在；reviews 无 M0.3–M0.7 记录）。项目实际按 D8 裁决前缺省运行（审查记录入 `docs/reviews/`——实际发生，32 份在案），且 00 §15 G2 触发条件含「M0.7 完成」→ **门条件⑧残留**，处置选项（执行/书面豁免/裁定已被 Rolling Implementation 路径实质取代）由项目负责人签收时定。另 00 §15 条件⑥「产出位于 peiligo_restart rebuild/v1」字面已被 SSOT 迁移取代（三方审计 2026-09-01 定论 canonical=peiligo；全部产出已在 canonical main 提交）——属已记录的历史性取代，非未决设计。
+- **治理线残留（须 Human 在 G2 签收时处置，非设计阻塞）**：计划治理线步骤 **M0.3–M0.7**（AI_WORKFLOW＋D8 裁决、TASK_TEMPLATE、SECRETS_POLICY、CHANGE_MANAGEMENT、PHASE_GATES＋G2 治理确认包）在 canonical 与历史仓均无产物＝未执行（`docs/decisions/M0-2-BASELINE-MANIFEST.md:51` 明示 D8 未裁决；`docs/governance/` 不存在；reviews 无 M0.3–M0.7 记录）。项目实际按 D8 裁决前缺省运行（审查记录入 `docs/reviews/`——实际发生，32 份在案），且 00 §15 G2 触发条件含「M0.7 完成」→ **门条件⑧残留**，处置选项（执行/书面豁免/裁定已被 Rolling Implementation 路径实质取代）由项目负责人签收时定。同批宜一并处置的项目负责人事项（SB §14 登记，非产品/架构设计决策）：R-05 用户/组管理无 DB 级审计的裁决（SB §7「开放（低）」）与曾暴露令牌轮换（治理动作）。另 00 §15 条件⑥「产出位于 peiligo_restart rebuild/v1」字面已被 SSOT 迁移取代（三方审计 2026-09-01 定论 canonical=peiligo；全部产出已在 canonical main 提交）——属已记录的历史性取代，非未决设计。
 
 ## 7. PROCESS_DEVIATION（§5）
 
