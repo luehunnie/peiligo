@@ -31,7 +31,7 @@
 | 0003 | 项目骨架：peiligo_restart 全新仓库干净 Wagtail 骨架 | Accepted | 2026-08-18 | C5/D2 | M1.4 · `0003-clean-wagtail-skeleton.md` | G1（=D2 正式裁决记录） |
 | 0004 | 部门权限容器树（不构成前台部门主页） | Accepted | 2026-08-18 | C3（=D5） | M1.5 · `0004-department-permission-container-tree.md` | G1 |
 | 0005 | 公开内容 Page / 受控数据 Snippet·设置 | Accepted | 2026-08-18 | C4（=D6） | M1.6 · `0005-page-vs-snippet-allocation.md` | G1 |
-| 0006 | 中文搜索后端 | Proposed | —（待落盘） | D7（保留决策门，待 M6.3 PoC 裁决） | M6.3 · `0006-chinese-search-backend.md` | M6.3 落盘 → G2 |
+| 0006 | 中文搜索后端 | Proposed | 2026-08-31 | D7（保留决策门，待 M6.3 PoC 裁决） | M6.3 · [0006-chinese-search-backend.md](0006-chinese-search-backend.md) | M6.3 落盘 → G2 |
 
 预列说明：
 
@@ -46,7 +46,7 @@
 
 | 状态 | 数量 | 编号 |
 | --- | --- | --- |
-| Proposed | 1 | 0006（预列占位，待 M6.3 落盘 → G2） |
+| Proposed | 1 | 0006（已落盘 Proposed，待 G2） |
 | Accepted | 5 | 0001、0002、0003、0004、0005（2026-08-18 G1 门批准） |
 | Superseded | 0 | — |
 | Rejected | 0 | — |
