@@ -29,7 +29,7 @@
 | ADR-0006 | Accepted（2026-08-31 M6.3 落盘、同日 G2 门项目负责人签收转 Accepted） | 中文搜索后端 SELECTED=E1（icontains 语义）；独立搜索服务评估 NOT REQUIRED；接受已知限制，生产正式接线后执行 §11.4 复验门方可视为生效 | YES——POC §6 D7 裁决逐字段转录、NFR §11 状态边界（选型 Accepted ≠ 实现已发生）自洽 |
 
 - 六份 ADR 状态变更决策人均为项目负责人/门记录（`docs/adr/README.md` §4 代理不得代决）；无状态互相覆盖而未说明；**无两个 Accepted ADR 对同一问题给出相反结论**。
-- ADR-0004 末行状态注记（`adr/0004:106`「本回写最终以独立审查复跑＋G2 门确认为准」）：本轮 G2-B 独立审查即该注记所指复核载体之一——§3 PERMISSION_MODEL 行分类（FROZEN）与 §8 条件②（T01–T16 16/16）复核已在案。
+- ADR-0004 末行状态注记（`adr/0004:105`「本回写最终以独立审查复跑＋G2 门确认为准」）：本轮 G2-B 独立审查即该注记所指复核载体之一——§3 PERMISSION_MODEL 行分类（FROZEN）与 §8 条件②（T01–T16 16/16）复核已在案。
 - 本轮不改任何 ADR（不重新设计）。
 
 ## 3. FREEZE_MATRIX（§7；FROZEN＝规则明确且实现基本对齐；FROZEN_WITH_IMPLEMENTATION_GAP＝规则与验收明确、实现未完；BLOCKED＝存在必须由 Human 决定的设计问题）
