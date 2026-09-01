@@ -36,6 +36,7 @@ from home.models import HomePage, SectionPage
 from notices.models import ArticlePage, NoticePage
 from resources.models import MaterialPage, SoftwareToolPage
 from wagtail import hooks
+from wagtail.admin.api.views import PagesAdminAPIViewSet
 from wagtail.models import Page
 
 from departments.models import (
@@ -352,3 +353,50 @@ def refuse_structure_page_edit_for_non_privileged(request, page):
         )
         return HttpResponseRedirect(reverse("wagtailadmin_explore", args=[page.get_parent().id]))
     return None
+
+
+# ---------------------------------------------------------------------------
+# 终审 Reviewer A（HTML 守卫一致性收口）：Admin API 页面 action 端点禁用。
+# ---------------------------------------------------------------------------
+
+
+class _ReadOnlyPagesAdminAPIViewSet(PagesAdminAPIViewSet):
+    """pages 端点只读形态：无任何 action，且 action 路由不再注册。
+
+    ``actions = {}`` 使任何 action 名一律 404（fail-closed 双保险）；覆盖
+    ``get_urlpatterns`` 沿 MRO 取 ``BaseAPIViewSet`` 的 listing/detail/find
+    只读路由（跳过 ``PagesAdminAPIViewSet.get_urlpatterns`` 追加的
+    ``<int:pk>/action/<str:action_name>/``）。路由命名不变，sidebar.js 的
+    GET listing 依赖不受影响（test_browser_tree_api_reachable 钉住）。
+    """
+
+    actions = {}
+
+    @classmethod
+    def get_urlpatterns(cls):
+        return super(PagesAdminAPIViewSet, cls).get_urlpatterns()
+
+
+@hooks.register("construct_admin_api")
+def disable_admin_api_page_actions(router):
+    """整体禁用 Admin API 页面 action 端点（终审 Reviewer A 收口）。
+
+    根因（Wagtail 7.4.2 源码亲证）：``PagesAdminAPIViewSet.action_view``
+    （wagtail/admin/api/views.py）无 permission_classes（项目未配置
+    REST_FRAMEWORK＝DRF 缺省 AllowAny）、无页面级权限检查，径直执行核心
+    ``wagtail.actions.*``，不经 before_edit_page/before_delete_page/
+    before_move_page 等 HTML 守卫钩子（仅挂 wagtail/admin/views/pages/
+    *.py）；唯一屏障是 Wagtail 树权限，而 change@容器 GPP 附带
+    can_delete/can_publish（上方 M4.4 注）——R2 经 API 即可永久删除/
+    发布/回滚/移动自己子树内容（行为级测试已实证），§17.4 非空结构
+    拒删、L-9 内容模型移动复检与递归复制复检对 API 完全无钩子可用。
+
+    该 action 面未被任何后台前端消费（全部编译 bundle 无 action/ 引用，
+    仅 sidebar.js 消费 GET listing），属产品外接口，整体禁用＝守卫语义
+    单一来源仍是 HTML 守卫钩子，不新增第二套权限判断。经官方
+    ``construct_admin_api`` 扩展点（wagtail/admin/api/urls.py，endpoint
+    注册之后、URL 装配之前触发）按名覆盖 pages 端点 viewset；
+    幂等：仅当 pages 端点仍是官方 viewset 时替换。
+    """
+    if router._endpoints.get("pages") is PagesAdminAPIViewSet:
+        router.register_endpoint("pages", _ReadOnlyPagesAdminAPIViewSet)
