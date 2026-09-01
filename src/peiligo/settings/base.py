@@ -251,21 +251,20 @@ WAGTAILADMIN_BASE_URL = "http://example.com"
 # This can be omitted to allow all files, but note that this may present a security risk
 # if untrusted users are allowed to upload files -
 # see https://docs.wagtail.org/en/stable/advanced_topics/deploying.html#user-uploaded-files
-WAGTAILDOCS_EXTENSIONS = [
-    "csv",
-    "docx",
-    "key",
-    "odt",
-    "pdf",
-    "pptx",
-    "rtf",
-    "txt",
-    "xlsx",
-    "zip",
-]
+# F-02（SECURITY_BASELINE §4.1 人工冻结清单）：wagtaildocs 面扩展名白名单。
+# 图片格式（png/jpg/webp）走 wagtailimages（Pillow/Willow 解码校验），不在此。
+# 扩展名仅是第一层；声明 MIME/内容签名一致性收口见 peiligo.upload_validation
+# （下一设置项），三级一致性回归见 tests/test_upload_validation.py。
+WAGTAILDOCS_EXTENSIONS = ["doc", "docx", "pdf", "ppt", "pptx", "xls", "xlsx"]
 
-# Maximum upload size for documents in bytes.
-WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+# F-02（SECURITY_BASELINE §13 / G2 Q1 人工冻结值）：20 MiB 硬上限，不由
+# 代码侧调整。
+WAGTAILDOCS_MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20MB
+
+# F-02：上传表单统一收口——单文件/多文件/编辑替换三条后台路径均经
+# get_document_form 构建（官方 WAGTAILDOCS_DOCUMENT_FORM_BASE 覆盖点），
+# 文件名治理＋声明 MIME＋内容签名三级一致性见 peiligo/upload_validation.py。
+WAGTAILDOCS_DOCUMENT_FORM_BASE = "peiligo.upload_validation.ValidatedDocumentForm"
 
 # M2.2（IA §6.1 页脚反馈）：统一反馈工作邮箱，环境变量外置（哑值样例见
 # .env.example）。正式载体为站点级配置（ADR-0005 载体表 #14，M3+ 终判），
