@@ -18,6 +18,8 @@ media/
 .ruff_cache/
 staticfiles/
 *.egg-info/
+# 本地开发 settings 覆盖（dev.py 读取；终审 M-2：不入库、production 不读）
+src/peiligo/settings/local.py
 # 哑值样例入库（计划 03 S1：.env.example 无真实秘密）
 !.env.example
 

@@ -10,7 +10,9 @@ wagtail/admin/views/pages/delete.py）与 ``before_bulk_action``（批量删除
 动线：``DeleteBulkAction.execute_action`` 直调 ``page.delete()`` 不经单页
 钩子，返回响应即在事务内取消整个动作，wagtail/admin/views/bulk_action/
 base_bulk_action.py）。直接 ORM ``delete()`` 属产品外路径，删除默认走
-下线/到期而非删除（§17.1）。
+下线/到期而非删除（§17.1）。批量移动同理（``MoveBulkAction`` 直调
+``page.move()`` 不经 ``before_move_page``），故 ``before_bulk_action``
+对 move 与 delete 同口径兜底，规则核心与单页动线共用一套（终审 L-9）。
 
 M4.4 增设权限面守卫（矩阵 §3.4 关闭措施，M4.2 PoC/M4.3 T08 已验证的
 最小方案）：Wagtail 页面树权限无独立 delete 类型，``change``@容器附带
@@ -19,6 +21,11 @@ M4.4 增设权限面守卫（矩阵 §3.4 关闭措施，M4.2 PoC/M4.3 T08 已�
 非特权用户的一切页面永久删除。守卫 fail-closed：特权判定
 （superuser 或总管理员组成员，departments.permissions）只用于放行，
 从不新增授权；非页面模型的批量动作不在守卫面。
+
+H-1（终审，矩阵 M-C3）补充同类只拒绝守卫：结构边界页（首页/板块/部门
+容器）是权限边界载体——容器＝GPP 挂载点、板块/首页＝IA 层级节点——
+非特权后台账号对三者的编辑面（含 slug/department 等结构字段）经
+``before_edit_page`` 服务端整体拒绝（非隐藏 panel 的展示层方案）。
 """
 
 from django.contrib import messages
@@ -29,6 +36,7 @@ from home.models import HomePage, SectionPage
 from notices.models import ArticlePage, NoticePage
 from resources.models import MaterialPage, SoftwareToolPage
 from wagtail import hooks
+from wagtail.admin.api.views import PagesAdminAPIViewSet
 from wagtail.models import Page
 
 from departments.models import (
@@ -46,6 +54,9 @@ CONTENT_PAGE_CLASSES = (
     SoftwareToolPage,
     GuidePage,
 )
+
+# 结构边界页（矩阵 M-C3）：权限边界载体，编辑面仅总管理员（H-1 守卫谓词）。
+STRUCTURE_PAGE_CLASSES = (HomePage, SectionPage, DepartmentContainerPage)
 
 
 def _cancel_move(request, page, error_text):
@@ -76,28 +87,30 @@ def _subtree_violation(container, section_slug):
     return None
 
 
-@hooks.register("before_move_page")
-def enforce_content_model_rules_on_move(request, page, destination):
-    """移动前校验：容器仅可移至板块页且不撞部门、子树按目标板块复检；
-    内容页仅可移至容器，且目标板块须在本类型白名单内、部门一致、
-    活动字段板块语义仍成立。"""
+def _move_violation(page, destination):
+    """单页/批量移动共用的内容模型规则核心（§1.4/§4/§7.2）。
+
+    返回拒绝文案（None＝放行）。终审 L-9：批量移动（``MoveBulkAction``
+    ``execute_action`` 直调 ``page.move()``）不经 ``before_move_page``，
+    两条动线必须共用本判定——不复制第二套规则。
+    """
     specific = page.specific
     if isinstance(specific, DepartmentContainerPage):
         dest = destination.specific
         if not isinstance(dest, SectionPage):
-            return _cancel_move(request, page, "部门容器只能移动到板块页下（CONTENT_MODEL §1.4）")
+            return "部门容器只能移动到板块页下（CONTENT_MODEL §1.4）"
         if department_clash_exists(specific, destination):
-            return _cancel_move(request, page, "该板块下已存在绑定此部门的容器（CONTENT_MODEL §4）")
+            return "该板块下已存在绑定此部门的容器（CONTENT_MODEL §4）"
         # 容器移动＝子树随迁换板块：按目标板块复检子树（§1.4 冻结约束为
         # 任何时点树上不存在违约内容页；同板块移动复检平凡通过，不误伤）。
         violation = _subtree_violation(specific, dest.slug)
         if violation:
-            return _cancel_move(request, page, f"容器移动被内容模型校验拒绝：{violation}")
+            return f"容器移动被内容模型校验拒绝：{violation}"
         return None
     if isinstance(specific, CONTENT_PAGE_CLASSES):
         dest = destination.specific
         if not isinstance(dest, DepartmentContainerPage):
-            return _cancel_move(request, page, "公开内容只能挂在本部门容器下（CONTENT_MODEL §1.4）")
+            return "公开内容只能挂在本部门容器下（CONTENT_MODEL §1.4）"
         errors = {}
         section = clean_content_page(specific, errors, parent_override=dest)
         if isinstance(specific, (NoticePage, ArticlePage)):
@@ -105,7 +118,44 @@ def enforce_content_model_rules_on_move(request, page, destination):
             specific.clean_event_fields(section, errors)
         if errors:
             detail = "；".join(msg for msgs in errors.values() for msg in msgs)
-            return _cancel_move(request, page, f"移动被内容模型校验拒绝：{detail}")
+            return f"移动被内容模型校验拒绝：{detail}"
+    return None
+
+
+@hooks.register("before_move_page")
+def enforce_content_model_rules_on_move(request, page, destination):
+    """移动前校验：容器仅可移至板块页且不撞部门、子树按目标板块复检；
+    内容页仅可移至容器，且目标板块须在本类型白名单内、部门一致、
+    活动字段板块语义仍成立（规则核心＝``_move_violation``，批量动线共用）。"""
+    violation = _move_violation(page, destination)
+    if violation:
+        return _cancel_move(request, page, violation)
+    return None
+
+
+@hooks.register("before_bulk_action")
+def refuse_illegal_bulk_move(request, action_type, objects, bulk_action):
+    """内容模型守卫——批量移动动线（终审 L-9）：与单页移动同一规则核心。
+
+    后台列表勾选移动经 ``MoveBulkAction``（/admin/bulk/wagtailcore/page/
+    move/），``execute_action`` 直调 ``page.move()`` 不经
+    ``before_move_page``。目的地取确认表单 ``chooser`` 字段（wagtail
+    ``BulkAction.form_valid`` 先置 ``cleaned_form`` 再触发本钩子）；
+    逐页复检，任一违规即返回响应＝事务内取消整个动作（含同批其余
+    页面，与批量删除守卫同口径）。目的地缺失（表单展示期/无目的地
+    短路）无移动发生，不拦。
+    """
+    if action_type != "move":
+        return None
+    form = getattr(bulk_action, "cleaned_form", None)
+    destination = form.cleaned_data.get("chooser") if form is not None else None
+    if destination is None:
+        return None
+    for obj in objects:
+        violation = _move_violation(obj, destination)
+        if violation:
+            messages.error(request, f"批量移动已取消：{violation}")
+            return HttpResponseRedirect(reverse("wagtailadmin_home"))
     return None
 
 
@@ -278,3 +328,75 @@ def refuse_non_admin_bulk_page_deletion(request, action_type, objects, bulk_acti
         f"涉及 {len(objects)} 页）。",
     )
     return HttpResponseRedirect(reverse("wagtailadmin_home"))
+
+
+@hooks.register("before_edit_page")
+def refuse_structure_page_edit_for_non_privileged(request, page):
+    """权限面守卫——结构边界页编辑动线（矩阵 M-C3；终审 H-1）。
+
+    首页/板块/部门容器是权限边界载体（容器＝GPP 挂载点、板块/首页＝
+    IA 层级节点），非特权账号编辑任一结构边界页（含改 slug/department
+    等结构字段）一律服务端拒绝。``before_edit_page`` 在 wagtail 默认
+    ``can_edit`` 判定之后、表单装配之前触发（GET/POST 同路，
+    wagtail/admin/views/pages/edit.py ``EditView.setup``），返回响应即
+    取消本次编辑。特权判定复用 ``is_privileged``（superuser 或总管理员
+    组，R1 走组权限行权）；守卫只拒绝、从不授权（fail-closed），
+    五类内容页编辑不受影响。
+    """
+    if is_privileged(request.user):
+        return None
+    if isinstance(page.specific, STRUCTURE_PAGE_CLASSES):
+        messages.error(
+            request,
+            f"「{page.title}」是结构边界页（首页/板块/部门容器），仅总管理员可编辑"
+            "（ROLE_PERMISSION_MATRIX M-C3）。",
+        )
+        return HttpResponseRedirect(reverse("wagtailadmin_explore", args=[page.get_parent().id]))
+    return None
+
+
+# ---------------------------------------------------------------------------
+# 终审 Reviewer A（HTML 守卫一致性收口）：Admin API 页面 action 端点禁用。
+# ---------------------------------------------------------------------------
+
+
+class _ReadOnlyPagesAdminAPIViewSet(PagesAdminAPIViewSet):
+    """pages 端点只读形态：无任何 action，且 action 路由不再注册。
+
+    ``actions = {}`` 使任何 action 名一律 404（fail-closed 双保险）；覆盖
+    ``get_urlpatterns`` 沿 MRO 取 ``BaseAPIViewSet`` 的 listing/detail/find
+    只读路由（跳过 ``PagesAdminAPIViewSet.get_urlpatterns`` 追加的
+    ``<int:pk>/action/<str:action_name>/``）。路由命名不变，sidebar.js 的
+    GET listing 依赖不受影响（test_browser_tree_api_reachable 钉住）。
+    """
+
+    actions = {}
+
+    @classmethod
+    def get_urlpatterns(cls):
+        return super(PagesAdminAPIViewSet, cls).get_urlpatterns()
+
+
+@hooks.register("construct_admin_api")
+def disable_admin_api_page_actions(router):
+    """整体禁用 Admin API 页面 action 端点（终审 Reviewer A 收口）。
+
+    根因（Wagtail 7.4.2 源码亲证）：``PagesAdminAPIViewSet.action_view``
+    （wagtail/admin/api/views.py）无 permission_classes（项目未配置
+    REST_FRAMEWORK＝DRF 缺省 AllowAny）、无页面级权限检查，径直执行核心
+    ``wagtail.actions.*``，不经 before_edit_page/before_delete_page/
+    before_move_page 等 HTML 守卫钩子（仅挂 wagtail/admin/views/pages/
+    *.py）；唯一屏障是 Wagtail 树权限，而 change@容器 GPP 附带
+    can_delete/can_publish（上方 M4.4 注）——R2 经 API 即可永久删除/
+    发布/回滚/移动自己子树内容（行为级测试已实证），§17.4 非空结构
+    拒删、L-9 内容模型移动复检与递归复制复检对 API 完全无钩子可用。
+
+    该 action 面未被任何后台前端消费（全部编译 bundle 无 action/ 引用，
+    仅 sidebar.js 消费 GET listing），属产品外接口，整体禁用＝守卫语义
+    单一来源仍是 HTML 守卫钩子，不新增第二套权限判断。经官方
+    ``construct_admin_api`` 扩展点（wagtail/admin/api/urls.py，endpoint
+    注册之后、URL 装配之前触发）按名覆盖 pages 端点 viewset；
+    幂等：仅当 pages 端点仍是官方 viewset 时替换。
+    """
+    if router._endpoints.get("pages") is PagesAdminAPIViewSet:
+        router.register_endpoint("pages", _ReadOnlyPagesAdminAPIViewSet)

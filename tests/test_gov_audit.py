@@ -251,6 +251,32 @@ class GroupCrudAuditTests(TestCase):
         )
         self.assertIn("移除", row.data["summary"])
 
+    def test_group_collection_permission_change_logged(self):
+        """终审 L-10：组集合权限行级变更（授/移）与页面权限同口径落审计。"""
+        w = self.world
+        group = Group.objects.create(name="t48-gcp-grp")  # 独立组，避开播种 GCP
+        gcp = group.collection_permissions.create(
+            collection=w["coll_b"],
+            permission=Permission.objects.get(
+                codename="add_document", content_type__app_label="wagtaildocs"
+            ),
+        )
+        row = (
+            group_entries(group.pk)
+            .filter(action="peiligo.gov.group_collection_permissions_changed")
+            .get()
+        )
+        self.assertEqual(row.data["collection"], w["coll_b"].name)
+        self.assertEqual(row.data["permission"], "add_document")
+        gcp.delete()
+        row = (
+            group_entries(group.pk)
+            .filter(action="peiligo.gov.group_collection_permissions_changed")
+            .order_by("-pk")
+            .first()
+        )
+        self.assertIn("移除", row.data["summary"])
+
 
 class NonRequestAuditTests(TestCase):
     """无请求上下文的变更照记，但 actor 置空＋显式 non_request（§9）。"""

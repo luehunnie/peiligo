@@ -5,8 +5,8 @@
 - 独立副本未配置须显式报告（不静默）；
 - 失败→非零退出＋残集清理＋不泄露口令；
 - 保留策略只删 Peiligo 备份集双重特征项，其余目录绝不触碰；
-- 恢复缺省 dry-run 零写入；实际恢复须显式隔离目标，与当前库/当前
-  媒体根同名同径即拒绝。
+- --dry-run 零写入（非缺省）；实际恢复须显式隔离目标，与当前库同名、
+  媒体目录等于或位于当前媒体根之内即拒绝（终审 L-7/L-8 口径）。
 """
 
 import os
@@ -267,6 +267,54 @@ class BackupRestoreTests(TestCase):
                     (scratch_db_name(),),
                 )
                 self.assertIsNone(cursor.fetchone(), "拒绝路径不产生任何库")
+
+    def test_refuses_media_interior_allows_sibling(self):
+        """终审 L-8：恢复媒体目标在当前 MEDIA_ROOT 内部（含深层）同样拒绝；
+        同级隔离目录（不在其内）照常放行——真实恢复往返验证。"""
+        scratch = scratch_db_name()
+        with tempfile.TemporaryDirectory(prefix="f12-media-root-") as media_root:
+            media_root = Path(media_root)
+            (media_root / "keep.txt").write_text("媒体样例", encoding="utf-8")
+            with (
+                tempfile.TemporaryDirectory(prefix="f12-backup-") as backup_tmp,
+                override_settings(MEDIA_ROOT=media_root),  # 恢复期当前媒体根＝该临时根
+            ):
+                set_dir = make_backup_set(Path(backup_tmp))
+
+                # 内部目标（深层且尚不存在）：拒绝执行
+                with self.assertRaises(CommandError):
+                    call_command(
+                        "backup_restore",
+                        "--source",
+                        str(set_dir),
+                        "--target-database",
+                        scratch,
+                        "--media-target-dir",
+                        str(media_root / "restore-tmp" / "deep"),
+                        stdout=StringIO(),
+                    )
+
+                # 同级隔离目录：不在 MEDIA_ROOT 之内 → 放行
+                conn = psycopg.connect(**pg_connect_kwargs("postgres"))
+                conn.autocommit = True
+                with conn.cursor() as cursor:
+                    cursor.execute(f'CREATE DATABASE "{scratch}"')
+                conn.close()
+                sibling = media_root.with_name(media_root.name + "-restore-target")
+                buf = StringIO()
+                call_command(
+                    "backup_restore",
+                    "--source",
+                    str(set_dir),
+                    "--target-database",
+                    scratch,
+                    "--media-target-dir",
+                    str(sibling),
+                    stdout=buf,
+                )
+                self.assertIn("restored_database=", buf.getvalue())
+                self.assertIn("restored_media=", buf.getvalue())
+                self.assertTrue((sibling / "media" / "keep.txt").exists(), "同级隔离目录解包成功")
 
 
 class VerifyChecksumsTraversalTests(TestCase):

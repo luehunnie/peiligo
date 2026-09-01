@@ -18,6 +18,10 @@
                      （仅提示，不判 CRIT——业务异常而非服务故障）。
 - app_errors         可选 OPS_LOG_FILE：近 24h ERROR 行数 >0＝WARN；
                      未配置则如实报告 unknown（不装作没事）。
+
+fail-soft（终审 L-6）：任一信号计算抛错不拖垮整份快照——该信号如实
+标 ``unknown``（附 error 文案），overall 至少 ``unknown``；JSON 永远
+完整输出，CRIT 非零退出的告警判定锚点不变（unknown 不触发非零退出）。
 """
 
 import json
@@ -195,7 +199,9 @@ def _hours(age):
 
 
 def _worse(current, candidate):
-    order = {"ok": 0, "warn": 1, "crit": 2}
+    # unknown＝信号计算失败（fail-soft 标记）：比 ok 重（不静默）、比
+    # warn 轻（监控自身故障不冒充业务 CRIT 触发非零退出）。
+    order = {"ok": 0, "unknown": 1, "warn": 2, "crit": 3}
     return candidate if order[candidate] > order[current] else current
 
 
@@ -226,7 +232,12 @@ class Command(BaseCommand):
             ("login_anomalies", _login_check),
             ("app_errors", _app_errors_check),
         ):
-            level, detail = check()
+            try:
+                level, detail = check()
+            except Exception as error:
+                # 终审 L-6：单信号计算失败（表未迁移/权限等）不拖垮快照，
+                # 如实标 unknown——JSON 仍完整，不装作 ok 也不误报 CRIT。
+                level, detail = "unknown", {"error": str(error)}
             checks[name] = {"level": level, **detail}
             overall = _worse(overall, level)
 

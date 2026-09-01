@@ -24,6 +24,7 @@ from wagtail.models import ModelLogEntry
 MEMBERSHIP_CHANGED = "peiligo.gov.membership_changed"
 GROUP_PERMS_CHANGED = "peiligo.gov.group_permissions_changed"
 PAGE_PERMS_CHANGED = "peiligo.gov.group_page_permissions_changed"
+COLL_PERMS_CHANGED = "peiligo.gov.group_collection_permissions_changed"
 USER_STATE_CHANGED = "peiligo.gov.user_active_state_changed"
 
 
@@ -50,6 +51,7 @@ def register_gov_audit_actions(actions):
     _detail_action(MEMBERSHIP_CHANGED, "组员变动", "组员变动")(actions)
     _detail_action(GROUP_PERMS_CHANGED, "组权限变更", "组权限变更")(actions)
     _detail_action(PAGE_PERMS_CHANGED, "组页面权限变更", "组页面权限变更")(actions)
+    _detail_action(COLL_PERMS_CHANGED, "组集合权限变更", "组集合权限变更")(actions)
     _detail_action(USER_STATE_CHANGED, "账号启停", "账号启停")(actions)
 
 

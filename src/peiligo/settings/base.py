@@ -318,6 +318,8 @@ WAGTAILSEARCH_BACKENDS = {
 
 # Base URL to use when referring to full URLs within the Wagtail admin backend -
 # e.g. in notification emails. Don't include '/admin' or a trailing slash
+# 终审 L-1：生产经环境外置（production.py env_required，与部署域名同源
+# 配置）；此处的哑值仅供本地/测试 settings 导入面使用。
 WAGTAILADMIN_BASE_URL = "http://example.com"
 
 # Allowed file extensions for documents in the document library.
@@ -345,6 +347,7 @@ WAGTAILDOCS_MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20MB
 WAGTAILDOCS_DOCUMENT_FORM_BASE = "peiligo.upload_validation.ValidatedDocumentForm"
 
 # M2.2（IA §6.1 页脚反馈）：统一反馈工作邮箱，环境变量外置（哑值样例见
-# .env.example）。正式载体为站点级配置（ADR-0005 载体表 #14，M3+ 终判），
-# 此前以 settings 过渡承载，不建模型、不伪造站点配置数据。
-FEEDBACK_EMAIL = os.environ.get("FEEDBACK_EMAIL", "feedback@example.com")
+# .env.example）。正式载体为站点级配置 SiteSettings.feedback_email（终审
+# M-1：前台取值站点设置优先、本值仅兜底，见 peiligo.context_processors）；
+# ``or`` 缺省——环境置空串视同未设，避免兜底被空值打穿。
+FEEDBACK_EMAIL = os.environ.get("FEEDBACK_EMAIL") or "feedback@example.com"
