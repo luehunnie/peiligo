@@ -5,6 +5,8 @@ CRUD 主行（wagtail.create/edit/delete）由 Wagtail generic 视图原生写�
 - User.groups m2m_changed        → 组员变动（正反向两个触发面都落行）；
 - Group.permissions m2m_changed  → 组 Django 权限逐项变更；
 - GroupPagePermission 行级信号   → 组页面权限变更（formset 删旧建新）；
+- GroupCollectionPermission 行级信号 → 组集合权限变更（终审 L-10，
+  文档/图片集合授权同面补齐，与页面权限同口径）；
 - after_bulk_action 钩子         → 用户批量启停（queryset.update 绕过
   generic 视图，不触信号）；批量删除由 post_delete 兜底覆盖；
 - User/Group post_delete 兜底    → generic 视图已先行写 wagtail.delete
@@ -22,10 +24,11 @@ from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 from wagtail import hooks
 from wagtail.log_actions import get_active_log_context, log
-from wagtail.models import ModelLogEntry
+from wagtail.models import GroupCollectionPermission, ModelLogEntry
 from wagtail.models.pages import GroupPagePermission
 
 from peiligo.govaudit.wagtail_hooks import (
+    COLL_PERMS_CHANGED,
     GROUP_PERMS_CHANGED,
     MEMBERSHIP_CHANGED,
     PAGE_PERMS_CHANGED,
@@ -134,6 +137,43 @@ def handle_group_page_permission_deleted(sender, instance, **kwargs):
         PAGE_PERMS_CHANGED,
         f"移除页面权限：{_page_perm_desc(instance)}",
         **_page_perm_data(instance),
+    )
+
+
+# --- 组集合权限（GroupCollectionPermission 行级；终审 L-10 同面补齐） ------
+
+
+def _coll_perm_desc(perm):
+    return f"{perm.permission.codename} → {perm.collection.name}"
+
+
+def _coll_perm_data(perm):
+    return {"collection": perm.collection.name, "permission": perm.permission.codename}
+
+
+@receiver(post_save, sender=GroupCollectionPermission, dispatch_uid="govaudit.group_coll_perm_save")
+def handle_group_collection_permission_saved(sender, instance, created, **kwargs):
+    if not created:
+        return  # 无更新动线：权限 formset 删旧建新
+    _log_detail(
+        instance.group,
+        COLL_PERMS_CHANGED,
+        f"授予集合权限：{_coll_perm_desc(instance)}",
+        **_coll_perm_data(instance),
+    )
+
+
+@receiver(
+    post_delete,
+    sender=GroupCollectionPermission,
+    dispatch_uid="govaudit.group_coll_perm_del",
+)
+def handle_group_collection_permission_deleted(sender, instance, **kwargs):
+    _log_detail(
+        instance.group,
+        COLL_PERMS_CHANGED,
+        f"移除集合权限：{_coll_perm_desc(instance)}",
+        **_coll_perm_data(instance),
     )
 
 
