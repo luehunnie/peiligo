@@ -34,6 +34,9 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+      # 终审 L-1：后台通知邮件基准地址（production env_required；compose
+      # 侧 `:?` 同口径快速失败，部署 .env 与 DOMAIN 同源填写）。
+      WAGTAILADMIN_BASE_URL: ${WAGTAILADMIN_BASE_URL:?WAGTAILADMIN_BASE_URL is required}
       MEDIA_ROOT: /data/media
       # 终审 M-1/L-11：反馈邮箱环境兜底值（正式载体为后台站点设置
       # SiteSettings.feedback_email，此处仅部署层缺省；置空视同未设）。

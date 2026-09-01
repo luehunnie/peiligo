@@ -55,7 +55,8 @@ RUN set -eux; \
 ENV DJANGO_SETTINGS_MODULE=peiligo.settings.production \
     DATABASE_URL=postgres://build@localhost/build \
     SECRET_KEY=build-time-dummy-not-a-real-secret \
-    ALLOWED_HOSTS=build.invalid
+    ALLOWED_HOSTS=build.invalid \
+    WAGTAILADMIN_BASE_URL=https://build.invalid
 RUN python manage.py collectstatic --noinput
 
 USER peiligo

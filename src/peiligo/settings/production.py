@@ -11,6 +11,10 @@ SECRET_KEY = env_required("SECRET_KEY")
 # A1.1（03 计划 S1）：允许主机外置（逗号分隔，剔除空项）。
 ALLOWED_HOSTS = [host.strip() for host in env_required("ALLOWED_HOSTS").split(",") if host.strip()]
 
+# 终审 L-1：后台通知邮件等全 URL 的基准地址外置（哑值 http://example.com
+# 不可上生产——密码重置/内容通知链接指向假域名）。部署与 DOMAIN 同源填写。
+WAGTAILADMIN_BASE_URL = env_required("WAGTAILADMIN_BASE_URL")
+
 # F-10（SB §10-1 冻结值）：CSRF 可信来源外置（逗号分隔；形如
 # https://host）。冻结部署为 Caddy 同源反代——Django 4+ 对同源请求
 # （Origin＝Host 头所指）隐式信任，故缺省空值即安全；仅出现跨源

@@ -318,6 +318,8 @@ WAGTAILSEARCH_BACKENDS = {
 
 # Base URL to use when referring to full URLs within the Wagtail admin backend -
 # e.g. in notification emails. Don't include '/admin' or a trailing slash
+# 终审 L-1：生产经环境外置（production.py env_required，与部署域名同源
+# 配置）；此处的哑值仅供本地/测试 settings 导入面使用。
 WAGTAILADMIN_BASE_URL = "http://example.com"
 
 # Allowed file extensions for documents in the document library.

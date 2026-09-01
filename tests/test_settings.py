@@ -39,6 +39,7 @@ ENV_EXAMPLE_REQUIRED_KEYS = [
     "DATABASE_URL",
     "TEST_DATABASE_URL",
     "ALLOWED_HOSTS",
+    "WAGTAILADMIN_BASE_URL",
     "MEDIA_ROOT",
 ]
 ENV_EXAMPLE_DUMMY_MARKERS = ("CHANGE_ME", "django-insecure", "localhost", "example.com", "/tmp/")
