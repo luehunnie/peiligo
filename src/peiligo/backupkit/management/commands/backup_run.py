@@ -66,6 +66,15 @@ class Command(BaseCommand):
                     "secondary": "ok" if secondary is not None else "skipped",
                 },
             )
+            # F-13：心跳供 ops_report 判定备份新鲜度（>12 小时 WARN / >24 小时 CRIT）。
+            from peiligo.opsignal.models import OpsHeartbeat
+
+            OpsHeartbeat.record(
+                "backup",
+                ok=True,
+                backup_set=set_dir.name,
+                secondary="ok" if secondary is not None else "skipped",
+            )
             self.stdout.write(f"backup_set={set_dir}")
             self.stdout.write(f"secondary_copy={secondary_status}")
         except Exception as error:
@@ -73,5 +82,9 @@ class Command(BaseCommand):
                 "备份失败",
                 extra={"event": "backup.run", "status": "failed", "backup_set": stamp},
             )
+            # F-13：失败心跳让 ops_report 即刻可见（新鲜度之外再有最近态）。
+            from peiligo.opsignal.models import OpsHeartbeat
+
+            OpsHeartbeat.record("backup", ok=False, error=str(error))
             shutil.rmtree(set_dir, ignore_errors=True)  # 清残集：绝不留半套备份
             raise CommandError(f"备份失败：{error}") from error

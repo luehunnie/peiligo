@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     # F-12：备份/恢复工程（backup_run/backup_prune/backup_restore 三命令，
     # 零模型零迁移）。
     "peiligo.backupkit",
+    # F-13：监控信号（OpsHeartbeat 心跳表＋ops_report 快照命令，无平台无常驻）。
+    "peiligo.opsignal",
 ]
 
 MIDDLEWARE = [
