@@ -173,7 +173,7 @@ Caddy 自动 HTTPS + 调度器 + 备份 + 监控信号），**尚未执行实际
 
 - Docker 镜像构建与容器启动尚未实跑（`docker compose config`
   静态校验已通过）；
-- GitHub Actions CI 将随最终实现 PR 首次真实运行；
+- GitHub Actions CI 已在最终实现 PR 中完成首次真实运行并通过；
 - 生产 TLS 证书与 DNS 未配置（Caddy 首次启动自动申请证书）；
 - `SECONDARY_BACKUP_DIR`（备份独立副本）需在部署阶段绑定到
   独立存储，未配置时监控信号会显式 WARN；
