@@ -10,7 +10,9 @@ wagtail/admin/views/pages/delete.py）与 ``before_bulk_action``（批量删除
 动线：``DeleteBulkAction.execute_action`` 直调 ``page.delete()`` 不经单页
 钩子，返回响应即在事务内取消整个动作，wagtail/admin/views/bulk_action/
 base_bulk_action.py）。直接 ORM ``delete()`` 属产品外路径，删除默认走
-下线/到期而非删除（§17.1）。
+下线/到期而非删除（§17.1）。批量移动同理（``MoveBulkAction`` 直调
+``page.move()`` 不经 ``before_move_page``），故 ``before_bulk_action``
+对 move 与 delete 同口径兜底，规则核心与单页动线共用一套（终审 L-9）。
 
 M4.4 增设权限面守卫（矩阵 §3.4 关闭措施，M4.2 PoC/M4.3 T08 已验证的
 最小方案）：Wagtail 页面树权限无独立 delete 类型，``change``@容器附带
@@ -19,6 +21,11 @@ M4.4 增设权限面守卫（矩阵 §3.4 关闭措施，M4.2 PoC/M4.3 T08 已�
 非特权用户的一切页面永久删除。守卫 fail-closed：特权判定
 （superuser 或总管理员组成员，departments.permissions）只用于放行，
 从不新增授权；非页面模型的批量动作不在守卫面。
+
+H-1（终审，矩阵 M-C3）补充同类只拒绝守卫：结构边界页（首页/板块/部门
+容器）是权限边界载体——容器＝GPP 挂载点、板块/首页＝IA 层级节点——
+非特权后台账号对三者的编辑面（含 slug/department 等结构字段）经
+``before_edit_page`` 服务端整体拒绝（非隐藏 panel 的展示层方案）。
 """
 
 from django.contrib import messages
@@ -46,6 +53,9 @@ CONTENT_PAGE_CLASSES = (
     SoftwareToolPage,
     GuidePage,
 )
+
+# 结构边界页（矩阵 M-C3）：权限边界载体，编辑面仅总管理员（H-1 守卫谓词）。
+STRUCTURE_PAGE_CLASSES = (HomePage, SectionPage, DepartmentContainerPage)
 
 
 def _cancel_move(request, page, error_text):
@@ -278,3 +288,28 @@ def refuse_non_admin_bulk_page_deletion(request, action_type, objects, bulk_acti
         f"涉及 {len(objects)} 页）。",
     )
     return HttpResponseRedirect(reverse("wagtailadmin_home"))
+
+
+@hooks.register("before_edit_page")
+def refuse_structure_page_edit_for_non_privileged(request, page):
+    """权限面守卫——结构边界页编辑动线（矩阵 M-C3；终审 H-1）。
+
+    首页/板块/部门容器是权限边界载体（容器＝GPP 挂载点、板块/首页＝
+    IA 层级节点），非特权账号编辑任一结构边界页（含改 slug/department
+    等结构字段）一律服务端拒绝。``before_edit_page`` 在 wagtail 默认
+    ``can_edit`` 判定之后、表单装配之前触发（GET/POST 同路，
+    wagtail/admin/views/pages/edit.py ``EditView.setup``），返回响应即
+    取消本次编辑。特权判定复用 ``is_privileged``（superuser 或总管理员
+    组，R1 走组权限行权）；守卫只拒绝、从不授权（fail-closed），
+    五类内容页编辑不受影响。
+    """
+    if is_privileged(request.user):
+        return None
+    if isinstance(page.specific, STRUCTURE_PAGE_CLASSES):
+        messages.error(
+            request,
+            f"「{page.title}」是结构边界页（首页/板块/部门容器），仅总管理员可编辑"
+            "（ROLE_PERMISSION_MATRIX M-C3）。",
+        )
+        return HttpResponseRedirect(reverse("wagtailadmin_explore", args=[page.get_parent().id]))
+    return None
