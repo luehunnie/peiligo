@@ -74,6 +74,9 @@ INSTALLED_APPS = [
     # Redis 依赖），非第二套认证系统（仅前置的失败计数后端＋中间件，
     # ModelBackend 仍为唯一凭据校验者）。app 置尾，迁移随 axes app 走。
     "axes",
+    # F-07：应用日志微 app（信号接收器＋publish_scheduled 结果包装命令），
+    # 零模型零迁移。
+    "peiligo.applog",
 ]
 
 MIDDLEWARE = [
@@ -102,6 +105,34 @@ AUTHENTICATION_BACKENDS = [
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_RESET_ON_SUCCESS = True
+
+# F-07（SB §6.2 / G2 缺口 23）：结构化 LOGGING——单行 JSON 入 stdout，
+# 由运行环境采集（容器/宿主轮转负责保留期，工程默认 ≥30 天、与备份
+# 保留对齐；零文件 handler、零外部日志框架）。logger 层级一律 ≥INFO
+# （SB §6.2 #4：DEBUG 级不入生产管道）；错误可见性＝django.request/root
+# 显式接线（含 exc 堆栈字段，仅入日志管道不入 HTTP 响应）。
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {"()": "peiligo.logging_utils.JsonFormatter"},
+    },
+    "handlers": {
+        "console_json": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+    },
+    "loggers": {
+        # 应用事件（peiligo.applog 信号接收器经 peiligo.events 发出，层级
+        # 命名天然归入本 logger）。
+        "peiligo": {"handlers": ["console_json"], "level": "INFO", "propagate": False},
+        "django": {"handlers": ["console_json"], "level": "INFO", "propagate": False},
+        # 请求异常（应用错误可见性主通道）独立成行，不向 root 重复传播。
+        "django.request": {"handlers": ["console_json"], "level": "ERROR", "propagate": False},
+    },
+    "root": {"handlers": ["console_json"], "level": "INFO"},
+}
 
 ROOT_URLCONF = "peiligo.urls"
 
