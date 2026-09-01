@@ -15,6 +15,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -69,6 +70,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # F-05（SB §10-1/SEC-01）：django-axes 登录限速——DB 存储处理器（无
+    # Redis 依赖），非第二套认证系统（仅前置的失败计数后端＋中间件，
+    # ModelBackend 仍为唯一凭据校验者）。app 置尾，迁移随 axes app 走。
+    "axes",
 ]
 
 MIDDLEWARE = [
@@ -80,7 +85,23 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+    # F-05：锁定态把 authenticate() 的 PermissionDenied 转为锁定响应。
+    "axes.middleware.AxesMiddleware",
 ]
+
+# F-05：AxesStandaloneBackend 置首（锁定判定与失败计数前置闸门），
+# ModelBackend 仍为唯一凭据校验后端——零第二套认证系统。
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# F-05（SB §10-1 冻结值）：10 次失败 → 锁 15 分钟；成功登录即清零计数
+# （AXES_RESET_ON_SUCCESS）。锁定粒度＝默认 用户名＋IP（AXES_LOCKOUT_
+# PARAMETERS 缺省），存储＝DB handler（axes_attempt 表，无 Redis 依赖）。
+AXES_FAILURE_LIMIT = 10
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_RESET_ON_SUCCESS = True
 
 ROOT_URLCONF = "peiligo.urls"
 
@@ -144,7 +165,9 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
+        # F-05（SB §10-1 冻结值）：密码最短 12 位。
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -153,6 +176,9 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# F-05（SB §10-1）：会话有效期 24 小时（默认站点后台会话时长）。
+SESSION_COOKIE_AGE = 60 * 60 * 24
 
 
 # Internationalization
