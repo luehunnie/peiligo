@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -31,6 +33,93 @@ SECTIONS = [
 ]
 
 
+# 首页数据区展示参数（IA §7.1/§7.2；条数为 MB9 实现阶段展示参数，非架构
+# 冻结值）：推荐位有效槽位上限 3（Q14），最新通知 8 条，近期活动 4 条。
+FEATURED_MAX_SLOTS = 3
+HOMEPAGE_LATEST_NOTICES_COUNT = 8
+HOMEPAGE_UPCOMING_EVENTS_COUNT = 4
+
+
+def _active_alert(site_settings, now):
+    """紧急提示展示判定（IA §7.1 层 1；CONTENT_MODEL §13.4 同口径）。
+
+    ``alert_text`` 空（含纯空白）＝无提示；起止成对，双空＝不限期，成对
+    填写时须 ``起 ≤ now ≤ 止`` 才展示（窗口语义与 FeaturedItem §15.4
+    同口径）。
+    """
+    text = (site_settings.alert_text or "").strip()
+    if not text:
+        return None
+    start, end = site_settings.alert_start_at, site_settings.alert_end_at
+    if start is not None and end is not None and not (start <= now <= end):
+        return None
+    return {"text": text}
+
+
+def _featured_entries(now):
+    """推荐位有效条目（IA §7.2；Q14/Q15 裁决）。
+
+    槽位上限 3（Q14）、0 条整区不渲染、1–2 条自然呈现；顺序＝创建顺序
+    （snippet 无排序字段，§13.3——pk 升序即运营录入顺序，确定性）；有效
+    性判定复用 §15.4 ``is_on_display``（enabled∧窗口∧所指内容 S2 live）
+    为唯一权威口径——查询集的窗口预过滤仅为少取行，无效条目不占槽位。
+    """
+    candidates = FeaturedItem.objects.filter(
+        enabled=True, start_at__lte=now, end_at__gte=now
+    ).order_by("pk")
+    entries = []
+    for item in candidates:
+        if not item.is_on_display(now):
+            continue
+        entries.append(item.content.specific)
+        if len(entries) == FEATURED_MAX_SLOTS:
+            break
+    return entries
+
+
+def _latest_notices():
+    """最新通知（IA §7.1 层 3）：全站最新且仍有效的通知，发布时间倒序。
+
+    可见性谓词＝CURRENT_DEFAULT（§16.4 live∧¬expired），与
+    ``search.services._current_default_search_queryset``/
+    ``notices.lifecycle.current_default_pages`` 同一谓词的逐类型形态；
+    条数＝MB9 展示参数（``HOMEPAGE_LATEST_NOTICES_COUNT``）。
+    """
+    return (
+        NoticePage.objects.live()
+        .filter(expired=False)
+        .order_by("-first_published_at")[:HOMEPAGE_LATEST_NOTICES_COUNT]
+    )
+
+
+def _upcoming_events(now, events_section):
+    """近期活动（IA §7.1 层 4）：活动板块子树内尚未结束的活动，按开始
+    时间升序（时间邻近）。
+
+    活动载体＝通知/文章的结构化活动字段（CONTENT_MODEL §7，无独立活动
+    Page）；板块归属经物化路径区间（``path__startswith``，§20.1 表 A
+    同一维度语义）。可见性谓词同 CURRENT_DEFAULT；纳入条件＝已填开始且
+    ``event_end_at ≥ now``（进行中＋未开始）；通知/文章两模型各取候选
+    后合并按开始时间排序截断。
+    """
+    if events_section is None:
+        return []
+    pages = []
+    for model in (NoticePage, ArticlePage):
+        pages.extend(
+            model.objects.live()
+            .filter(
+                expired=False,
+                path__startswith=events_section.path,
+                event_start_at__isnull=False,
+                event_end_at__gte=now,
+            )
+            .order_by("event_start_at")[:HOMEPAGE_UPCOMING_EVENTS_COUNT]
+        )
+    pages.sort(key=lambda page: page.event_start_at)
+    return pages[:HOMEPAGE_UPCOMING_EVENTS_COUNT]
+
+
 class HomePage(Page):
     """首页（第 1 层，全站唯一实例；挂载约束 IA §5）。"""
 
@@ -43,19 +132,26 @@ class HomePage(Page):
     subpage_types = ["home.SectionPage"]  # 仅五个一级板块页
 
     def get_context(self, request, *args, **kwargs):
-        """首页模板上下文：五板块入口网格（IA §7.1 层 4）。
+        """首页模板上下文：四数据区＋五板块入口网格（IA §7.1 层 1–4）。
 
-        仅查询本页下已发布的 SectionPage 并按 ``SECTIONS`` 冻结顺序排列
-        （§2 #1–#5）；容器不是入口、永不进入网格（§6.2——本查询经
-        ``subpage_types`` 白名单 + ``type()`` 过滤，天然只含板块页）。
-        首页其余数据区（紧急提示/推荐位/最新通知/近期活动，§7.1 层 1–3）
-        依赖 M3 模型，本步不查询、不渲染（无数据不得显示假内容）。
+        层 1 紧急提示（SiteSettings 站点级配置）、层 2 推荐位（FeaturedItem
+        snippet）、层 3 最新通知、层 4 近期活动——各数据区空则模板整区不
+        渲染（§7.1），层内相对顺序冻结、查询与渲染口径见各 helper。层 4
+        之后的五板块入口网格仅查询本页下已发布的 SectionPage 并按
+        ``SECTIONS`` 冻结顺序排列（§2 #1–#5）；容器不是入口、永不进入
+        网格（§6.2——经 ``subpage_types`` 白名单 + ``type()`` 过滤天然
+        只含板块页）。
         """
         context = super().get_context(request, *args, **kwargs)
         children = {page.slug: page for page in self.get_children().live().type(SectionPage)}
         context["section_entries"] = [
             children[section["slug"]] for section in SECTIONS if section["slug"] in children
         ]
+        now = timezone.now()
+        context["alert"] = _active_alert(SiteSettings.for_request(request), now)
+        context["featured_entries"] = _featured_entries(now)
+        context["latest_notices"] = _latest_notices()
+        context["upcoming_events"] = _upcoming_events(now, children.get("events"))
         return context
 
 
@@ -92,12 +188,23 @@ class SectionPage(Page):
         return context
 
 
+# 推荐位默认有效期 30 天（G2_HUMAN_DECISIONS Q15 裁决：默认 30 天，到期
+# 自动停展；提前撤下＝enabled=False，延长＝改 end_at——字段值可编辑，
+# 默认值仅作用于新建时留空的表单位）。
+FEATURED_DEFAULT_DAYS = 30
+
+
+def _featured_default_end():
+    return timezone.now() + timedelta(days=FEATURED_DEFAULT_DAYS)
+
+
 @register_snippet
 class FeaturedItem(models.Model):
     """首页推荐位（CONTENT_MODEL §13.3；PRD §9；ADR-0005 #13）。
 
     推荐位呈现所指内容自身的标题/摘要（无文案/图片字段）；展示数量与顺序
-    由前台消费侧冻结（无排序字段）。仅总管理员可管理（§3）。
+    由前台消费侧冻结（无排序字段，前台按创建顺序取有效条目前 3）。仅总
+    管理员可管理（§3）。
     """
 
     content = models.ForeignKey(
@@ -107,8 +214,14 @@ class FeaturedItem(models.Model):
         on_delete=models.CASCADE,
         verbose_name="指向内容",
     )
-    start_at = models.DateTimeField("开始时间")
-    end_at = models.DateTimeField("结束时间")
+    # 默认窗口＝自创建时刻起 30 天（Q15）：起＝当前时刻，止＝30 天后
+    # （callable default 每次新建表单实时求值）。
+    start_at = models.DateTimeField("开始时间", default=timezone.now)
+    end_at = models.DateTimeField(
+        "结束时间",
+        default=_featured_default_end,
+        help_text="默认自开始时刻起 30 天，可编辑延长；提前撤下请关闭「启用」",
+    )
     enabled = models.BooleanField("启用", default=True)  # 总管理员的即时开关
 
     panels = [

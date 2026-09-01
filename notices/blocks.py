@@ -13,6 +13,8 @@ from wagtail.contrib.table_block.blocks import TableBlock
 from wagtail.documents.blocks import DocumentChooserBlock
 from wagtail.images.blocks import ImageChooserBlock
 
+from peiligo.link_validation import validate_external_url
+
 # RichText features 显式白名单（CONTENT_MODEL §11.2）：
 # 编辑器工具条与入库内容转换双层收窄；排除各级标题（结构经标题块单轨）、
 # image（插图经图片块）、文档链接 feature（附件经附件块）及 PRD 未要求项。
@@ -68,7 +70,7 @@ class AttachmentBlock(DocumentChooserBlock):
 class ExternalLinkBlock(StructBlock):
     """外链块（§11.1）：文内外部链接，存原始 URL；输出安全语义见 §11.4。"""
 
-    url = URLBlock(label="链接地址")
+    url = URLBlock(label="链接地址", validators=[validate_external_url])
     link_text = CharBlock(label="链接文字")
 
     class Meta:

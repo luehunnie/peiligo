@@ -15,6 +15,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -69,6 +70,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # F-05（SB §10-1/SEC-01）：django-axes 登录限速——DB 存储处理器（无
+    # Redis 依赖），非第二套认证系统（仅前置的失败计数后端＋中间件，
+    # ModelBackend 仍为唯一凭据校验者）。app 置尾，迁移随 axes app 走。
+    "axes",
+    # F-07：应用日志微 app（信号接收器＋publish_scheduled 结果包装命令），
+    # 零模型零迁移。
+    "peiligo.applog",
 ]
 
 MIDDLEWARE = [
@@ -80,7 +88,54 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+    # F-05：锁定态把 authenticate() 的 PermissionDenied 转为锁定响应。
+    "axes.middleware.AxesMiddleware",
 ]
+
+# F-05：AxesStandaloneBackend 置首（锁定判定与失败计数前置闸门），
+# ModelBackend 仍为唯一凭据校验后端——零第二套认证系统。
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# F-05（SB §10-1 冻结值）：10 次失败 → 锁 15 分钟；成功登录即清零计数
+# （AXES_RESET_ON_SUCCESS）。锁定键＝SB §2.3 建议的 username＋ip_address
+# 组合（兼顾撞库与爆破；axes 8.3.1 缺省仅按 IP——校园 NAT 共享出口下
+# 任一账号 10 次失败将误锁全站点，故显式钉值）；存储＝DB handler
+# （axes_attempt 表，无 Redis 依赖）。
+AXES_FAILURE_LIMIT = 10
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+
+# F-07（SB §6.2 / G2 缺口 23）：结构化 LOGGING——单行 JSON 入 stdout，
+# 由运行环境采集（容器/宿主轮转负责保留期，工程默认 ≥30 天、与备份
+# 保留对齐；零文件 handler、零外部日志框架）。logger 层级一律 ≥INFO
+# （SB §6.2 #4：DEBUG 级不入生产管道）；错误可见性＝django.request/root
+# 显式接线（含 exc 堆栈字段，仅入日志管道不入 HTTP 响应）。
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {"()": "peiligo.logging_utils.JsonFormatter"},
+    },
+    "handlers": {
+        "console_json": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+    },
+    "loggers": {
+        # 应用事件（peiligo.applog 信号接收器经 peiligo.events 发出，层级
+        # 命名天然归入本 logger）。
+        "peiligo": {"handlers": ["console_json"], "level": "INFO", "propagate": False},
+        "django": {"handlers": ["console_json"], "level": "INFO", "propagate": False},
+        # 请求异常（应用错误可见性主通道）独立成行，不向 root 重复传播。
+        "django.request": {"handlers": ["console_json"], "level": "ERROR", "propagate": False},
+    },
+    "root": {"handlers": ["console_json"], "level": "INFO"},
+}
 
 ROOT_URLCONF = "peiligo.urls"
 
@@ -144,7 +199,9 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
+        # F-05（SB §10-1 冻结值）：密码最短 12 位。
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -153,6 +210,9 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# F-05（SB §10-1）：会话有效期 24 小时（默认站点后台会话时长）。
+SESSION_COOKIE_AGE = 60 * 60 * 24
 
 
 # Internationalization
@@ -231,9 +291,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Search
 # https://docs.wagtail.org/en/stable/topics/search/backends.html
+# F-01（ADR-0006 · Accepted）：E1＝Wagtail DB 后端 icontains fallback。
+# 显式后端选择＝E1 生产落地前提（PRODUCTION_IMPLEMENTATION_REQUIRED=YES）：
+# 通用 database 后端按连接 vendor 分派，PostgreSQL 下走 FTS＝E2 语义；
+# 此处固定指向项目内 fallback 子类，任何 vendor 下均为 icontains 语义。
+# 既有边界（CM §20.2，选型已接受）：RelatedFields 文本缺席、boost 忽略、
+# 无相关度排序——保序由 services 层 order_by_relevance=False 统一施加。
 WAGTAILSEARCH_BACKENDS = {
     "default": {
-        "BACKEND": "wagtail.search.backends.database",
+        "BACKEND": "search.backends.E1IcontainsSearchBackend",
     }
 }
 
@@ -245,21 +311,25 @@ WAGTAILADMIN_BASE_URL = "http://example.com"
 # This can be omitted to allow all files, but note that this may present a security risk
 # if untrusted users are allowed to upload files -
 # see https://docs.wagtail.org/en/stable/advanced_topics/deploying.html#user-uploaded-files
-WAGTAILDOCS_EXTENSIONS = [
-    "csv",
-    "docx",
-    "key",
-    "odt",
-    "pdf",
-    "pptx",
-    "rtf",
-    "txt",
-    "xlsx",
-    "zip",
-]
+# F-02（SECURITY_BASELINE §4.1 人工冻结清单）：wagtaildocs 面扩展名白名单。
+# 图片格式（png/jpg/webp）走 wagtailimages（Pillow/Willow 解码校验），不在此。
+# 扩展名仅是第一层；声明 MIME/内容签名一致性收口见 peiligo.upload_validation
+# （下一设置项），三级一致性回归见 tests/test_upload_validation.py。
+WAGTAILDOCS_EXTENSIONS = ["doc", "docx", "pdf", "ppt", "pptx", "xls", "xlsx"]
 
-# Maximum upload size for documents in bytes.
-WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+# F-02（SEC-17 图片面收口；SB §4.1 冻结白名单图片项＝png/jpg/webp）：
+# Wagtail 缺省另放行 avif/gif，超出冻结集，故显式钉值收窄。jpeg 为 jpg
+# 同格式别名（PRD 白名单按格式口径，接受 .jpeg 文件名，非格式扩充）。
+WAGTAILIMAGES_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
+
+# F-02（SECURITY_BASELINE §13 / G2 Q1 人工冻结值）：20 MiB 硬上限，不由
+# 代码侧调整。
+WAGTAILDOCS_MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20MB
+
+# F-02：上传表单统一收口——单文件/多文件/编辑替换三条后台路径均经
+# get_document_form 构建（官方 WAGTAILDOCS_DOCUMENT_FORM_BASE 覆盖点），
+# 文件名治理＋声明 MIME＋内容签名三级一致性见 peiligo/upload_validation.py。
+WAGTAILDOCS_DOCUMENT_FORM_BASE = "peiligo.upload_validation.ValidatedDocumentForm"
 
 # M2.2（IA §6.1 页脚反馈）：统一反馈工作邮箱，环境变量外置（哑值样例见
 # .env.example）。正式载体为站点级配置（ADR-0005 载体表 #14，M3+ 终判），

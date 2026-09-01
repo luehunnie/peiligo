@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
+from django.views.generic import TemplateView
 from home import views as home_views
 from home.models import SECTIONS
 from search import views as search_views
@@ -19,6 +20,18 @@ urlpatterns = [
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
+    # F-03（CM §11.4/PRD §7.5）：外链统一确认页＋「继续访问」端点；自定义
+    # 视图不入页面树（ADR-0005 #5 先例）→ 不进 sitemap；整页恒 noindex。
+    path("link-confirm/", home_views.link_confirm, name="link-confirm"),
+    path("link-confirm/go/", home_views.link_confirm_go, name="link-confirm-go"),
+    # F-06（IA §10）：robots.txt——管理面与外链确认页禁抓；/search/ 不在
+    # Disallow（noindex 是收录语义，robots Disallow 反致 meta 读不到）。
+    # Sitemap 取请求 Host 拼绝对地址；自定义视图不入页面树（ADR-0005 #5）。
+    path(
+        "robots.txt",
+        TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
+        name="robots-txt",
+    ),
     re_path(
         rf"^({_SECTION_ARCHIVE_SLUGS})/archive/$",
         home_views.section_archive,
