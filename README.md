@@ -95,8 +95,9 @@ PostgreSQL
 
 - **持久卷**：PostgreSQL 数据、media、static、备份各独立卷；
 - **scheduler**：常驻定时发布调度服务；
-- **备份**：cron 定时触发 `backup_run`，独立副本目录可配置；
-- **监控**：cron 定时执行 `ops_report` 快照，非零退出接告警。
+- **备份与监控**：compose 内不含 cron——备份（`backup_run`，独立副本
+  目录可配置）与巡检快照（`ops_report`，非零退出接告警）由宿主机
+  cron（或等效定时器）触发，条目样例见 `docs/PRODUCTION_RUNBOOK.md`。
 
 本地开发不需要 Docker，直接使用 Django development server。
 
