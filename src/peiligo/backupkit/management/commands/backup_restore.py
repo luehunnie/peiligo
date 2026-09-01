@@ -81,9 +81,18 @@ class Command(BaseCommand):
             raise CommandError(
                 f"拒绝恢复：目标库与当前使用库同名（{current_db}）。请建隔离目标库后再恢复"
             )
-        if media_dir.resolve() == current_media.resolve():
+        media_resolved = media_dir.resolve()
+        current_media_resolved = current_media.resolve()
+        # 终审 L-8：隔离面不只「不同径」——目标位于在线媒体树内部（深层
+        # 子目录）同样会把恢复解包写进在线媒体，与同径一并拒绝。
+        # （Path.resolve 非严格：目标尚不存在亦可判定。）
+        if (
+            media_resolved == current_media_resolved
+            or current_media_resolved in media_resolved.parents
+        ):
             raise CommandError(
-                f"拒绝恢复：媒体目录与当前 MEDIA_ROOT 相同（{current_media}）。请指定隔离目录"
+                f"拒绝恢复：媒体目录与当前 MEDIA_ROOT 相同或位于其内（{current_media}）。"
+                "请指定隔离目录"
             )
 
         connection.close()
