@@ -86,28 +86,30 @@ def _subtree_violation(container, section_slug):
     return None
 
 
-@hooks.register("before_move_page")
-def enforce_content_model_rules_on_move(request, page, destination):
-    """移动前校验：容器仅可移至板块页且不撞部门、子树按目标板块复检；
-    内容页仅可移至容器，且目标板块须在本类型白名单内、部门一致、
-    活动字段板块语义仍成立。"""
+def _move_violation(page, destination):
+    """单页/批量移动共用的内容模型规则核心（§1.4/§4/§7.2）。
+
+    返回拒绝文案（None＝放行）。终审 L-9：批量移动（``MoveBulkAction``
+    ``execute_action`` 直调 ``page.move()``）不经 ``before_move_page``，
+    两条动线必须共用本判定——不复制第二套规则。
+    """
     specific = page.specific
     if isinstance(specific, DepartmentContainerPage):
         dest = destination.specific
         if not isinstance(dest, SectionPage):
-            return _cancel_move(request, page, "部门容器只能移动到板块页下（CONTENT_MODEL §1.4）")
+            return "部门容器只能移动到板块页下（CONTENT_MODEL §1.4）"
         if department_clash_exists(specific, destination):
-            return _cancel_move(request, page, "该板块下已存在绑定此部门的容器（CONTENT_MODEL §4）")
+            return "该板块下已存在绑定此部门的容器（CONTENT_MODEL §4）"
         # 容器移动＝子树随迁换板块：按目标板块复检子树（§1.4 冻结约束为
         # 任何时点树上不存在违约内容页；同板块移动复检平凡通过，不误伤）。
         violation = _subtree_violation(specific, dest.slug)
         if violation:
-            return _cancel_move(request, page, f"容器移动被内容模型校验拒绝：{violation}")
+            return f"容器移动被内容模型校验拒绝：{violation}"
         return None
     if isinstance(specific, CONTENT_PAGE_CLASSES):
         dest = destination.specific
         if not isinstance(dest, DepartmentContainerPage):
-            return _cancel_move(request, page, "公开内容只能挂在本部门容器下（CONTENT_MODEL §1.4）")
+            return "公开内容只能挂在本部门容器下（CONTENT_MODEL §1.4）"
         errors = {}
         section = clean_content_page(specific, errors, parent_override=dest)
         if isinstance(specific, (NoticePage, ArticlePage)):
@@ -115,7 +117,44 @@ def enforce_content_model_rules_on_move(request, page, destination):
             specific.clean_event_fields(section, errors)
         if errors:
             detail = "；".join(msg for msgs in errors.values() for msg in msgs)
-            return _cancel_move(request, page, f"移动被内容模型校验拒绝：{detail}")
+            return f"移动被内容模型校验拒绝：{detail}"
+    return None
+
+
+@hooks.register("before_move_page")
+def enforce_content_model_rules_on_move(request, page, destination):
+    """移动前校验：容器仅可移至板块页且不撞部门、子树按目标板块复检；
+    内容页仅可移至容器，且目标板块须在本类型白名单内、部门一致、
+    活动字段板块语义仍成立（规则核心＝``_move_violation``，批量动线共用）。"""
+    violation = _move_violation(page, destination)
+    if violation:
+        return _cancel_move(request, page, violation)
+    return None
+
+
+@hooks.register("before_bulk_action")
+def refuse_illegal_bulk_move(request, action_type, objects, bulk_action):
+    """内容模型守卫——批量移动动线（终审 L-9）：与单页移动同一规则核心。
+
+    后台列表勾选移动经 ``MoveBulkAction``（/admin/bulk/wagtailcore/page/
+    move/），``execute_action`` 直调 ``page.move()`` 不经
+    ``before_move_page``。目的地取确认表单 ``chooser`` 字段（wagtail
+    ``BulkAction.form_valid`` 先置 ``cleaned_form`` 再触发本钩子）；
+    逐页复检，任一违规即返回响应＝事务内取消整个动作（含同批其余
+    页面，与批量删除守卫同口径）。目的地缺失（表单展示期/无目的地
+    短路）无移动发生，不拦。
+    """
+    if action_type != "move":
+        return None
+    form = getattr(bulk_action, "cleaned_form", None)
+    destination = form.cleaned_data.get("chooser") if form is not None else None
+    if destination is None:
+        return None
+    for obj in objects:
+        violation = _move_violation(obj, destination)
+        if violation:
+            messages.error(request, f"批量移动已取消：{violation}")
+            return HttpResponseRedirect(reverse("wagtailadmin_home"))
     return None
 
 
