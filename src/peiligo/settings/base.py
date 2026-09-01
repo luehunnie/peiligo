@@ -231,9 +231,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Search
 # https://docs.wagtail.org/en/stable/topics/search/backends.html
+# F-01（ADR-0006 · Accepted）：E1＝Wagtail DB 后端 icontains fallback。
+# 显式后端选择＝E1 生产落地前提（PRODUCTION_IMPLEMENTATION_REQUIRED=YES）：
+# 通用 database 后端按连接 vendor 分派，PostgreSQL 下走 FTS＝E2 语义；
+# 此处固定指向项目内 fallback 子类，任何 vendor 下均为 icontains 语义。
+# 既有边界（CM §20.2，选型已接受）：RelatedFields 文本缺席、boost 忽略、
+# 无相关度排序——保序由 services 层 order_by_relevance=False 统一施加。
 WAGTAILSEARCH_BACKENDS = {
     "default": {
-        "BACKEND": "wagtail.search.backends.database",
+        "BACKEND": "search.backends.E1IcontainsSearchBackend",
     }
 }
 

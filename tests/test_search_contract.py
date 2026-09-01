@@ -4,9 +4,10 @@
 可见性（draft/scheduled/unpublished 三排除＋板块默认列表 CURRENT_DEFAULT；
 M5.2 起 /search/ 入口升级 ARCHIVE-SEARCH 含 expired，§7.1/§7.2 登记）；
 IA §9 URL 全 GET 可分享；IA §10 收录（noindex/去参 canonical/§8.2 筛选态标题）。
-中文检索只测契约（整 token 命中——E2 simple 语义下 CJK 连续串成单
-token），不虚构分词质量。词表 M2M 名文本依赖 update_index 批量重建
-（发布期即时索引不捕捉 cluster M2M 变更——上游时机限制，登记见 impl
+中文检索契约断言以 F-01 接线后的 E1 语义（ADR-0006：icontains 子串）为
+准：语义锁定回归见 tests/test_search_e1_backend.py，金标集功能回归见
+tests/test_search_golden_set.py。词表 M2M 名文本依赖 update_index 批量
+重建（发布期即时索引不捕捉 cluster M2M 变更——上游时机限制，登记见 impl
 报告），故建数据后统一重建再断言。search_fields 逐页反射与契约常量
 断言见 tests/test_search_fields_reflection.py。
 """
@@ -81,15 +82,18 @@ class SearchContractTestCase(WagtailPageTestCase):
 
 
 class QueryHitsTests(SearchContractTestCase):
-    """PRD §10 覆盖面：七类查询目标整 token 命中（契约级，非质量宣称）。"""
+    """PRD §10 覆盖面：自有列检索文本命中（契约级，非质量宣称）。
+
+    F-01 接线后检索面＝E1 顶层 SearchField（title/summary/body/自有结构化
+    字段）；RelatedFields 文本（部门名/标签名/学科词表名）缺席为 ADR-0006
+    选型已接受的结构性边界，负例由 ``test_e1_relatedfields_absence`` 显式
+    锁定，不再作为正向命中断言。
+    """
 
     def test_query_hits_declared_fields(self):
         hits = [
             ("标题", "开学典礼通知", self.notice),
             ("正文", "测试正文段落", self.notice),
-            ("部门名", "教务处", self.notice),
-            ("受控标签名", "开学季", self.notice),
-            ("学科词表名", "计算机科学", self.material),
             ("指南地点", "第一教学楼一层", self.guide),
             ("指南开放时间", "工作日", self.guide),
             ("活动地点", "大学生活动中心", self.event_notice),
@@ -97,6 +101,20 @@ class QueryHitsTests(SearchContractTestCase):
         for label, query, target in hits:
             with self.subTest(hit=label):
                 self.assertIn(target.pk, self._pks("/search/", {"q": query}))
+
+    def test_e1_relatedfields_absence(self):
+        """E1 结构性边界（ADR-0006 后果节/CM §20.2，G2 接受）：部门名/
+        标签名/词表名不经 RelatedFields 进检索文本——关联字段命中面缺席
+        为选定语义，非缺陷。维度过滤（dept/tag ORM 双通道）不受影响
+        （FilterDimensionTests 覆盖）。"""
+        misses = [
+            ("部门名", "教务处", self.notice),
+            ("受控标签名", "开学季", self.notice),
+            ("学科词表名", "计算机科学", self.material),
+        ]
+        for label, query, target in misses:
+            with self.subTest(related=label):
+                self.assertNotIn(target.pk, self._pks("/search/", {"q": query}))
 
     def test_empty_q_is_pure_orm_no_backend_call(self):
         """§21.1：空串/空白 q＝不加条件；无任何有效参数＝表单态不查全量。"""
