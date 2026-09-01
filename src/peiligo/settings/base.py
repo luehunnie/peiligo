@@ -83,6 +83,9 @@ INSTALLED_APPS = [
     # F-05R（SB §2.4）：强制改密闸门——后台设置/重置密码后必须先自行
     # 改密（单状态表＋服务端路由级中间件；非第二套认证系统）。
     "peiligo.passwordgate",
+    # F-12：备份/恢复工程（backup_run/backup_prune/backup_restore 三命令，
+    # 零模型零迁移）。
+    "peiligo.backupkit",
 ]
 
 MIDDLEWARE = [

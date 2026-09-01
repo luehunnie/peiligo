@@ -12,9 +12,13 @@ SECRET_KEY = env_required("SECRET_KEY")
 ALLOWED_HOSTS = [host.strip() for host in env_required("ALLOWED_HOSTS").split(",") if host.strip()]
 
 # F-10（SB §10-1 冻结值）：CSRF 可信来源外置（逗号分隔；形如
-# https://host）。Caddy 已按 DOMAIN 收口，此项为 Django 表单保护口径。
+# https://host）。冻结部署为 Caddy 同源反代——Django 4+ 对同源请求
+# （Origin＝Host 头所指）隐式信任，故缺省空值即安全；仅出现跨源
+# 管理入口等需要时经环境显式追加。
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in env_required("CSRF_TRUSTED_ORIGINS").split(",") if origin.strip()
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
 
 # F-10（SB §10-1 冻结值）：会话与 CSRF Cookie 全锁——24h 时效在 base.py、
