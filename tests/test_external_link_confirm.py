@@ -331,6 +331,33 @@ class ConfirmPageTests(ConfirmPageDataTestCase):
                 self.assertNotContains(response, "最后更新时间")
                 self.assertNotContains(response, "来源")
 
+    def test_draft_or_expired_source_page_not_disclosed(self):
+        """R 审查 M3：from 仅引用前台可见页——草稿/到期页标题零泄漏。"""
+        draft = self.notice  # 复用同一容器下另建草稿
+        from tests.helpers import make_notice
+
+        draft = make_notice(self.container, slug="confirm-draft-src")
+        expired = make_notice(self.container, slug="confirm-expired-src", publish=True)
+        expired.expired = True
+        expired.save()
+
+        for hidden, label in ((draft, "草稿"), (expired, "到期")):
+            with self.subTest(state=label):
+                response = self.client.get(
+                    "/link-confirm/",
+                    {"url": "https://example.com/doc", "from": str(hidden.pk)},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, "最后更新时间")
+                self.assertNotContains(response, hidden.title)
+
+        # live 在场页仍正常披露（行为不回缩）
+        live = make_notice(self.container, slug="confirm-live-src", publish=True)
+        response = self.client.get(
+            "/link-confirm/", {"url": "https://example.com/doc", "from": str(live.pk)}
+        )
+        self.assertContains(response, live.title)
+
     def test_noindex_and_canonical_always(self):
         """确认页恒 noindex＋canonical 指向去参基础 URL（IA §10 家族）。"""
         for params in ({"url": "https://example.com/doc"}, {}):

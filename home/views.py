@@ -72,8 +72,14 @@ def _confirm_context(request):
     source_page = None
     from_id = request.GET.get("from", "")
     if from_id.isdigit():
+        # R 审查 M3：只引用前台可见页（live∧未到期＝CURRENT_DEFAULT 谓词）——
+        # 否则匿名者可借 from 枚举 pk 读到草稿/未发布页标题（可见性边界泄漏）。
         source_page = (
-            Page.objects.filter(pk=int(from_id)).only("id", "title", "last_published_at").first()
+            Page.objects.filter(pk=int(from_id))
+            .live()
+            .filter(expired=False)
+            .only("id", "title", "last_published_at")
+            .first()
         )
     notice_text = SiteSettings.for_request(request).redirect_notice_text.strip()
     return {

@@ -100,11 +100,14 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # F-05（SB §10-1 冻结值）：10 次失败 → 锁 15 分钟；成功登录即清零计数
-# （AXES_RESET_ON_SUCCESS）。锁定粒度＝默认 用户名＋IP（AXES_LOCKOUT_
-# PARAMETERS 缺省），存储＝DB handler（axes_attempt 表，无 Redis 依赖）。
+# （AXES_RESET_ON_SUCCESS）。锁定键＝SB §2.3 建议的 username＋ip_address
+# 组合（兼顾撞库与爆破；axes 8.3.1 缺省仅按 IP——校园 NAT 共享出口下
+# 任一账号 10 次失败将误锁全站点，故显式钉值）；存储＝DB handler
+# （axes_attempt 表，无 Redis 依赖）。
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 
 # F-07（SB §6.2 / G2 缺口 23）：结构化 LOGGING——单行 JSON 入 stdout，
 # 由运行环境采集（容器/宿主轮转负责保留期，工程默认 ≥30 天、与备份
@@ -313,6 +316,11 @@ WAGTAILADMIN_BASE_URL = "http://example.com"
 # 扩展名仅是第一层；声明 MIME/内容签名一致性收口见 peiligo.upload_validation
 # （下一设置项），三级一致性回归见 tests/test_upload_validation.py。
 WAGTAILDOCS_EXTENSIONS = ["doc", "docx", "pdf", "ppt", "pptx", "xls", "xlsx"]
+
+# F-02（SEC-17 图片面收口；SB §4.1 冻结白名单图片项＝png/jpg/webp）：
+# Wagtail 缺省另放行 avif/gif，超出冻结集，故显式钉值收窄。jpeg 为 jpg
+# 同格式别名（PRD 白名单按格式口径，接受 .jpeg 文件名，非格式扩充）。
+WAGTAILIMAGES_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 
 # F-02（SECURITY_BASELINE §13 / G2 Q1 人工冻结值）：20 MiB 硬上限，不由
 # 代码侧调整。

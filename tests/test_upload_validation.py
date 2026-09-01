@@ -62,6 +62,17 @@ CFB_BYTES = CFB_MAGIC + b"\x00" * 512
 TEXT_BYTES = "这是一段伪装成附件的纯文本。".encode()
 
 
+class ImageExtensionFreezeTests(TestCase):
+    """R 审查 M2：图片面白名单按 SB §4.1 冻结集收口（png/jpg/webp）。
+
+    Wagtail 缺省另放行 avif/gif，超出冻结集；jpeg 为 jpg 同格式别名
+    （PRD 白名单按格式口径，非格式扩充）。
+    """
+
+    def test_settings_freeze_image_extensions(self):
+        self.assertEqual(settings.WAGTAILIMAGES_EXTENSIONS, ["jpg", "jpeg", "png", "webp"])
+
+
 class UploadFixtureTests(TestCase):
     """经收口表单的完整校验流（含模型层扩展名约束）。"""
 

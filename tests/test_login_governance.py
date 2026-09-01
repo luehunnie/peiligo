@@ -68,6 +68,22 @@ class AxesLockoutTests(TestCase):
         self.assertEqual(settings.AXES_FAILURE_LIMIT, 10)
         self.assertEqual(settings.AXES_COOLOFF_TIME, timedelta(minutes=15))
         self.assertTrue(settings.AXES_RESET_ON_SUCCESS)
+        # R 审查 M1：锁定键＝SB §2.3 建议 username＋ip 组合（非 axes 缺省
+        # 的仅 IP——校园 NAT 共享出口下仅 IP 会误锁全站点）。
+        self.assertEqual(settings.AXES_LOCKOUT_PARAMETERS, [["username", "ip_address"]])
+
+    def test_same_ip_cross_username_failures_do_not_lock_site(self):
+        """组合键行为级：同 IP 多账号分散失败不锁全站点（仅 IP 键将误锁）。"""
+        from django.contrib.auth import get_user_model
+
+        user_model = get_user_model()
+        for i in range(10):
+            user_model.objects.create_user(f"cross-user-{i}", password=PASSWORD)
+            response = _post_login(self.client, f"cross-user-{i}", "wrong-password-1")
+            self.assertEqual(response.status_code, 200, f"账号 {i} 每键独立计数")
+        fresh = user_model.objects.create_user("cross-user-fresh", password=PASSWORD)
+        response = _post_login(self.client, fresh.username, PASSWORD)
+        self.assertEqual(response.status_code, 302, "同 IP 他账号失败不牵连新账号登录")
 
     def test_axes_apps_and_backends_wiring(self):
         """接线事实：axes 入 INSTALLED_APPS＋中间件；ModelBackend 仍在
