@@ -282,3 +282,33 @@ class TestOpsReport:
     def test_app_errors_unknown_when_unconfigured(self, fresh_world):
         report = run_report()
         assert report["checks"]["app_errors"]["status"] == "unknown"
+
+    def test_signal_crash_fail_soft_unknown(self, fresh_world, monkeypatch):
+        """终审 L-6：单信号计算抛错不拖垮快照——JSON 完整、该信号标 unknown。"""
+        monkeypatch.setattr(
+            f"{REPORT}._publish_check", mock.Mock(side_effect=RuntimeError("table gone"))
+        )
+        report = run_report()
+        assert set(report["checks"]) == {
+            "database",
+            "disk",
+            "backup_freshness",
+            "backup_heartbeat",
+            "publish_scheduled",
+            "login_anomalies",
+            "app_errors",
+        }
+        publish = report["checks"]["publish_scheduled"]
+        assert publish["level"] == "unknown"
+        assert "table gone" in publish["error"]
+        assert report["overall"] == "unknown"
+
+    def test_signal_crash_does_not_mask_crit_exit(self, fresh_world, monkeypatch):
+        """fail-soft 的 unknown 不吞掉真 CRIT 的非零退出判定。"""
+        aged = time.time() - 25 * 3600
+        os.utime(next(iter(fresh_world.glob("*"))), (aged, aged))  # 主集陈旧 → CRIT
+        monkeypatch.setattr(
+            f"{REPORT}._publish_check", mock.Mock(side_effect=RuntimeError("table gone"))
+        )
+        with pytest.raises(CommandError, match="backup_freshness"):
+            call_command("ops_report")
