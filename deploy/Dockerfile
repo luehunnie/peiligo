@@ -13,6 +13,25 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# F-12 运行依赖（首跑 CI 暴露的缺口）：backup_run / backup_restore 在
+# web 容器内经 subprocess 调用 pg_dump / pg_restore（runbook §4–§6 的
+# 正式用法），基础镜像 slim 不含 PG 客户端，须装与服务端 postgres:18
+# 同大版本的客户端（PGDG 源按基础镜像 Debian 代号动态拼接；构建期网络
+# 依赖仅此一层）。置于代码 COPY 之前，代码变更不使本层缓存失效。
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl ca-certificates; \
+    install -d /usr/share/postgresql-common/pgdg; \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc; \
+    echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends postgresql-client-18; \
+    apt-get purge -y curl; \
+    apt-get autoremove -y; \
+    rm -rf /var/lib/apt/lists/*
+
 # 代码层（多源 COPY 逐目录落位到 /app/；.dockerignore 排除 .env/.git/
 # venv/测试产物/media 等非构建上下文）。
 COPY manage.py pyproject.toml ./
