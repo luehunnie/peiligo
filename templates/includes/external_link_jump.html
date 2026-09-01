@@ -1,0 +1,3 @@
+{# F-03（CM §11.4/PRD §7.5）：外链出口统一经确认跳转页包装——不裸跳转； #}
+{# 展示保留完整 URL 明文（可辨识目标域名），点击进入确认页再决定去留。 #}
+<a href="{% url 'link-confirm' %}?url={{ url|urlencode }}&from={{ from }}">{{ text }}</a>

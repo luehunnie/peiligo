@@ -1,6 +1,7 @@
 {% comment %}
-外链块（CONTENT_MODEL §11.1/§11.4）：存原始 URL；输出安全语义＝不得裸跳转
-（无 <a>）。统一确认跳转页属 S12/DEFERRED_TO_M3_4，就位前以
-"链接文字＋完整 URL 明文"呈现（用户可识别目标域名后自行复制访问）。
+外链块（CONTENT_MODEL §11.1/§11.4）：存原始 URL；输出安全语义＝不得裸跳
+转（无指向外站的直出 <a>）。F-03 起统一经确认跳转页包装：点击进入确认
+页，显示 PRD §7.5 四要素后再决定去留；page 上下文不可用时省略 from
+（确认页相应省略来源/时间要素）。
 {% endcomment %}
-<p class="block-external-link">{{ self.link_text }}：<span class="url-text">{{ self.url }}</span></p>
+<p class="block-external-link">{{ self.link_text }}：<span class="url-text">{% include "includes/external_link_jump.html" with url=self.url text=self.url from=page.pk only %}</span></p>

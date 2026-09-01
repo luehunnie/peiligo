@@ -28,6 +28,7 @@ from notices.lifecycle import (
     LifecycleStateMixin,
     clean_publish_window,
 )
+from peiligo.link_validation import validate_external_url
 
 
 @register_snippet
@@ -252,7 +253,7 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pag
         blank=True,
         verbose_name="附件",
     )
-    external_url = models.URLField("外部链接", blank=True)
+    external_url = models.URLField("外部链接", blank=True, validators=[validate_external_url])
     tags = ControlledTaggableManager(through=NoticeTag, blank=True)
 
     content_panels = Page.content_panels + _notice_article_panels() + EventFieldsMixin.event_panels
@@ -317,7 +318,7 @@ class ArticlePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pa
         blank=True,
         verbose_name="附件",
     )
-    external_url = models.URLField("外部链接", blank=True)
+    external_url = models.URLField("外部链接", blank=True, validators=[validate_external_url])
     tags = ControlledTaggableManager(through=ArticleTag, blank=True)
 
     content_panels = Page.content_panels + _notice_article_panels() + EventFieldsMixin.event_panels

@@ -26,6 +26,8 @@ from wagtail.models import Page
 from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
+from peiligo.link_validation import validate_external_url
+
 
 class _ControlledVocabulary(models.Model):
     """受控类别词表同构骨架（§13.2：四词表字段仅两枚——名称/排序）。
@@ -110,7 +112,7 @@ class MaterialPage(SectionContextMixin, LifecycleStateMixin, Page):
     material_type = models.ForeignKey(
         MaterialType, on_delete=models.PROTECT, verbose_name="资料类型"
     )
-    external_url = models.URLField("外部链接", blank=True)
+    external_url = models.URLField("外部链接", blank=True, validators=[validate_external_url])
     attachments = ParentalManyToManyField("wagtaildocs.Document", blank=True, verbose_name="附件")
     department = models.ForeignKey(
         "departments.Department",
@@ -175,7 +177,7 @@ class SoftwareToolPage(SectionContextMixin, LifecycleStateMixin, Page):
 
     body = StreamField(SOFTWARE_TOOL_BLOCKS, min_num=1, use_json_field=True, verbose_name="正文")
     platforms = ParentalManyToManyField(Platform, blank=False, verbose_name="适用平台")
-    source_url = models.URLField("来源链接或第三方网盘链接")
+    source_url = models.URLField("来源链接或第三方网盘链接", validators=[validate_external_url])
     license_note = models.TextField("授权或费用说明")
     department = models.ForeignKey(
         "departments.Department",

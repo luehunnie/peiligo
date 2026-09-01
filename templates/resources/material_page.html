@@ -33,11 +33,11 @@
     </section>
     {% endif %}
 
-    {% comment %}外部链接＝明文 URL（§11.4 不裸跳转；跳转页 DEFERRED_TO_M3_4）。{% endcomment %}
+    {% comment %}外部链接＝经确认跳转页包装（CM §11.4 不裸跳转；F-03 确认页四要素 PRD §7.5）。{% endcomment %}
     {% if page.external_url %}
     <section class="article-aside" aria-label="外部链接">
         <h2>外部链接</h2>
-        <p class="url-text">{{ page.external_url }}</p>
+        <p class="url-text">{% include "includes/external_link_jump.html" with url=page.external_url text=page.external_url from=page.pk only %}</p>
     </section>
     {% endif %}
 
