@@ -16,8 +16,10 @@
         <meta name="description" content="{{ page.search_description }}" />
         {% endif %}
         {% block head_robots %}
-        {# IA §10 #6：query 参数态一律 noindex（全参数可选，任一参数即过滤视图） #}
-        {% if request.GET %}
+        {# IA §10 #6：query 参数态一律 noindex（任一参数即过滤视图）。 #}
+        {# IA §10 #7（F-06）：逐内容页 noindex 开关；首页/板块/容器/自定义视图无此字段， #}
+        {# 模板属性查找静默为假，不受影响。 #}
+        {% if request.GET or page.noindex %}
         <meta name="robots" content="noindex">
         {% endif %}
         {% endblock head_robots %}

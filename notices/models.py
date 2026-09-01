@@ -29,6 +29,7 @@ from notices.lifecycle import (
     clean_publish_window,
 )
 from peiligo.link_validation import validate_external_url
+from peiligo.seo import SeoControlMixin
 
 
 @register_snippet
@@ -216,7 +217,7 @@ def _notice_article_panels():
     ]
 
 
-class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Page):
+class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page):
     """通知页（CONTENT_MODEL §5；PRD §7.1）。
 
     与 ArticlePage 字段集同构，唯一差异：有效期必填（CM-01，clean 强制）；
@@ -257,8 +258,9 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pag
     tags = ControlledTaggableManager(through=NoticeTag, blank=True)
 
     content_panels = Page.content_panels + _notice_article_panels() + EventFieldsMixin.event_panels
-    # promote_panels/settings_panels 保持官方默认（§5.3：含 PublishingPanel
-    # 的 go_live_at/expire_at 位点；行为语义 DEFERRED_TO_M3_3）。
+    # promote_panels＝官方默认＋F-06 noindex 位（settings_panels 仍官方默认，
+    # §5.3：含 PublishingPanel 的 go_live_at/expire_at 位点）。
+    promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
 
     # M3.4：搜索索引字段映射（§20.1 表 A 骨架＋表 B 本页差异项——摘要/
     # 正文（中）＋活动地点（低，EventFieldsMixin 结构化贡献）＋受控标签）。
@@ -281,7 +283,9 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pag
             raise ValidationError(errors)
 
 
-class ArticlePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Page):
+class ArticlePage(
+    EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page
+):
     """文章页（CONTENT_MODEL §6；PRD §7.2）。
 
     与 NoticePage 字段集完全同构，唯一差异：有效期可选
@@ -322,6 +326,8 @@ class ArticlePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Pa
     tags = ControlledTaggableManager(through=ArticleTag, blank=True)
 
     content_panels = Page.content_panels + _notice_article_panels() + EventFieldsMixin.event_panels
+    # F-06（IA §10 #7）：promote 面板尾挂「禁止搜索引擎收录」位（同 NoticePage）。
+    promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
 
     # M3.4：搜索索引字段映射（§20.1 表 A 骨架＋表 B 本页差异项）——与
     # NoticePage 差异集相同（§5/§6 字段集同构）。

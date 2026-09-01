@@ -1,0 +1,9 @@
+{# F-06（IA §10）：robots.txt —— 管理面与外链确认页禁抓；/search/ 刻意
+   不 Disallow（noindex 是收录语义，robots Disallow 会让爬虫读不到 meta）。
+   模板经 TemplateView 以 text/plain 输出。 #}
+User-agent: *
+Disallow: /django-admin/
+Disallow: /admin/
+Disallow: /link-confirm/
+
+Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap.xml

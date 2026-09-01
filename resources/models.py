@@ -27,6 +27,7 @@ from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
 from peiligo.link_validation import validate_external_url
+from peiligo.seo import SeoControlMixin
 
 
 class _ControlledVocabulary(models.Model):
@@ -85,7 +86,7 @@ class MaterialTag(ItemBase):
     )
 
 
-class MaterialPage(SectionContextMixin, LifecycleStateMixin, Page):
+class MaterialPage(SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page):
     """学习资料页（CONTENT_MODEL §8；PRD §7.4）。
 
     受控三维度＝学科（FK）/资料类型（FK）/关键词标签（词表多值）；
@@ -134,6 +135,9 @@ class MaterialPage(SectionContextMixin, LifecycleStateMixin, Page):
         FieldPanel("tags"),
     ]
 
+    # F-06（IA §10 #7）：promote 面板尾挂「禁止搜索引擎收录」位。
+    promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
+
     # M3.4：搜索索引字段映射（§20.1 表 A 骨架＋表 B 本页差异项——摘要/
     # 正文（中）＋受控标签＋学科/资料类型两词表；词表无 slug，过滤键=name）。
     search_fields = content_search_fields(
@@ -157,7 +161,7 @@ class MaterialPage(SectionContextMixin, LifecycleStateMixin, Page):
             raise ValidationError(errors)
 
 
-class SoftwareToolPage(SectionContextMixin, LifecycleStateMixin, Page):
+class SoftwareToolPage(SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page):
     """软件与工具页（CONTENT_MODEL §9；PRD §7.5"每条内容至少包含"六项）。
 
     网站不直接托管软件安装包——无附件字段且正文白名单不含附件块
@@ -195,6 +199,9 @@ class SoftwareToolPage(SectionContextMixin, LifecycleStateMixin, Page):
         FieldPanel("source_url"),
         FieldPanel("license_note"),
     ]
+
+    # F-06（IA §10 #7）：promote 面板尾挂「禁止搜索引擎收录」位。
+    promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
 
     # M3.4：搜索索引字段映射（§20.1 表 A 骨架＋表 B 本页差异项）——无摘要
     # 字段（§9.1）；正文（中）＋授权说明（低，"免费/正版授权"类查询目标）
