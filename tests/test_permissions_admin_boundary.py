@@ -403,7 +403,15 @@ class T16BoundaryTests(TestCase):
         )
         self.assertIn("/chronicle/</loc>", sitemap, "板块页在 sitemap")
         home_html = anon.get("/").content.decode()
-        self.assertNotIn(w["b_chron"].url, home_html, "容器不入前台导航（N14）")
+        # F-04 起首页内容卡（最新通知等数据区）合法携带以容器路径为前缀的
+        # 内容页 URL，全页子串断言过宽；收窄为「容器不可作为链接目标」
+        # （恰等 href）——语义仍覆盖前台导航与一切数据区。
+        self.assertNotIn(f'href="{w["b_chron"].url}"', home_html, "容器不入前台导航（N14）")
+        self.assertNotIn(
+            f'href="{w["a_containers"]["chronicle"].url}"',
+            home_html,
+            "容器不入前台导航（N14）",
+        )
 
     def test_anonymous_admin_boundaries(self):
         """④ 未登录访问 /admin/ 重定向登录页；错误凭据不泄露账号存在性。"""

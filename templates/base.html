@@ -100,9 +100,7 @@
             </div>
         </footer>
 
-        {# Global javascript #}
-        <script type="text/javascript" src="{% static 'js/peiligo.js' %}"></script>
-
+        {# 全站无 JS（纯 SSR，ADR-0002）；空静态脚本加载位已移除（F-04）。 #}
         {% block extra_js %}
         {# Override this in templates to add extra javascript #}
         {% endblock %}

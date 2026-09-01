@@ -414,6 +414,21 @@ form[role="search"] button:hover {
     box-shadow: var(--shadow-subtle);
 }
 
+/* 首页层 1 紧急提示（F-04，IA §7.1）：页面最顶部的通栏提示条——品牌色
+ * 左缘＋品牌软底承载提示语义，版式沿用 token，不引入新视觉体系。 */
+.site-alert {
+    padding: var(--space-md) var(--space-lg);
+    background: var(--brand-bg-soft);
+    border-left: 4px solid var(--brand-color);
+    border-radius: var(--radius-sm);
+}
+
+.site-alert p {
+    margin: 0;
+    font-weight: 600;
+    line-height: var(--line-height-base);
+}
+
 .search-bench h2 {
     margin-bottom: var(--space-md);
 }
