@@ -80,6 +80,9 @@ INSTALLED_APPS = [
     # F-08B（R-05 方案 B）：用户/组治理 DB 级审计——复用 Wagtail 官方
     # log_actions（ModelLogEntry＋LogContext），零自建模型零迁移。
     "peiligo.govaudit",
+    # F-05R（SB §2.4）：强制改密闸门——后台设置/重置密码后必须先自行
+    # 改密（单状态表＋服务端路由级中间件；非第二套认证系统）。
+    "peiligo.passwordgate",
 ]
 
 MIDDLEWARE = [
@@ -88,6 +91,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # F-05R（SB §2.4 ③）：已登录且密码未设定 → 服务端路由级强制改密。
+    "peiligo.passwordgate.middleware.PasswordChangeGateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "wagtail.contrib.redirects.middleware.RedirectMiddleware",
