@@ -51,7 +51,8 @@ SECURE_REDIRECT_EXEMPT = [r"^healthz/$", r"^readyz/$"]
 # See https://docs.djangoproject.com/en/5.2/ref/contrib/staticfiles/#manifeststaticfilesstorage
 STORAGES["staticfiles"]["BACKEND"] = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
-try:
-    from .local import *
-except ImportError:
-    pass
+# 终审 M-2：production 不读 local.py（本地开发覆盖仅 dev settings 支持，
+# dev.py 保留同款 import 块属设计）。生产敏感项全部环境外置、缺失即
+# fail-fast——若此处回落 local settings，一份被误放的 local.py 即可无声
+# 打开 DEBUG/放宽安全设置；local.py 已入 .gitignore，防本地覆盖误入库。
+# 此处刻意不加载任何本地覆盖模块（test_settings 有静态断言收口）。

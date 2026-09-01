@@ -49,6 +49,19 @@ def test_settings_module_importable(module):
     assert importlib.import_module(module) is not None
 
 
+def test_production_does_not_import_local_settings():
+    """终审 M-2：production 不读 local.py——本地覆盖仅 dev settings 支持。
+
+    静态断言（不依赖运行期环境）：production.py 内出现 local import 即
+    意味着一份误放的 local.py 可无声覆盖生产安全设置（DEBUG、Cookie
+    锁、SSL 重定向等）。本地覆盖文件不入库（.gitignore 同批收口）。
+    """
+    source = (REPO_ROOT / "src" / "peiligo" / "settings" / "production.py").read_text()
+    assert "from .local import" not in source, "production.py 不得 import local settings"
+    gitignore = (REPO_ROOT / ".gitignore").read_text()
+    assert "settings/local.py" in gitignore, ".gitignore 应排除 settings/local.py"
+
+
 def test_no_hardcoded_loopback_in_db_related_sources():
     for path in HARDCODE_SCAN_TARGETS:
         content = path.read_text()
