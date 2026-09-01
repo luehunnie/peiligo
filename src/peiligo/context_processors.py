@@ -1,9 +1,11 @@
 """全站页头/页脚上下文（M2.2 前台 IA）：固定清单数据源，零页面树查询。
 
 IA §6.1：一级导航仅=首页+五板块+站内搜索入口（固定七类，顺序按 §2 #1–#5）；
-IA §6.2：导航**永不查询、永不渲染部门容器**——本处理器仅消费
-``home.models.SECTIONS`` 冻结常量，不触数据库，容器没有进入通道；
-当前板块项判定供模板输出 ``aria-current``（§6.1；PRD §13 无障碍）。
+IA §6.2：导航**永不查询、永不渲染部门容器**——导航清单仅消费
+``home.models.SECTIONS`` 冻结常量，容器没有进入通道；当前板块项判定供
+模板输出 ``aria-current``（§6.1；PRD §13 无障碍）。
+反馈邮箱一项（终审 M-1）按站点查 SiteSettings——这是本处理器唯一的
+非导航查询面，失败回落 settings.FEEDBACK_EMAIL（见 ``_feedback_email``）。
 """
 
 from django.conf import settings

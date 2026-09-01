@@ -36,7 +36,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--media-target-dir",
             default="",
-            help="媒体解包目录（与当前 MEDIA_ROOT 同径即拒绝）",
+            help="媒体解包目录（等于或位于当前 MEDIA_ROOT 内即拒绝，终审 L-8）",
         )
 
     def handle(self, *args, **options):
