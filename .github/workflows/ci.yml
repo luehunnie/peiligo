@@ -46,6 +46,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      # 项目配置包在 src/peiligo（src 布局），须 editable 安装后
+      # manage.py / pytest 才能导入 peiligo.settings（与本地 venv、
+      # Dockerfile 的安装方式同构；首跑 CI 漏装即 ModuleNotFoundError）。
+      - name: Install project package
+        run: pip install -e .
+
       - name: System check
         run: python manage.py check
 
