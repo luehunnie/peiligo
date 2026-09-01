@@ -6,13 +6,12 @@ R1/特权管理员放行，内容页编辑不受影响。拒绝主证沿用矩�
 快照（title/slug/修订数/日志等），HTTP 302 仅辅证（拒权与成功同为 302）。
 """
 
+from departments.models import DepartmentContainerPage
+from departments.wagtail_hooks import refuse_structure_page_edit_for_non_privileged
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from wagtail.models import Page
-
-from departments.models import DepartmentContainerPage
-from departments.wagtail_hooks import refuse_structure_page_edit_for_non_privileged
 
 from .permission_helpers import (
     build_permission_world,
@@ -71,9 +70,7 @@ class StructureEditGuardTests(TestCase):
             msg="R2 改容器 slug",
         )
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(
-            DepartmentContainerPage.objects.get(pk=container.pk).slug, container.slug
-        )
+        self.assertEqual(DepartmentContainerPage.objects.get(pk=container.pk).slug, container.slug)
 
     def test_dept_user_change_container_department_denied(self):
         """R2 修改容器 department 绑定（结构字段）→ 拒绝（零库变更）。"""
@@ -99,7 +96,10 @@ class StructureEditGuardTests(TestCase):
         client = login_client(w["user_a"])
         container = w["a_containers"]["events"]
         resp = denied_get(
-            self, client, reverse("wagtailadmin_pages:edit", args=[container.pk]), msg="GET 编辑容器"
+            self,
+            client,
+            reverse("wagtailadmin_pages:edit", args=[container.pk]),
+            msg="GET 编辑容器",
         )
         self.assertEqual(resp.status_code, 302)
 
@@ -114,7 +114,10 @@ class StructureEditGuardTests(TestCase):
         container = w["b_chron"]
         resp = client.post(
             reverse("wagtailadmin_pages:edit", args=[container.pk]),
-            {**container_form(container.title, "xsc-b-new", w["dept_b"].id), "action-publish": "true"},
+            {
+                **container_form(container.title, "xsc-b-new", w["dept_b"].id),
+                "action-publish": "true",
+            },
         )
         self.assertEqual(resp.status_code, 302)
         container.refresh_from_db()
