@@ -35,6 +35,20 @@ def scratch_db_name():
     return str(connection.settings_dict["NAME"]) + "_restore_chk"
 
 
+def pg_connect_kwargs(dbname: str) -> dict:
+    """psycopg 直连参数取自 Django 活动连接（同实例同 host/port/user）。
+    不假设 unix socket：本地（socket 形 DATABASE_URL）与 CI（TCP 服务
+    容器）均成立；空值回退 None 交 libpq 取默认。"""
+    d = connection.settings_dict
+    return {
+        "dbname": dbname,
+        "user": d.get("USER") or None,
+        "password": d.get("PASSWORD") or None,
+        "host": d.get("HOST") or None,
+        "port": d.get("PORT") or None,
+    }
+
+
 def parse_backup_set(buf: StringIO) -> Path:
     return Path(buf.getvalue().split("backup_set=")[1].strip().splitlines()[0])
 
@@ -145,7 +159,7 @@ class BackupRestoreTests(TestCase):
     def _drop_scratch(self):
         # DDL 须在事务块外：走独立 autocommit 连接（不动 Django 测试连接）
         scratch = scratch_db_name()
-        conn = psycopg.connect(dbname="postgres", user=connection.settings_dict["USER"])
+        conn = psycopg.connect(**pg_connect_kwargs("postgres"))
         conn.autocommit = True
         with conn.cursor() as cursor:
             cursor.execute(f'DROP DATABASE IF EXISTS "{scratch}"')
@@ -193,8 +207,7 @@ class BackupRestoreTests(TestCase):
                 set_dir = make_backup_set(Path(backup_tmp))
 
             # 隔离目标库由调用方 createdb（runbook 口径）
-            db_user = connection.settings_dict["USER"]
-            conn = psycopg.connect(dbname="postgres", user=db_user)
+            conn = psycopg.connect(**pg_connect_kwargs("postgres"))
             conn.autocommit = True
             with conn.cursor() as cursor:
                 cursor.execute(f'CREATE DATABASE "{scratch}"')
@@ -213,7 +226,7 @@ class BackupRestoreTests(TestCase):
             )
             self.assertIn("restored_database=", buf.getvalue())
             self.assertTrue((Path(target) / "media" / "keep.txt").exists(), "媒体解包落隔离目录")
-            conn = psycopg.connect(dbname=scratch)
+            conn = psycopg.connect(**pg_connect_kwargs(scratch))
             with conn.cursor() as cursor:
                 cursor.execute(
                     "SELECT count(*) FROM information_schema.tables "
