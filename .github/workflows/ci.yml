@@ -1,0 +1,85 @@
+# F-11：CI 质量门（GitHub Actions）。
+# 冻结口径：单 Python 3.13＋单 PostgreSQL 服务容器；只做质量门
+# （check / migrations 一致性 / 测试 / ruff），不做矩阵、多 OS 与部署。
+# 凭据纪律：库里只出现哑值（见 env: 块），服务容器口令同为一次性哑值。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: peiligo_ci
+          POSTGRES_USER: peiligo_ci
+          POSTGRES_PASSWORD: ci-dummy-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U peiligo_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    env:
+      # 哑值密钥与本地库指向（CI 专用库 peiligo_ci / peiligo_ci_test）；
+      # ALLOWED_HOSTS 哑值供 settings.production 导入性测试（与 Dockerfile
+      # 构建期哑值同风格，非真实秘密）。
+      DATABASE_URL: postgres://peiligo_ci:ci-dummy-password@localhost:5432/peiligo_ci
+      TEST_DATABASE_URL: postgres://peiligo_ci:ci-dummy-password@localhost:5432/peiligo_ci_test
+      SECRET_KEY: ci-dummy-secret-key-not-a-real-secret
+      ALLOWED_HOSTS: ci-dummy.invalid
+      DJANGO_SETTINGS_MODULE: peiligo.settings.dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # backupkit 测试真实调用 pg_dump/pg_restore（F-12 口径）；runner 自带
+      # 客户端为 16.x，与服务容器 postgres:18 大版本不匹配会被服务端拒绝，
+      # 故装 PGDG 的 18 客户端并置于 PATH 最前（与服务端同大版本）。
+      - name: Install PostgreSQL 18 client tools
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # 项目配置包在 src/peiligo（src 布局），须 editable 安装后
+      # manage.py / pytest 才能导入 peiligo.settings（与本地 venv、
+      # Dockerfile 的安装方式同构；首跑 CI 漏装即 ModuleNotFoundError）。
+      - name: Install project package
+        run: pip install -e .
+
+      - name: System check
+        run: python manage.py check
+
+      - name: Migrations consistency
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Format (ruff format --check)
+        run: ruff format --check .
+
+      - name: Tests
+        run: pytest -q

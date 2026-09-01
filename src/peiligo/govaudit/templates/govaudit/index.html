@@ -1,0 +1,75 @@
+{% extends "wagtailadmin/base.html" %}
+{% load i18n %}
+
+{% block titletag %}治理审计{% endblock %}
+
+{% block content %}
+  {% include "wagtailadmin/shared/header.html" with title=page_title subtitle=page_subtitle icon_name="history" %}
+
+  <div class="nice-padding">
+    <form method="get" class="govaudit-filters" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;">
+      <select name="action" style="max-width:16rem;">
+        <option value="">全部动作</option>
+        {% for value, label in action_choices %}
+          <option value="{{ value }}" {% if get_params.action == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="actor">
+        <option value="">全部操作者</option>
+        {% for user_id, username in actor_choices %}
+          <option value="{{ user_id }}" {% if get_params.actor == user_id|stringformat:"s" %}selected{% endif %}>{{ username }}</option>
+        {% endfor %}
+      </select>
+      <select name="target">
+        <option value="">全部对象</option>
+        <option value="user" {% if get_params.target == "user" %}selected{% endif %}>用户</option>
+        <option value="group" {% if get_params.target == "group" %}selected{% endif %}>组</option>
+      </select>
+      <input type="date" name="date_from" value="{{ get_params.date_from|default_if_none:'' }}" />
+      <input type="date" name="date_to" value="{{ get_params.date_to|default_if_none:'' }}" />
+      <button type="submit" class="button">{% trans "筛选" %}</button>
+    </form>
+
+    <table class="listing">
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>操作者</th>
+          <th>动作</th>
+          <th>对象</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in object_list %}
+          <tr>
+            <td>{{ entry.timestamp|date:"Y-m-d H:i:s" }}</td>
+            <td>{{ entry.user_display_name }}</td>
+            <td>{{ entry.message }}</td>
+            <td>
+              {{ entry.object_verbose_name }} · {{ entry.label }}
+              {% if entry.data.actor_type == "non_request" %}
+                <em>（操作者未知：非后台请求）</em>
+              {% endif %}
+            </td>
+            <td>{% if entry.data.summary %}{{ entry.data.summary }}{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">暂无审计记录</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if is_paginated %}
+      <div style="margin-top:1rem;">
+        {% if page_obj.has_previous %}
+          <a class="button" href="?page={{ page_obj.previous_page_number }}&{{ get_params.urlencode }}">上一页</a>
+        {% endif %}
+        <span>第 {{ page_obj.number }} / {{ paginator.num_pages }} 页</span>
+        {% if page_obj.has_next %}
+          <a class="button" href="?page={{ page_obj.next_page_number }}&{{ get_params.urlencode }}">下一页</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

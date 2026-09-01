@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags %}
+
+{% block body_class %}template-linkconfirm{% endblock %}
+
+{% block title %}外部链接确认{% endblock %}
+
+{% comment %}
+F-03 外链统一确认跳转页（PRD §7.5 四要素；CM §11.4 冻结语义；SEC-21）：
+显示目标地址与域名、来源、最后更新时间、第三方内容可能变化的声明，无需
+强制勾选免责协议（PRD §7.5）。无任何自动跳转（无 meta refresh、无 JS、
+无 302）——离开本站须手动点击「继续访问」；目标不合法＝拒绝提示，绝不
+跳转（SEC-22 白名单语义）。自定义视图不入页面树 → 不进 sitemap；整页
+恒 noindex（/search/ 与归档同款，IA §10 家族）。
+{% endcomment %}
+{% block head_robots %}
+<meta name="robots" content="noindex">
+{% endblock head_robots %}
+{% block head_canonical %}
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}/link-confirm/">
+{% endblock head_canonical %}
+
+{% block content %}
+<div class="page-head">
+    <h1>外部链接确认</h1>
+    <p class="section-lede">您即将离开本站，访问外部网站提供的资源。</p>
+</div>
+
+{% if target_ok %}
+    <dl class="meta-list confirm-facts">
+        <div><dt>目标地址</dt><dd><span class="url-text">{{ target_display }}</span>（域名：<span class="url-text">{{ target_domain }}</span>）</dd></div>
+        {% if source_page %}
+        <div><dt>来源</dt><dd><a href="{% pageurl source_page %}">{{ source_page.title }}</a></dd></div>
+        <div><dt>最后更新时间</dt><dd>{{ source_page.last_published_at|date:"Y-m-d H:i" }}</dd></div>
+        {% endif %}
+        <div><dt>声明</dt><dd>{{ notice_text }}</dd></div>
+    </dl>
+    <p class="confirm-actions">
+        <a class="button" href="{{ go_url }}" rel="nofollow">继续访问</a>
+        <a class="button button-secondary" href="/" onclick="history.back(); return false;">返回</a>
+    </p>
+{% else %}
+    <p class="confirm-error">该链接不安全或格式不正确，已阻止访问：{{ problem }}</p>
+    <p class="confirm-actions"><a class="button" href="/">返回首页</a></p>
+{% endif %}
+{% endblock content %}

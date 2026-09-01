@@ -4,8 +4,10 @@ T14 总管理员（纯组权限行权，非 superuser）工厂面正向全链（
 周期、词表/容器/推荐位/站点设置/部门子树代建）；T15 跨部门治理与永久
 删除的守卫放行面（M-B4/B5/A8 R1 列——守卫只拒绝不放行的另一侧直证）；
 T16 前台四态可见性（N13）、容器 URL 404（ADR-0004 决策 2）、sitemap/
-导航（N14）、后台入口边界与 R3 型账号（N09/N10）。wagtailusers 无 DB
-级用户审计日志＝记录性缺口（M-G2/G3，OPEN_ITEM 只登记不实现）。
+导航（N14）、后台入口边界与 R3 型账号（N09/N10）。用户/组治理 DB 级
+审计已由 F-08B（R-05 方案 B）经 Wagtail ModelLogEntry 落地——原
+「无 DB 级留痕」断言按 requirement-approved behavior change 更新为
+正向断言（Human 批准 2026-09-01）。
 """
 
 import datetime as dt
@@ -22,7 +24,7 @@ from guides.models import GuideCategory
 from home.models import FeaturedItem
 from notices.models import ArticlePage, NoticePage
 from resources.models import Discipline, MaterialType, Platform, SoftwareToolPage
-from wagtail.models import Page, Revision
+from wagtail.models import ModelLogEntry, Page, Revision
 
 from .helpers import future
 from .permission_helpers import (
@@ -68,12 +70,23 @@ class T14AdminFactoryTests(TestCase):
         )
         user_c = get_user_model().objects.filter(username="t44-dept-c").first()
         self.assertIsNotNone(user_c, f"创建部门岗位账号 HTTP {resp.status_code}")
-        # 记录性核查：wagtailusers 视图无 DB 级审计写入（M-G2/G3 留痕缺口，
-        # OPEN_ITEM 登记于工作报告——页面操作有 PageLogEntry，用户操作无对等留痕）
+        # F-08B（R-05 方案 B，Human 2026-09-01 批准的 requirement-approved
+        # behavior change）：用户治理操作必须落 DB 级审计——Wagtail 官方
+        # ModelLogEntry（django.contrib.admin 的 LogEntry 仍不启用）。
         self.assertEqual(
             LogEntry.objects.filter(object_id=str(user_c.pk)).count(),
             0,
-            "记录性核查：用户操作无 DB 级审计日志（M-G2/G3 缺口）",
+            "记录性核查：django.contrib.admin LogEntry 仍非本项目审计载体",
+        )
+        self.assertTrue(
+            ModelLogEntry.objects.filter(
+                content_type__app_label="auth",
+                content_type__model="user",
+                object_id=str(user_c.pk),
+                action="wagtail.create",
+                user_id=w["admin"].pk,
+            ).exists(),
+            "R-05：后台建用户必须留 DB 审计（actor=操作管理员）",
         )
         resp = client.post(
             reverse("wagtailusers_users:edit", args=[user_c.pk]),
@@ -403,7 +416,15 @@ class T16BoundaryTests(TestCase):
         )
         self.assertIn("/chronicle/</loc>", sitemap, "板块页在 sitemap")
         home_html = anon.get("/").content.decode()
-        self.assertNotIn(w["b_chron"].url, home_html, "容器不入前台导航（N14）")
+        # F-04 起首页内容卡（最新通知等数据区）合法携带以容器路径为前缀的
+        # 内容页 URL，全页子串断言过宽；收窄为「容器不可作为链接目标」
+        # （恰等 href）——语义仍覆盖前台导航与一切数据区。
+        self.assertNotIn(f'href="{w["b_chron"].url}"', home_html, "容器不入前台导航（N14）")
+        self.assertNotIn(
+            f'href="{w["a_containers"]["chronicle"].url}"',
+            home_html,
+            "容器不入前台导航（N14）",
+        )
 
     def test_anonymous_admin_boundaries(self):
         """④ 未登录访问 /admin/ 重定向登录页；错误凭据不泄露账号存在性。"""

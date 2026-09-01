@@ -16,6 +16,8 @@ from wagtail.models import Page
 from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
+from peiligo.seo import SeoControlMixin
+
 
 @register_snippet
 class GuideCategory(models.Model):
@@ -38,7 +40,7 @@ class GuideCategory(models.Model):
         return self.name
 
 
-class GuidePage(SectionContextMixin, LifecycleStateMixin, Page):
+class GuidePage(SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page):
     """校园指南页（CONTENT_MODEL §10；PRD §7.6）。
 
     九字段＝#1 服务名称（title 映射，不双轨命名）/#2 指南类别/#3 地点/
@@ -93,6 +95,9 @@ class GuidePage(SectionContextMixin, LifecycleStateMixin, Page):
         FieldPanel("maintenance_mode"),
         FieldPanel("last_confirmed_on"),
     ]
+
+    # F-06（IA §10 #7）：promote 面板尾挂「禁止搜索引擎收录」位。
+    promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
 
     # M3.4：搜索索引字段映射（§20.1 表 A 骨架＋表 B 本页差异项）——无
     # StreamField 正文（§10.1），结构化字段即全部可检索面：地点/开放时间

@@ -1,0 +1,23 @@
+# F-09：镜像构建上下文裁剪——秘密、本地产物与开发件一律不进镜像。
+.env
+.env.*
+!.env.example
+deploy/.env
+deploy/.env.*
+!deploy/.env.example
+.git/
+.venv/
+.worktrees/
+.claude/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+**/*.pyc
+media/
+staticfiles/
+tests/
+docs/
+*.sqlite3
+*.log
+Dockerfile
+docker-compose*.yml

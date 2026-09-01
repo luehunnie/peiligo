@@ -1,0 +1,37 @@
+# F-09：Caddy 反向代理（HTTPS 终结；主机名经 $DOMAIN 环境注入，零硬编码）。
+# 证书自动申请/续期落 caddy_data 卷；静态/媒体直供（web 容器只出动态）。
+{
+	# 管理接口仅本地回环（无跨机管理面需求）
+	admin localhost:2019
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	header {
+		# 与 Django 侧 HSTS（production settings）互补：静态文件响应
+		# 亦带 HSTS；两路各出各的响应头，不会重复叠加。
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# 健康探针与静态/媒体直供；其余全部反代 gunicorn。
+	handle /healthz* {
+		reverse_proxy web:8000
+	}
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+	handle {
+		reverse_proxy web:8000
+	}
+
+	log {
+		output stdout
+	}
+}

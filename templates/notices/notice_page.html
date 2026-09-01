@@ -35,7 +35,7 @@
             <div><dt>开始时间</dt><dd>{{ page.event_start_at|date:"Y-m-d H:i" }}</dd></div>
             <div><dt>结束时间</dt><dd>{{ page.event_end_at|date:"Y-m-d H:i" }}</dd></div>
             <div><dt>活动地点</dt><dd>{% if page.event_is_online %}线上活动{% else %}{{ page.event_location }}{% endif %}</dd></div>
-            {% if page.event_registration_url %}<div><dt>报名</dt><dd class="url-text">{{ page.event_registration_url }}</dd></div>{% endif %}
+            {% if page.event_registration_url %}<div><dt>报名</dt><dd class="url-text">{% include "includes/external_link_jump.html" with url=page.event_registration_url text=page.event_registration_url from=page.pk only %}</dd></div>{% endif %}
         </dl>
     </section>
     {% endif %}
@@ -55,11 +55,11 @@
     </section>
     {% endif %}
 
-    {% comment %}外部链接＝明文 URL（§11.4 不裸跳转；跳转页 DEFERRED_TO_M3_4）。{% endcomment %}
+    {% comment %}外部链接＝经确认跳转页包装（CM §11.4 不裸跳转；F-03 确认页四要素 PRD §7.5）。{% endcomment %}
     {% if page.external_url %}
     <section class="article-aside" aria-label="外部链接">
         <h2>外部链接</h2>
-        <p class="url-text">{{ page.external_url }}</p>
+        <p class="url-text">{% include "includes/external_link_jump.html" with url=page.external_url text=page.external_url from=page.pk only %}</p>
     </section>
     {% endif %}
 
