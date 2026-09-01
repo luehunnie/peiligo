@@ -35,6 +35,9 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
       MEDIA_ROOT: /data/media
+      # 终审 M-1/L-11：反馈邮箱环境兜底值（正式载体为后台站点设置
+      # SiteSettings.feedback_email，此处仅部署层缺省；置空视同未设）。
+      FEEDBACK_EMAIL: ${FEEDBACK_EMAIL:-feedback@example.com}
       # F-12/F-13（独立审查 P1 修复）：.env 配置须显式透传才进容器。
       # BACKUP_ROOT 缺省落在具名卷 backups（重建容器不丢）；独立副本
       # SECONDARY_BACKUP_DIR 指向宿主/独立挂载路径时由 .env 提供。

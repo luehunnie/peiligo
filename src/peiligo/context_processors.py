@@ -7,7 +7,23 @@ IA §6.2：导航**永不查询、永不渲染部门容器**——本处理器�
 """
 
 from django.conf import settings
-from home.models import SECTIONS
+from home.models import SECTIONS, SiteSettings
+from wagtail.models import Site
+
+
+def _feedback_email(request):
+    """反馈邮箱取值（终审 M-1/L-11）：站点设置优先，环境缺省兜底。
+
+    ``SiteSettings.feedback_email``（后台 M-E1 可改，反馈/投稿同源单值）
+    非空即用；站点解析失败或设置行缺失（``for_site(None)`` 抛
+    ``SiteSettings.DoesNotExist``）等未就绪场景 fail-soft 回落
+    ``settings.FEEDBACK_EMAIL``——前台渲染永不因设置缺失而 500。
+    """
+    try:
+        site_value = SiteSettings.for_request(request).feedback_email
+    except (SiteSettings.DoesNotExist, Site.DoesNotExist):
+        site_value = ""
+    return site_value or settings.FEEDBACK_EMAIL
 
 
 def site_chrome(request):
@@ -22,5 +38,5 @@ def site_chrome(request):
         "nav_sections": SECTIONS,
         "current_section_slug": current_section_slug,
         "site_brand": settings.WAGTAIL_SITE_NAME,
-        "feedback_email": settings.FEEDBACK_EMAIL,
+        "feedback_email": _feedback_email(request),
     }
