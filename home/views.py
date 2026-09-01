@@ -12,9 +12,11 @@ Wagtail 子树）。查询与合并委托 ``search.services`` 同一过滤层（
 from urllib.parse import quote
 
 from django.core.exceptions import ValidationError
-from django.http import Http404, HttpResponseRedirect
+from django.db import connection
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from search import services
 from search.services import SearchFilters
 from wagtail.models import Page
@@ -107,3 +109,24 @@ def link_confirm_go(request):
     except ValidationError:
         return link_confirm(request)
     return HttpResponseRedirect(target)
+
+
+# F-09（容器健康检查基线）：探针端点挂在 wagtail 兜底路由之前
+# （urls.py）。口径：只回答「活/不活、可不可服务」，不泄露 DB URL/
+# 路径/版本/栈回溯——响应体恒为最小 JSON；探针失败也不带任何环境
+# 细节（503＋unavailable 一词）。
+@never_cache
+def healthz(request):
+    """存活探针：进程在即 200，不触数据库（liveness）。"""
+    return JsonResponse({"status": "ok"})
+
+
+@never_cache
+def readyz(request):
+    """就绪探针：数据库可应答才 200，否则 503（readiness）。"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except Exception:
+        return JsonResponse({"status": "unavailable"}, status=503)
+    return JsonResponse({"status": "ok"})

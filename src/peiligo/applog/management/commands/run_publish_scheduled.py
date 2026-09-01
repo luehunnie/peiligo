@@ -26,11 +26,25 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         now = timezone.now()
         due_before = _due_revisions_count(now)
-        call_command("publish_scheduled")
+        try:
+            call_command("publish_scheduled")
+        except Exception as exc:
+            # F-13：失败也落心跳，ops_report 才能区分「没跑」与「跑了但失败」。
+            from peiligo.opsignal.models import OpsHeartbeat
+
+            OpsHeartbeat.record("publish_scheduled", ok=False, error=str(exc))
+            raise
         due_after = _due_revisions_count(timezone.now())
 
         published = max(due_before - due_after, 0)
         self.stdout.write(f"due_before={due_before} published={published} due_after={due_after}")
+
+        # F-13：心跳供 ops_report 判定定时发布新鲜度（>15 分钟 WARN / >2 小时 CRIT）。
+        from peiligo.opsignal.models import OpsHeartbeat
+
+        OpsHeartbeat.record(
+            "publish_scheduled", ok=True, published=published, due_before=due_before
+        )
 
         logging.getLogger("peiligo.events").info(
             "publish_scheduled 运行完成",

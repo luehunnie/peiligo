@@ -20,6 +20,10 @@ urlpatterns = [
     path("admin/", include(wagtailadmin_urls)),
     path("documents/", include(wagtaildocs_urls)),
     path("search/", search_views.search, name="search"),
+    # F-09：容器健康检查探针（存活/就绪；最小 JSON，不泄露环境细节），
+    # 须在 wagtail 兜底路由之前。
+    path("healthz/", home_views.healthz, name="healthz"),
+    path("readyz/", home_views.readyz, name="readyz"),
     # F-03（CM §11.4/PRD §7.5）：外链统一确认页＋「继续访问」端点；自定义
     # 视图不入页面树（ADR-0005 #5 先例）→ 不进 sitemap；整页恒 noindex。
     path("link-confirm/", home_views.link_confirm, name="link-confirm"),
