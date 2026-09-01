@@ -1,11 +1,13 @@
 """F-12：backup_restore——校验后恢复到隔离目标。
 
-铁律：绝不默认毁当前库/当前媒体。
-- --dry-run（缺省）：只做校验与计划——manifest/校验和/dump 可读性
+铁律：绝不默认毁当前库/当前媒体。终审 L-7 文档如实化：**dry-run 非
+缺省**，不显式给目标＝拒绝执行，绝不静默真恢复。
+- --dry-run：只做校验与计划——manifest/校验和/dump 可读性
   （pg_restore --list）/归档可读性，不写任何库与盘；
-- 实际恢复：必须显式给 --target-database（须已由 createdb 建好）与
-  --media-target-dir，且二者与当前 settings 所指的库/媒体根同名同径
-  时拒绝执行（防止误毁在线库与在线媒体）。
+- 不带 --dry-run：未显式给 --target-database（须已由 createdb 建好）
+  与 --media-target-dir 即拒绝执行；二者齐备才做实际恢复，且目标库
+  与当前库同名、媒体目录等于或位于当前 MEDIA_ROOT 之内时拒绝
+  （防止误毁在线库与在线媒体）。
 """
 
 from pathlib import Path
@@ -18,7 +20,10 @@ from peiligo.backupkit import _lib
 
 
 class Command(BaseCommand):
-    help = "从备份集恢复到隔离目标（缺省 dry-run；拒绝指向当前库/当前媒体根）。"
+    help = (
+        "从备份集恢复到隔离目标（--dry-run 只校验出计划；实际恢复必须显式"
+        "给 --target-database 与 --media-target-dir；拒绝指向当前库/当前媒体根）。"
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--source", required=True, help="备份集目录（含 manifest.json）")
