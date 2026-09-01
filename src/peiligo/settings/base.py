@@ -77,6 +77,9 @@ INSTALLED_APPS = [
     # F-07：应用日志微 app（信号接收器＋publish_scheduled 结果包装命令），
     # 零模型零迁移。
     "peiligo.applog",
+    # F-08B（R-05 方案 B）：用户/组治理 DB 级审计——复用 Wagtail 官方
+    # log_actions（ModelLogEntry＋LogContext），零自建模型零迁移。
+    "peiligo.govaudit",
 ]
 
 MIDDLEWARE = [
