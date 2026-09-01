@@ -11,6 +11,10 @@ SECRET_KEY = env_required("SECRET_KEY")
 # A1.1（03 计划 S1）：允许主机外置（逗号分隔，剔除空项）。
 ALLOWED_HOSTS = [host.strip() for host in env_required("ALLOWED_HOSTS").split(",") if host.strip()]
 
+# 终审 L-1：后台通知邮件等全 URL 的基准地址外置（哑值 http://example.com
+# 不可上生产——密码重置/内容通知链接指向假域名）。部署与 DOMAIN 同源填写。
+WAGTAILADMIN_BASE_URL = env_required("WAGTAILADMIN_BASE_URL")
+
 # F-10（SB §10-1 冻结值）：CSRF 可信来源外置（逗号分隔；形如
 # https://host）。冻结部署为 Caddy 同源反代——Django 4+ 对同源请求
 # （Origin＝Host 头所指）隐式信任，故缺省空值即安全；仅出现跨源
@@ -51,7 +55,8 @@ SECURE_REDIRECT_EXEMPT = [r"^healthz/$", r"^readyz/$"]
 # See https://docs.djangoproject.com/en/5.2/ref/contrib/staticfiles/#manifeststaticfilesstorage
 STORAGES["staticfiles"]["BACKEND"] = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 
-try:
-    from .local import *
-except ImportError:
-    pass
+# 终审 M-2：production 不读 local.py（本地开发覆盖仅 dev settings 支持，
+# dev.py 保留同款 import 块属设计）。生产敏感项全部环境外置、缺失即
+# fail-fast——若此处回落 local settings，一份被误放的 local.py 即可无声
+# 打开 DEBUG/放宽安全设置；local.py 已入 .gitignore，防本地覆盖误入库。
+# 此处刻意不加载任何本地覆盖模块（test_settings 有静态断言收口）。

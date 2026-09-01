@@ -1,11 +1,13 @@
 """F-12：backup_restore——校验后恢复到隔离目标。
 
-铁律：绝不默认毁当前库/当前媒体。
-- --dry-run（缺省）：只做校验与计划——manifest/校验和/dump 可读性
+铁律：绝不默认毁当前库/当前媒体。终审 L-7 文档如实化：**dry-run 非
+缺省**，不显式给目标＝拒绝执行，绝不静默真恢复。
+- --dry-run：只做校验与计划——manifest/校验和/dump 可读性
   （pg_restore --list）/归档可读性，不写任何库与盘；
-- 实际恢复：必须显式给 --target-database（须已由 createdb 建好）与
-  --media-target-dir，且二者与当前 settings 所指的库/媒体根同名同径
-  时拒绝执行（防止误毁在线库与在线媒体）。
+- 不带 --dry-run：未显式给 --target-database（须已由 createdb 建好）
+  与 --media-target-dir 即拒绝执行；二者齐备才做实际恢复，且目标库
+  与当前库同名、媒体目录等于或位于当前 MEDIA_ROOT 之内时拒绝
+  （防止误毁在线库与在线媒体）。
 """
 
 from pathlib import Path
@@ -18,7 +20,10 @@ from peiligo.backupkit import _lib
 
 
 class Command(BaseCommand):
-    help = "从备份集恢复到隔离目标（缺省 dry-run；拒绝指向当前库/当前媒体根）。"
+    help = (
+        "从备份集恢复到隔离目标（--dry-run 只校验出计划；实际恢复必须显式"
+        "给 --target-database 与 --media-target-dir；拒绝指向当前库/当前媒体根）。"
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--source", required=True, help="备份集目录（含 manifest.json）")
@@ -31,7 +36,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--media-target-dir",
             default="",
-            help="媒体解包目录（与当前 MEDIA_ROOT 同径即拒绝）",
+            help="媒体解包目录（等于或位于当前 MEDIA_ROOT 内即拒绝，终审 L-8）",
         )
 
     def handle(self, *args, **options):
@@ -76,9 +81,18 @@ class Command(BaseCommand):
             raise CommandError(
                 f"拒绝恢复：目标库与当前使用库同名（{current_db}）。请建隔离目标库后再恢复"
             )
-        if media_dir.resolve() == current_media.resolve():
+        media_resolved = media_dir.resolve()
+        current_media_resolved = current_media.resolve()
+        # 终审 L-8：隔离面不只「不同径」——目标位于在线媒体树内部（深层
+        # 子目录）同样会把恢复解包写进在线媒体，与同径一并拒绝。
+        # （Path.resolve 非严格：目标尚不存在亦可判定。）
+        if (
+            media_resolved == current_media_resolved
+            or current_media_resolved in media_resolved.parents
+        ):
             raise CommandError(
-                f"拒绝恢复：媒体目录与当前 MEDIA_ROOT 相同（{current_media}）。请指定隔离目录"
+                f"拒绝恢复：媒体目录与当前 MEDIA_ROOT 相同或位于其内（{current_media}）。"
+                "请指定隔离目录"
             )
 
         connection.close()

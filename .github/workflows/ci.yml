@@ -36,6 +36,7 @@ jobs:
       TEST_DATABASE_URL: postgres://peiligo_ci:ci-dummy-password@localhost:5432/peiligo_ci_test
       SECRET_KEY: ci-dummy-secret-key-not-a-real-secret
       ALLOWED_HOSTS: ci-dummy.invalid
+      WAGTAILADMIN_BASE_URL: https://ci-dummy.invalid
       DJANGO_SETTINGS_MODULE: peiligo.settings.dev
 
     steps:
