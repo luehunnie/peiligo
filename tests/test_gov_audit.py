@@ -144,11 +144,40 @@ class UserCrudAuditTests(TestCase):
         self.assertTrue(all(r.content_type.model == "user" for r in rows))
         self.assertTrue(all(r.user_id == self.admin.pk for r in rows))
 
+        # 非法 actor（非数字）忽略该筛选返回 200，而非 500（独立审查 P2 修复）
+        resp = client.get(reverse("govaudit"), {"actor": "not-a-number"})
+        self.assertEqual(resp.status_code, 200, "非法 actor 即忽略筛选，不 500")
+
         resp = login_client(w["user_a"]).get(reverse("govaudit"))
         # 无 R1 行权面 → 视图抛 PermissionDenied，被 require_admin_access
         # 捕获后重定向后台首页（wagtail permission_denied 口径），不泄露行数据
         self.assertEqual(resp.status_code, 302, "部门内容账号被拒治理总览")
         self.assertNotIn("gov-audit", resp["Location"])
+
+    def test_settings_menu_entry_filtered_by_governance_perms(self):
+        """无 R1 行权面者菜单不可见治理审计入口（独立审查 P2 修复）。"""
+        from types import SimpleNamespace
+
+        from django.test import RequestFactory
+        from wagtail import hooks
+
+        construct_hooks = hooks.get_hooks("construct_settings_menu")
+        self.assertTrue(construct_hooks, "construct_settings_menu 钩子应已注册")
+
+        rf = RequestFactory()
+        request = rf.get("/admin/")
+
+        request.user = self.world["user_a"]
+        items = [SimpleNamespace(name="govaudit"), SimpleNamespace(name="users")]
+        for hook in construct_hooks:
+            hook(request, items)
+        self.assertEqual([item.name for item in items], ["users"], "无权限者入口被隐藏")
+
+        request.user = self.world["admin"]
+        items = [SimpleNamespace(name="govaudit")]
+        for hook in construct_hooks:
+            hook(request, items)
+        self.assertEqual([item.name for item in items], ["govaudit"], "R1 行权者入口保留")
 
 
 class GroupCrudAuditTests(TestCase):

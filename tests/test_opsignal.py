@@ -185,6 +185,8 @@ class TestOpsReport:
     def test_stdout_is_machine_readable_json(self, fresh_world):
         report = run_report()
         assert report["overall"] == "ok"
+        # 冻结口径「最近成功时刻」须绝对透出（独立审查 P2 修复）。
+        assert report["checks"]["backup_heartbeat"]["last_ok_at"]
         assert set(report["checks"]) == {
             "database",
             "disk",

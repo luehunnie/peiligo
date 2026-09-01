@@ -165,9 +165,14 @@ def verify_checksums(set_dir: Path) -> list:
         if not line.strip():
             continue
         checksum, name = line.split(maxsplit=1)
-        actual = sha256_file(set_dir / name.strip())
+        name = name.strip()
+        # 独立审查 P2 加固：清单条目只允许集内平文件名，含路径成分即
+        # 视为清单被篡改/损坏，整体拒绝（防 ../ 逃逸拼接）。
+        if "/" in name or "\\" in name or name in ("..", ".") or Path(name).is_absolute():
+            raise RuntimeError(f"sha256sums.txt 含非法路径条目：{name!r}")
+        actual = sha256_file(set_dir / name)
         if checksum != actual:
-            mismatches.append((name.strip(), checksum, actual))
+            mismatches.append((name, checksum, actual))
     return mismatches
 
 

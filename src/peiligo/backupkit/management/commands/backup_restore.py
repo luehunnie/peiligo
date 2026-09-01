@@ -40,7 +40,11 @@ class Command(BaseCommand):
             raise CommandError(f"不是合法备份集（须为时间戳目录且含 manifest.json）：{set_dir}")
 
         self.stdout.write(f"[verify] {set_dir}")
-        mismatches = _lib.verify_checksums(set_dir)
+        try:
+            mismatches = _lib.verify_checksums(set_dir)
+        except RuntimeError as error:
+            # 清单含路径逃逸等非法条目同样以 CommandError 收口（非零退出）。
+            raise CommandError(f"校验失败：{error}") from error
         if mismatches:
             raise CommandError(f"校验和不匹配：{mismatches}")
         self.stdout.write("[verify] sha256 全部一致")

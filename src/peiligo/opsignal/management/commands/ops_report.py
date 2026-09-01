@@ -140,9 +140,15 @@ def _backup_heartbeat_check():
     hb = OpsHeartbeat.objects.filter(kind="backup").first()
     if hb is None:
         return "ok", {"note": "尚无备份心跳（freshness 由 backup_freshness 判定）"}
+    # 冻结口径要求透出「最近成功时刻」：心跳每作业仅一行，updated_at＝
+    # 最近一次尝试时刻；ok 时即最近成功时刻，失败时标 last_attempt_at。
     if not hb.ok:
-        return "crit", {"ok": False, "detail": hb.detail}
-    return "ok", {"ok": True, "detail": hb.detail}
+        return "crit", {
+            "ok": False,
+            "last_attempt_at": hb.updated_at.isoformat(),
+            "detail": hb.detail,
+        }
+    return "ok", {"ok": True, "last_ok_at": hb.updated_at.isoformat(), "detail": hb.detail}
 
 
 def _login_check():

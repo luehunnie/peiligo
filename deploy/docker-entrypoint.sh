@@ -5,7 +5,17 @@
 set -eu
 
 echo "[entrypoint] waiting for database ..."
-until python manage.py check --database default >/dev/null 2>&1; do
+# 独立审查 P2 修复：`manage.py check --database` 对不可达数据库也退出 0
+# （配置层校验，不做真实连接），不能作等库探针；此处改为经 Django
+# 连接层实连一次（SELECT 级连通性），失败即重试。
+until python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'peiligo.settings.production')
+import django
+django.setup()
+from django.db import connection
+connection.ensure_connection()
+" >/dev/null 2>&1; do
   sleep 1
 done
 

@@ -69,3 +69,14 @@ def register_gov_audit_menu_item():
         icon_name="history",
         order=900,
     )
+
+
+@hooks.register("construct_settings_menu")
+def hide_gov_audit_without_governance_perms(request, menu_items):
+    # 独立审查 P2 修复：入口按 R1 行权面过滤（与 GovAuditIndexView.dispatch
+    # 同一条件），无权限账号不再看到点了才被拒的菜单项。
+    user = request.user
+    if not (
+        user.is_superuser or user.has_perm("auth.change_user") or user.has_perm("auth.change_group")
+    ):
+        menu_items[:] = [item for item in menu_items if item.name != "govaudit"]

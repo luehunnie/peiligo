@@ -14,8 +14,12 @@
    - `ALLOWED_HOSTS`：对外域名（逗号分隔）；
    - `DOMAIN`：Caddy 站点域名（同 ALLOWED_HOSTS 首项）；DNS A 记录指向本机；
    - `CSRF_TRUSTED_ORIGINS`：同源部署可留空；如另有跨源管理入口再补；
-   - `SECONDARY_BACKUP_DIR`：独立副本目录（强烈建议配置，见 §5/§4）；
-   - `BACKUP_ROOT`：备份根目录（先 `mkdir -p` 并确认盘容量，见 §4 disk 信号）。
+   - `SECONDARY_BACKUP_DIR`：独立副本目录——强烈建议指向另一块独立存储
+     （NFS/外接盘）；不设＝无独立副本（ops_report 将显式 WARN）；
+   - `BACKUP_ROOT`：**可选**——缺省落在 compose 具名卷 `backups`
+     （容器内 `/data/backups`，重建容器不丢）；仅当要落到宿主目录/独立盘时
+     才设置（bind mount 自理），并确认盘容量（见 §4 disk 信号）。
+     以上变量均经 compose `environment` 显式透传进容器，`.env` 即生效。
 3. 启动（首次自动构建镜像）：
    ```
    docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
@@ -61,6 +65,7 @@
 
 一份完整备份集＝`$BACKUP_ROOT/<YYYYmmddTHHMMSSZ>/`：`db.dump`（pg_dump
 自定义格式）+ `media.tar.gz` + `manifest.json` + `sha256sums.txt`。
+备份根缺省＝compose 具名卷 `backups`（容器内 `/data/backups`）。
 配置了 `SECONDARY_BACKUP_DIR` 时整集另存独立副本；未配置会在输出与
 ops_report 中显式标注（不静默）。任何失败：清残集、非零退出、结构化日志
 `backup.run status=failed`；全程不回显数据库口令（PGPASSWORD 只进子进程环境）。
@@ -124,9 +129,15 @@ docker compose ... exec web python manage.py backup_prune --days 30 --apply
 ## 9. 日志与错误可见性
 
 - 全部服务日志＝单行 JSON 入 stdout，由 `docker compose logs` / 宿主采集器
-  接管（保留期工程默认 ≥30 天，与备份保留对齐）。运行事件码：
-  `auth.*`（F-05）、`publish_scheduled.*`（F-07/09）、`backup.*`（F-12）、
-  `ops.report`（F-13）、`govaudit.*`（F-08B）。
+  接管（保留期工程默认 ≥30 天，与备份保留对齐）。运行事件码全集：
+  - F-05 认证：`auth.login` / `auth.login_failed` / `auth.locked_out` /
+    `auth.logout` / `password.forced_change_completed`（强制改密完成）；
+  - F-07/09/10 内容：`content.published` / `content.unpublished`；
+  - F-07/09 调度：`publish_scheduled.run` / `publish_scheduled.scheduler_error`；
+  - F-12 备份：`backup.run` / `backup.prune`；
+  - F-13 监控：`ops.report` / `ops.heartbeat_error`；
+  - 其余未标注事件的日志行以 `app.log`/`app.error` 兜底事件码输出。
+  （F-08B 治理审计走 DB 审计行（§8 的 /admin/gov-audit/），不经日志事件。）
 - 请求异常经 `django.request` 独立成行（含堆栈，仅入日志管道）。
 - ops_report 的 `app_errors` 信号需要文件源时，把 stdout JSON 落文件并在
   环境变量 `OPS_LOG_FILE` 指向它（未配置则如实报 unknown，不装作没事）。

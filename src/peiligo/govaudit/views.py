@@ -34,7 +34,10 @@ class GovAuditIndexView(WagtailAdminTemplateMixin, ListView):
         if get.get("action"):
             qs = qs.filter(action=get["action"])
         if get.get("actor"):
-            qs = qs.filter(user_id=get["actor"])
+            try:
+                qs = qs.filter(user_id=int(get["actor"]))
+            except (TypeError, ValueError):
+                pass  # 非法 actor（非数字）即忽略该筛选，与日期同口径不 500
         if get.get("target") in ("user", "group"):
             qs = qs.filter(content_type__model=get["target"])
         for param, lookup in (

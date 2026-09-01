@@ -254,3 +254,33 @@ class BackupRestoreTests(TestCase):
                     (scratch_db_name(),),
                 )
                 self.assertIsNone(cursor.fetchone(), "拒绝路径不产生任何库")
+
+
+class VerifyChecksumsTraversalTests(TestCase):
+    """独立审查 P2 加固：sha256sums.txt 条目只允许集内平文件名，
+    含路径成分（../、绝对路径、分隔符）即整体拒绝，绝不拼接执行。"""
+
+    def test_malformed_entries_are_rejected(self):
+        for bad in ("0" * 64 + "  ../../etc/passwd", "0" * 64 + "  /etc/passwd"):
+            with self.subTest(entry=bad.split(maxsplit=1)[1]):
+                with tempfile.TemporaryDirectory(prefix="f12-chksum-") as tmp:
+                    set_dir = Path(tmp) / "20260901T010000Z"
+                    set_dir.mkdir()
+                    (set_dir / _lib.MANIFEST_NAME).write_text("{}", encoding="utf-8")
+                    (set_dir / _lib.CHECKSUMS_NAME).write_text(bad + "\n", encoding="utf-8")
+                    with self.assertRaisesMessage(RuntimeError, "非法路径条目"):
+                        _lib.verify_checksums(set_dir)
+
+    def test_valid_entry_passes_through(self):
+        import hashlib
+
+        with tempfile.TemporaryDirectory(prefix="f12-chksum-") as tmp:
+            set_dir = Path(tmp) / "20260901T010000Z"
+            set_dir.mkdir()
+            (set_dir / _lib.MANIFEST_NAME).write_text("{}", encoding="utf-8")
+            (set_dir / _lib.DB_DUMP_NAME).write_bytes(b"PGDMP")
+            digest = hashlib.sha256(b"PGDMP").hexdigest()
+            (set_dir / _lib.CHECKSUMS_NAME).write_text(
+                f"{digest}  {_lib.DB_DUMP_NAME}\n", encoding="utf-8"
+            )
+            self.assertEqual(_lib.verify_checksums(set_dir), [])

@@ -35,10 +35,18 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
       MEDIA_ROOT: /data/media
+      # F-12/F-13（独立审查 P1 修复）：.env 配置须显式透传才进容器。
+      # BACKUP_ROOT 缺省落在具名卷 backups（重建容器不丢）；独立副本
+      # SECONDARY_BACKUP_DIR 指向宿主/独立挂载路径时由 .env 提供。
+      BACKUP_ROOT: ${BACKUP_ROOT:-/data/backups}
+      SECONDARY_BACKUP_DIR: ${SECONDARY_BACKUP_DIR:-}
+      HSTS_SECONDS: ${HSTS_SECONDS:-31536000}
+      OPS_LOG_FILE: ${OPS_LOG_FILE:-}
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
     volumes:
       - media:/data/media
       - static:/data/static
+      - backups:/data/backups
     depends_on:
       db:
         condition: service_healthy
@@ -56,13 +64,16 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    command: ["python", "manage.py", "publish_scheduler", "--interval", "60"]
+    # F-09（独立审查 P2 修复）：间隔经 SCHED_INTERVAL_SECONDS 环境统一
+    # 配置（命令缺省同源读取），不再硬编码 --interval 60 形成死旋钮。
+    command: ["python", "manage.py", "publish_scheduler"]
     environment:
       DJANGO_SETTINGS_MODULE: peiligo.settings.production
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       MEDIA_ROOT: /data/media
+      SCHED_INTERVAL_SECONDS: ${SCHED_INTERVAL_SECONDS:-60}
     depends_on:
       web:
         condition: service_healthy
@@ -89,5 +100,6 @@ volumes:
   pgdata:
   media:
   static:
+  backups:
   caddy_data:
   caddy_config:
