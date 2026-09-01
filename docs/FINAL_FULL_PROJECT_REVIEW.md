@@ -252,6 +252,7 @@ main = origin/main = f3bbbed，历史线性干净（PR merge 链）。历史分�
 | V-8 | 无障碍 | WCAG 2.2 AA 正式验证未执行（代码层已 IMPLEMENTED 部分） | VALIDATION_REQUIRED |
 | V-9 | 附件公开面 | `src/peiligo/urls.py:21` 挂载 wagtaildocs serve 视图（Wagtail 缺省无权限检查）：未认证者可按自增 ID 枚举下载文档库文件 | 文档＝公开附件模型属设计语义；但"按 ID 枚举"面应被知情。如需收口可用 collection view restrictions | NO_ACTION（登记为已知设计面） |
 | V-10 | 运维摩擦 | `init_permissions.py:24-29` 根集合 GCP 仅 add/change（collection+image），无 delete_image/delete_collection | 非超管 R1 无法删除误传图片/集合（Wagtail 删除走 GCP 记录）；矩阵未列 delete 项疑为有意 | OPERATIONS_REQUIRED（Runbook 登记超管通道或补 GCP） |
+| V-11 | 移动守卫 | 别名页（alias）作为 move destination 的守卫复检口径（Reviewer A 终审登记，定级 LOW）；Admin API action 端点已整体禁用（FINAL_FIX_ADMIN_API_CLOSEOUT），HTML 动线本项独立存在 | VALIDATION / FUTURE_HARDENING（登记跟踪，不扩大范围） |
 
 ---
 
