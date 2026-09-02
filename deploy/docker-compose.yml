@@ -16,7 +16,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # postgres:18+ 镜像采用 pg_ctlcluster 兼容布局（数据落
+      # /var/lib/postgresql/18/docker），挂载点须在 /var/lib/postgresql
+      # （挂旧路径 /data 会被镜像拒绝启动，实证于本地 Docker 验证）。
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
