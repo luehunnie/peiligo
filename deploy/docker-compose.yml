@@ -16,7 +16,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # postgres:18+ 镜像采用 pg_ctlcluster 兼容布局（数据落
+      # /var/lib/postgresql/18/docker），挂载点须在 /var/lib/postgresql
+      # （挂旧路径 /data 会被镜像拒绝启动，实证于本地 Docker 验证）。
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -59,7 +62,10 @@ services:
     healthcheck:
       # 存活探针不触库；entrypoint 串行完成迁移后 gunicorn 才启动，
       # 故 healthy 亦即迁移完成（scheduler 据此启动）。
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=3)"]
+      # 探针 Host 须取 ALLOWED_HOSTS 首项：Django 按请求 Host 校验，
+      # 硬编码 127.0.0.1 会被 DisallowedHost 打成 400（实证于本地
+      # Docker 验证），scheduler 永远等不到 healthy。
+      test: ["CMD", "python", "-c", "import os,urllib.request; h=os.environ.get('ALLOWED_HOSTS','').split(',')[0].strip() or 'localhost'; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/healthz/', headers={'Host': h}), timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 12

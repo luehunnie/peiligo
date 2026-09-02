@@ -35,18 +35,26 @@ RUN set -eux; \
 # 代码层（多源 COPY 逐目录落位到 /app/；.dockerignore 排除 .env/.git/
 # venv/测试产物/media 等非构建上下文）。
 COPY manage.py pyproject.toml ./
-COPY home/ notices/ departments/ guides/ resources/ search/ frontend/ locale/ ./
+# 多源 COPY 目录名不保留（内容平铺进目标，实证过）；八 app 各自落位。
+COPY home/ ./home/
+COPY notices/ ./notices/
+COPY departments/ ./departments/
+COPY guides/ ./guides/
+COPY resources/ ./resources/
+COPY search/ ./search/
+COPY frontend/ ./frontend/
+COPY locale/ ./locale/
 COPY src/ ./src/
 COPY static/ ./static/
 COPY templates/ ./templates/
 COPY deploy/docker-entrypoint.sh ./deploy/docker-entrypoint.sh
 
-# 运行身份：非 root；/data 为卷挂载点（media＋static，归属 peiligo，
-# 命名卷首挂即继承该属主）。
+# 运行身份：非 root；/data 为卷挂载点（media＋static＋backups，归属
+# peiligo，命名卷首挂即继承该属主）。
 RUN set -eux; \
-    pip install --no-cache-dir --no-deps -e ./src; \
+    pip install --no-cache-dir --no-deps -e .; \
     useradd --create-home --shell /usr/sbin/nologin peiligo; \
-    mkdir -p /data/media /data/static; \
+    mkdir -p /data/media /data/static /data/backups; \
     chown -R peiligo:peiligo /app /data
 
 # 构建期 collectstatic（ManifestStaticFilesStorage 哈希清单固化进镜像）。
