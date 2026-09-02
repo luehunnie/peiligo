@@ -53,6 +53,6 @@
 
 ## 交接注意事项
 
-- 5 个修复提交在本地 `fix/dockerfile-editable-install`,**未 push**;提交者身份为 git 自动推断(陈俊贤 <chenjunxian@…local>),push 前可 `git commit --amend --reset-author` 或合并时自行确认
+- 5 个修复提交在本地 `fix/dockerfile-editable-install`,**未 push**;提交者身份为 git 自动推断(陈俊贤 <USER@…local>),push 前可 `git commit --amend --reset-author` 或合并时自行确认
 - main 与 fix 分支的合流(本地 merge 或远端 PR)由 Human 决定;修复合入 main 前,勿在其他机器按原 Dockerfile 部署
 - 本地 .env 与管理员凭据文件均未入库;本轮凭据仅限本地验证用途

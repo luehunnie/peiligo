@@ -1,7 +1,7 @@
 # PEILIGO_V1_FINAL_FULL_PROJECT_REVIEW
 
 性质：READ-ONLY FINAL AUDIT（主审报告，Phase 1）
-审查基线：`/Users/chenjunxian/vscode_projects/peiligo` @ `main` = `origin/main` = `f3bbbed74dbe68fa13f2552383d7f29f7e1862a2`
+审查基线：`<LOCAL_PROJECT_PATH>` @ `main` = `origin/main` = `f3bbbed74dbe68fa13f2552383d7f29f7e1862a2`
 审查日期：2026-09-01
 本文件 untracked/uncommitted，等 Human 阅读后决定是否落档。
 
@@ -11,7 +11,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| repo | /Users/chenjunxian/vscode_projects/peiligo（canonical SSOT） |
+| repo | <LOCAL_PROJECT_PATH>（canonical SSOT） |
 | main | f3bbbed74dbe68fa13f2552383d7f29f7e1862a2 |
 | origin_main | f3bbbed74dbe68fa13f2552383d7f29f7e1862a2（fetch 后复核一致） |
 | clean | YES（Safety Gate 通过，无 divergence） |

@@ -3,7 +3,7 @@
 | 项目 | 结论 |
 | --- | --- |
 | 审计日期 | 2026-08-15 |
-| 需求基线 | `/Users/chenjunxian/vscode_projects/peiligo_restart/docs/PRODUCT_REQUIREMENTS.md`（457 行，已完整阅读） |
+| 需求基线 | `<LOCAL_PROJECT_PATH>_restart/docs/PRODUCT_REQUIREMENTS.md`（457 行，已完整阅读） |
 | 审计范围 | 旧 `peiligo`、Wagtail 上游、AI 开发工作流 |
 | 明确排除 | 业务开发、PVE 操作、旧站修改、V1 扩围、生产部署实施 |
 | 编排记录 | Orca Run `run_2413efa7a810`；3 个独立 Claude Code / GLM-5.2 只读调查任务均已 `worker_done` |
@@ -73,7 +73,7 @@
 
 ### 4.1 版本结论
 
-- 本地官方上游 clone 位于 `/Users/chenjunxian/vscode_projects/Wagtail/wagtail`，`origin` 为官方 Wagtail 仓库。
+- 本地官方上游 clone 位于 `<USER_HOME>/vscode_projects/Wagtail/wagtail`，`origin` 为官方 Wagtail 仓库。
 - 本地 `main` 是 8.0 开发/预发布线，包含 `v8.0rc1`；不能把 `main` 或 RC 用作 V1 依赖。
 - 截至审计日，官方稳定文档与 PyPI 均指向 **7.4.2**；7.4 是 LTS。
 - 官方兼容矩阵：Wagtail 7.4 支持 Django 5.2/6.0 和 Python 3.10–3.14。
@@ -202,7 +202,7 @@ A0 审计事实确认
 ## 10. 审计边界声明
 
 - 未操作 PVE、生产服务器或旧站运行环境。
-- 未修改 `/Users/chenjunxian/vscode_projects/peiligo` 和 `/Users/chenjunxian/vscode_projects/Wagtail/wagtail`。
+- 未修改 `<LOCAL_PROJECT_PATH>` 和 `<USER_HOME>/vscode_projects/Wagtail/wagtail`。
 - 未编写业务代码，未运行会改变 AI 工作流状态的实验。
 - 本工作区新增的三份 Markdown 仅为审计输出，不代表 PRD 或 ADR 已获项目负责人确认。
 - 在项目负责人确认 D0 前，保持“审计完成、开发禁止”的状态。

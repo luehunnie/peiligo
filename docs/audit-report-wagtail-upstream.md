@@ -2,8 +2,8 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 审计对象 | `/Users/chenjunxian/vscode_projects/Wagtail/wagtail`（本地 clone，origin=`https://github.com/wagtail/wagtail.git`，注意外层目录还包了一层 `Wagtail/wagtail`） |
-| 需求基线 | `/Users/chenjunxian/vscode_projects/peiligo_restart/docs/PRODUCT_REQUIREMENTS.md`（457 行，已完整阅读） |
+| 审计对象 | `<USER_HOME>/vscode_projects/Wagtail/wagtail`（本地 clone，origin=`https://github.com/wagtail/wagtail.git`，注意外层目录还包了一层 `Wagtail/wagtail`） |
+| 需求基线 | `<LOCAL_PROJECT_PATH>_restart/docs/PRODUCT_REQUIREMENTS.md`（457 行，已完整阅读） |
 | 审计日期 | 2026-08-15 |
 | 审计方式 | 只读：git 命令、源码/文档阅读、PyPI 与官方发布页在线核验。未修改任何被审计文件，未编写业务实现，未接触 PVE/服务器 |
 | 范围纪律 | 仅覆盖 PRD §26 审计项 2（Wagtail 上游版本、扩展点与推荐项目结构）；不扩大 V1，不替代决策门 |

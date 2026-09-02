@@ -1,6 +1,6 @@
 # Peiligo 重建文档索引（M0.2 基线）
 
-- **路径基准**：本仓库根 `/Users/chenjunxian/vscode_projects/peiligo_restart`，下表路径均为仓库根相对路径。
+- **路径基准**：本仓库根 `<LOCAL_PROJECT_PATH>_restart`，下表路径均为仓库根相对路径。
 - 本文件为 M0.2 新增的文档索引；入库完整性与字节级保真凭据见 `docs/decisions/M0-2-BASELINE-MANIFEST.md`。
 - `docs/reviews/M00.gpt-review.md` 不存在：G0 条件②（R3 级 GPT 压缩审查）已按一次性 R3_GPT_WAIVER 豁免（四要素记录见 `docs/decisions/D0_BASELINE_CONFIRMATION.md` §条件②）。
 
