@@ -35,7 +35,15 @@ RUN set -eux; \
 # 代码层（多源 COPY 逐目录落位到 /app/；.dockerignore 排除 .env/.git/
 # venv/测试产物/media 等非构建上下文）。
 COPY manage.py pyproject.toml ./
-COPY home/ notices/ departments/ guides/ resources/ search/ frontend/ locale/ ./
+# 多源 COPY 目录名不保留（内容平铺进目标，实证过）；八 app 各自落位。
+COPY home/ ./home/
+COPY notices/ ./notices/
+COPY departments/ ./departments/
+COPY guides/ ./guides/
+COPY resources/ ./resources/
+COPY search/ ./search/
+COPY frontend/ ./frontend/
+COPY locale/ ./locale/
 COPY src/ ./src/
 COPY static/ ./static/
 COPY templates/ ./templates/
