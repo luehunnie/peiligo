@@ -20,7 +20,7 @@
 | Python | 3.13.11（自建 `.venv`，未污染系统环境） |
 | Django | 5.2.17 |
 | Wagtail | 7.4.2.final.1 |
-| `peiligo.__file__` | `/Users/chenjunxian/orca/workspaces/peiligo/a4-3-permission-tests/src/peiligo/__init__.py`（本 worktree 载体确认） |
+| `peiligo.__file__` | `<USER_HOME>/orca/workspaces/peiligo/a4-3-permission-tests/src/peiligo/__init__.py`（本 worktree 载体确认） |
 | 数据库 | PostgreSQL，自建 scratch 库 `peiligo_m4_t16`（socket 连接 `postgres://<用户>@/peiligo_m4_t16?host=/tmp`）。执行器启动自检库名，不符即退出。**正式四库（peiligo_dev / peiligo_test / peiligo_restart_dev / peiligo_restart_test）零触碰、零 DROP** |
 | 场景重建 | 按矩阵 §3：五冻结板块（chronicle/events/materials/software/guide）+ 两部门容器树（A 五板块全建、B 建 chronicle/events）+ 三账号三组：`t16-admins`（总管理员，纯组权限，is_superuser=False：根节点 GPP add/change/publish + 全量 Django Permission + 根集合 GCP add/change_collection、add/change_image）、`t16-dept-a` / `t16-dept-b`（各仅 access_admin + 自有容器 GPP add/change/publish + 自有集合 GCP add/change_image） |
 | OQ1 删除守卫 | `before_delete_page` + `before_bulk_action` 双钩子只拒绝守卫，进程内经 `wagtail.hooks` 运行时注册（特权判定 = superuser 或 `t16-admins` 成员；零侵入，正式实现待 M4 门禁后落 `departments/wagtail_hooks.py`） |

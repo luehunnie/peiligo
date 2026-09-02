@@ -22,10 +22,10 @@
 1. 旧后端实现为 FastAPI/SQLAlchemy 技术栈，与重建目标 Wagtail（Django 基座）**无共享栈**（旧站审计 `docs/audit-report-old-peiligo.md` §6；02 §3 S1.4）。
 2. V1 功能对旧实现的功能覆盖率趋近零——旧实现几乎无可直接沿用的功能模块（上游审计 `docs/audit-report-wagtail-upstream.md` §4；02 §3 S1.4）。
 3. **无真实数据迁移负担**（02 §3 S1.4；综合审计 `docs/PEILIGO_REBUILD_AUDIT.md` §1/§8）。
-4. PRD §18（v1.4 修订后口径）：唯一执行仓库为 `peiligo_restart`；旧仓（绝对路径 `/Users/chenjunxian/vscode_projects/peiligo`）永久只读即视为等效归档，不建只读标签或归档分支（00 §3 修订 15；OR-2）。
+4. PRD §18（v1.4 修订后口径）：唯一执行仓库为 `peiligo_restart`；旧仓（绝对路径 `<LOCAL_PROJECT_PATH>`）永久只读即视为等效归档，不建只读标签或归档分支（00 §3 修订 15；OR-2）。
 5. **前置状态**：PRE-2（旧仓归档前置）已随 00 §3 修订 6 废止——OR-2 旧仓永久只读即等效归档，无旧仓归档前置；Git 基线 = M0.2 已完成 peiligo_restart 入库（`rebuild/v1` 分支）。
 
-**约束**：OR-1（唯一项目位置 = `/Users/chenjunxian/vscode_projects/peiligo_restart`）；OR-2（旧仓及其全部 worktree 永久只读）。
+**约束**：OR-1（唯一项目位置 = `<LOCAL_PROJECT_PATH>_restart`）；OR-2（旧仓及其全部 worktree 永久只读）。
 
 **可追溯性表**：
 
@@ -43,8 +43,8 @@
 
 展开为可检验的肯定句与边界条件：
 
-1. 唯一执行仓库为**全新仓库** `/Users/chenjunxian/vscode_projects/peiligo_restart`（OR-1）；骨架以 **`wagtail start` 起步**生成干净骨架，依赖版本按 C1/ADR-0001 约束在首次锁依赖时执行。
-2. **不继承旧仓**（绝对路径 `/Users/chenjunxian/vscode_projects/peiligo`）**任何 Git 历史、分支或工作区**（含 `feat/m4-admin-auth` 工作区现状等一切旧仓状态）；新旧仓库之间不建立任何 Git 级联关系。
+1. 唯一执行仓库为**全新仓库** `<LOCAL_PROJECT_PATH>_restart`（OR-1）；骨架以 **`wagtail start` 起步**生成干净骨架，依赖版本按 C1/ADR-0001 约束在首次锁依赖时执行。
+2. **不继承旧仓**（绝对路径 `<LOCAL_PROJECT_PATH>`）**任何 Git 历史、分支或工作区**（含 `feat/m4-admin-auth` 工作区现状等一切旧仓状态）；新旧仓库之间不建立任何 Git 级联关系。
 3. 旧仓在本项目中的唯一角色：**永久只读，仅可用于审计与选择性复用**（复用范围 = 综合审计 §3 清单）；复用方式为从旧仓只读读取后向新仓移植，不产生任何针对旧仓的操作安排。
 4. 骨架执行落点为 MB1（02 §3 S1.4 旧称 B1：`wagtail start` + 按域拆 app），**本 ADR 仅固化决策**，本步骤不执行任何骨架生成或仓库分支操作（单步骤对话边界）。
 5. V1 范围以 PRD 为准不得扩大（OR-5）；本决策不引入 V1 外任何功能。
@@ -81,7 +81,7 @@
 
 | 约束 | 核对结论 |
 | --- | --- |
-| OR-1 唯一项目位置 | 不违反：本决策的执行仓库即 `/Users/chenjunxian/vscode_projects/peiligo_restart`，一切仓库/worktree/分支/产物均且仅位于该目录内 |
+| OR-1 唯一项目位置 | 不违反：本决策的执行仓库即 `<LOCAL_PROJECT_PATH>_restart`，一切仓库/worktree/分支/产物均且仅位于该目录内 |
 | OR-2 旧仓永久只读 | 不违反：全文对旧仓仅有"永久只读、仅审计与选择性复用"表述，无任何针对旧仓的写操作、分支/标签/提交、文档迁入或开发安排；被否决替代方案均以"与 OR-2 冲突"为否决理由之一 |
 | C1–C5 冻结（00 §2.1） | 不违反：仅固化 C5，不重开任何选型（OR-4）；骨架版本组合服从 C1/ADR-0001 |
 | PRD §18（v1.4 修订后口径） | 一致：唯一执行仓库 = `peiligo_restart`，旧仓永久只读即等效归档 |

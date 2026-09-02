@@ -11,7 +11,7 @@
 ## 0. 环境亲证（README 自建）
 
 - 本 worktree 自建 `.venv`（Python 3.13.11；`python3.13 -m venv` 经 pyenv 3.13.11 显式路径）；`pip install -r requirements*.txt && pip install -e .`。
-- **`peiligo.__file__` = `/Users/chenjunxian/vscode_projects/peiligo/.worktrees/a4-4-security-review/src/peiligo/__init__.py`**（亲证指本 worktree）。
+- **`peiligo.__file__` = `<LOCAL_PROJECT_PATH>/.worktrees/a4-4-security-review/src/peiligo/__init__.py`**（亲证指本 worktree）。
 - 版本钉版亲证：Wagtail 7.4.2 / Django 5.2.17 / modelsearch 1.3.2 / psycopg 3.3.4（`pip list` 与 ADR-0001 一致）；`pip check` 无破损依赖。
 - 数据库纪律：`DATABASE_URL→peiligo_restart_dev`（migrate no-op；幂等探针全程 `transaction.set_rollback` 零持久变更）；`TEST_DATABASE_URL→peiligo_restart_test`（pytest-django 自建自清，输出含 Creating/Destroying test database）。`peiligo_dev`/`peiligo_test` **零触碰、零 DROP**（本审查全程唯一 psql 操作为只读 `SELECT datname`）。
 

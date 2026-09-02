@@ -3,8 +3,8 @@
 - **步骤**：M0.2 Git 初始化与文档基线入库（`docs/plans/00_MASTER_PLAN.md` §7 M0.2；引源 01 §5 PG-S3 按修订 2/3）。
 - **日期**：2026-08-18。
 - **执行**：M0.2 派发 worker；仓库本地 git 身份 `peiligo-rebuild <peiligo-rebuild@localhost>`（仅本仓库 config，未改动全局）。
-- **路径基准**：本仓库根 `/Users/chenjunxian/vscode_projects/peiligo_restart`，下表路径均为仓库根相对路径。
-- **远程**：本仓库不配置任何 remote；旧仓 `/Users/chenjunxian/vscode_projects/peiligo` 为永久只读禁区（OR-2），本步骤未对其执行任何命令。
+- **路径基准**：本仓库根 `<LOCAL_PROJECT_PATH>_restart`，下表路径均为仓库根相对路径。
+- **远程**：本仓库不配置任何 remote；旧仓 `<LOCAL_PROJECT_PATH>` 为永久只读禁区（OR-2），本步骤未对其执行任何命令。
 
 ## 1. 入库清单（共 14 行 = 实际入库文件数：11 基线 + 3 新增）
 

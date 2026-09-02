@@ -33,7 +33,7 @@
 ### 2.1 关键事实
 
 1. **（Historical fact，2026-08-15 审计时事实，非当前执行规则）**基线文档（PRD + 三份审计）当时位于 `peiligo_restart` 工作区（**非 Git 仓库**），与 PRD §25 原文"唯一事实来源是 `peiligo` 仓库"冲突（综合审计 P0 风险第 1 条）。**当前执行规则**：M0.2 在 `peiligo_restart` 内 `git init` 基线入库（00 修订 2/15；FIX-01）；PRD §25 已按 v1.4 授权修订为 `peiligo_restart`。
-2. **（Historical fact，2026-08-15 审计时事实）**旧 `peiligo` 仓库（绝对路径 `/Users/chenjunxian/vscode_projects/peiligo`，**永久只读禁区 OR-2**）：分支 `feat/m4-admin-auth` 上有 M4 认证半成品**零提交**躺在工作区；`git tag` 为空，PRD §18 原要求的旧实现只读归档标签**未建立**（P0 风险第 2 条）。**当前执行规则**：OR-2 旧仓永久只读即视为等效归档——不处置、不建 tag/branch/commit，该状态不阻塞本项目任何步骤（00 修订 1/13；FIX-01）。
+2. **（Historical fact，2026-08-15 审计时事实）**旧 `peiligo` 仓库（绝对路径 `<LOCAL_PROJECT_PATH>`，**永久只读禁区 OR-2**）：分支 `feat/m4-admin-auth` 上有 M4 认证半成品**零提交**躺在工作区；`git tag` 为空，PRD §18 原要求的旧实现只读归档标签**未建立**（P0 风险第 2 条）。**当前执行规则**：OR-2 旧仓永久只读即视为等效归档——不处置、不建 tag/branch/commit，该状态不阻塞本项目任何步骤（00 修订 1/13；FIX-01）。
 3. AI 治理缺口（综合审计 §5）：双独立审查未制度化、文件写入互斥未制度化、`worker_done` 报告入库/脱敏规则未定义、CI 门禁未落地（CI 属后续 B6，不在本计划）。
 4. 秘密暴露事件：Claude 配置中的敏感字段曾被调查命令读入 transcript（综合审计 §5.1，P0 风险第 4 条），已建议轮换曾暴露的令牌。
 5. 决策门 D0–D9 由项目负责人独占裁决，**一次只处理一个**（综合审计 §8）。
@@ -189,10 +189,10 @@ grep -oE '/Users/[^ )`]+\.md' docs/decisions/D0_CONFIRMATION_BRIEFING.md \
 
 ### PG-S2 · M4 处置与旧实现归档（D1）——已废止（tombstone，FIX-01/v1.4）
 
-> **本步骤已整体废止，不得派发、不得执行**（00 §3 修订 1：删除该步骤；OR-2 旧仓 `/Users/chenjunxian/vscode_projects/peiligo` 永久只读即视为等效归档）。
+> **本步骤已整体废止，不得派发、不得执行**（00 §3 修订 1：删除该步骤；OR-2 旧仓 `<LOCAL_PROJECT_PATH>` 永久只读即视为等效归档）。
 >
 > - **D1 处置**：见 00 §2.2 决策门处置表——**撤销**（接受现状即闭环：不处置 M4 未提交工作、不建 `archive/m4-admin-auth` 分支、不建 `legacy/pre-rebuild-v0` 标签、不对旧仓执行任何 git 写操作；旧仓工作区/tag 状态不阻塞本项目任何步骤）。
-> - 原步骤的全部可执行旧仓命令（`cd /Users/chenjunxian/vscode_projects/peiligo`、`git tag`/`git stash`/`git reset`/`git ls-tree` 系列与对应验收命令块）已按 FIX-01 删除，**不得在任何对话中恢复或执行**。
+> - 原步骤的全部可执行旧仓命令（`cd <LOCAL_PROJECT_PATH>`、`git tag`/`git stash`/`git reset`/`git ls-tree` 系列与对应验收命令块）已按 FIX-01 删除，**不得在任何对话中恢复或执行**。
 > - 旧仓审计时状态（2026-08-15：`feat/m4-admin-auth` 脏工作区、`git tag` 为空）为 **Historical fact**，仅见 `docs/audit-report-old-peiligo.md`（Historical Evidence，非当前执行规范——00 §3.0 第 5 级）。
 > - 对应全局流程：G0 → M0.1 → **M0.2（peiligo_restart git init）**——中间无本步骤、无 PG-G1 门（00 §5.1 全局 DAG）。
 
