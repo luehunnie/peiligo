@@ -49,12 +49,12 @@ COPY static/ ./static/
 COPY templates/ ./templates/
 COPY deploy/docker-entrypoint.sh ./deploy/docker-entrypoint.sh
 
-# 运行身份：非 root；/data 为卷挂载点（media＋static，归属 peiligo，
-# 命名卷首挂即继承该属主）。
+# 运行身份：非 root；/data 为卷挂载点（media＋static＋backups，归属
+# peiligo，命名卷首挂即继承该属主）。
 RUN set -eux; \
     pip install --no-cache-dir --no-deps -e .; \
     useradd --create-home --shell /usr/sbin/nologin peiligo; \
-    mkdir -p /data/media /data/static; \
+    mkdir -p /data/media /data/static /data/backups; \
     chown -R peiligo:peiligo /app /data
 
 # 构建期 collectstatic（ManifestStaticFilesStorage 哈希清单固化进镜像）。
