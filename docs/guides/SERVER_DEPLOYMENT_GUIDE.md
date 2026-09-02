@@ -2,7 +2,7 @@
 
 > **这是 Deployment Guide(部署指南),不是 Deployment Record(部署记录)。**
 >
-> **截至本文基线(`main` @ `0069953`,2026-09-02),Peiligo 尚未在任何真实服务器上完成生产部署**:staging / production 部署、DNS、TLS 证书均**未执行**。本文把部署所需的全部步骤、变量、验收项整理到位,使另一位全栈工程师可以接手执行;但下文所有「操作步骤」都属于**待执行**方案,除 Docker 本地验证外均未在真实环境演练过。
+> **截至本文基线(`main` @ `2992b1a`,2026-09-02),Peiligo 尚未在任何真实服务器上完成生产部署**:staging / production 部署、DNS、TLS 证书均**未执行**。生产同构的 Docker 编排已在**本地完整实跑验证通过**(2026-09-02,见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md) 与 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 方式 B),但本文所述的真实服务器操作步骤仍属**待执行**方案。
 >
 > 配套事实源:[../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md)(运维手册,本文与其口径一致)、[../FINAL_FULL_PROJECT_REVIEW.md](../FINAL_FULL_PROJECT_REVIEW.md)(终审与部署就绪判定)。
 
@@ -170,7 +170,7 @@ docker compose ... exec -T web python manage.py init_permissions \
 1. 建部门 Snippet(「设置 → Snippets → 部门」);
 2. 在对应板块页下建「部门容器」并绑定部门(仅为确有内容的部门建);
 3. 为部门建岗位账号(命令行;stdin 重定向加 `-T`):`docker compose ... exec -T web python manage.py init_permissions --dept-user <用户名> --department <slug> --password-stdin < 密码文件`(每部门至多一个);
-4. **验证部门隔离**:用 A 部门账号登录,确认看不到、进不去 B 部门的容器与内容;确认部门账号没有删除按钮、动不了结构页;
+4. **验证部门隔离**:用 A 部门账号登录,确认看不到、进不去 B 部门的容器与内容;对内容执行删除会被系统拒绝(提示「永久删除仅限总管理员」——删除菜单项可能仍显示,但操作不会成功);确认动不了结构页;
 5. 后台「站点设置」里填统一反馈邮箱(前台页脚即用);
 6. 收尾:配置备份 cron(§9)、监控 cron(§10)、绑定独立副本存储。
 
@@ -340,10 +340,10 @@ docker compose ... logs -f web    # 或等待下一轮 ops_report
 |---|---|
 | 生产工程(Dockerfile / Compose / Caddyfile / entrypoint / .env.example) | **IMPLEMENTED**(实现完毕) |
 | 静态校验(`docker compose config` 等) | **COMPLETED**(通过) |
-| 本地 Docker 运行时实跑验证 | **PENDING**(从未执行,指南见 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 方式 B) |
+| 本地 Docker 运行时实跑验证 | **COMPLETED / PASS**(2026-09-02,含备份与恢复演练;证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md),复现步骤见 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 方式 B) |
 | Staging 部署 | **NOT YET PERFORMED** |
 | Production 部署 | **NOT YET PERFORMED** |
 | DNS / TLS(真实域名与证书) | **NOT YET PERFORMED**(Caddy 自动证书能力已就绪,未对接) |
-| 性能 / WCAG / 恢复演练 | **VALIDATION REQUIRED**(排期执行) |
+| 性能 / WCAG / 恢复演练 | **VALIDATION REQUIRED**(恢复机制已在本地验证过一轮,正式环境按季度演练;性能与 WCAG 未执行) |
 
-**不要让任何后来者误以为服务器已经配置好了。** 接手顺序建议:先完成本地 Docker 实跑验证 → staging(可用真域名低配 VM)→ 生产。
+**不要让任何后来者误以为服务器已经配置好了。** 接手顺序建议:staging(可用真域名低配 VM)→ 生产;每步完成后回到本文 §15 验收清单逐项打勾。

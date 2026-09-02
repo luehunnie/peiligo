@@ -51,7 +51,7 @@ Peiligo 的答案:五个固定板块 + 一个全站搜索 + 一套「部门各�
 - **全站搜索**(`/search/`):关键词 + 板块 / 部门 / 类型 / 标签筛选,过期内容也纳入并标注;
 - **内容生命周期**:草稿 → 预览 → 修订历史 → 发布 → 定时发布 → 到期自动归档 / 手动下线;**到期不是删除**,数据全保留,可重新发布;
 - **部门权限隔离**:部门账号只能在本部门的内容子树内创建、编辑、发布、下线;任何部门账号都**没有删除权**;永久删除仅总管理员;
-- **上传安全**:文档白名单(pdf/doc/docx/xls/xlsx/ppt/pptx)+ 图片白名单(jpg/png/webp),单个文件 20 MiB 上限,扩展名 + MIME + 文件内容签名三级校验,文件名清洗;
+- **上传安全**:文档附件白名单(pdf/doc/docx/xls/xlsx/ppt/pptx,单文件 20 MiB 上限)+ 图片白名单(jpg/jpeg/png/webp),文档扩展名 + 声明类型 + 文件内容签名三级校验,文件名清洗;
 - **外链确认**:站内所有外部链接不直接跳转,先经过统一确认页(显示目标域名、来源、时间与第三方内容声明);
 - **后台中文化**:Wagtail 管理界面与提示文案为简体中文;
 - **治理审计**:后台「治理审计」页(`/admin/gov-audit/`)完整记录用户/组的变更;
@@ -63,19 +63,19 @@ Peiligo 的答案:五个固定板块 + 一个全站搜索 + 一套「部门各�
 
 诚实地说,这个项目**代码已完成,但尚未上线**。分三档:
 
-### 已完成(开发 + 生产工程)
+### 已完成(开发 + 生产工程 + 本地运行时验证)
 
 - 五大板块内容模型、部门权限树、认证治理、治理审计、上传/外链安全、中文搜索、生命周期与归档、SEO 收口、首页运营区——全部实现;
 - Docker / Compose / Caddy 生产打包、备份/恢复/监控三件套、CI 质量门——工程文件齐备;
 - 本地自动化验证:pytest **604 项通过 + 269 子测试**(2026-09-02 于 `main` @ `0069953` 实测;终审时点为 574 + 266,其后新增批次又扩充了测试)、ruff 全绿、迁移无漂移(终审结论见 [../FINAL_FULL_PROJECT_REVIEW.md](../FINAL_FULL_PROJECT_REVIEW.md));
+- **本地 Production-like Docker 实跑验证:PASS(2026-09-02)**——四容器(db / web / scheduler / caddy)构建、启动、健康检查、人工验收建内容传图片、持久化、定时发布端到端、`ops_report`、备份与隔离恢复演练全部实跑通过;过程中发现的 5 个运行时问题已修复并合并回 `main`(证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md));
 - 终审发现的 1 项 HIGH(H-1)与 2 项 MEDIUM 已在修复批次全部收口;当前无未修复的 BLOCKER/HIGH。
 
 ### 尚需验证(代码已就绪,验证未做)
 
-- **Docker 容器实跑**:镜像构建与容器启动**尚未实际执行过**(目前仅通过 `docker compose config` 静态校验);
 - **性能验证**:目标口径(核心内容 2 秒内可见、千条内容搜索亚秒、100 并发)未实测;
 - **无障碍(WCAG 2.2 AA)正式验证**:代码层已按规范实现,正式走查(axe + 键盘)未执行;
-- **恢复演练**:`backup_restore` 设计了严格的隔离保护,但「没演过就不算数」,需按季度演练(RTO ≤ 4 小时);
+- **恢复演练的常态化**:`backup_restore` 的隔离保护机制已在上述本地 Docker 验证中实跑过一次恢复演练并通过,但正式环境需按季度持续演练(RTO ≤ 4 小时);
 - **生产监控与备份的实际运行**:cron 接线、独立备份副本绑定等属部署现场工作。
 
 ### 尚未进行
@@ -108,6 +108,7 @@ Wagtail 是项目立项时确定的技术基线,它也确实合适:基于 Django
 
 ## 7. 想深入了解
 
+- 日常发布内容(非技术) → [CONTENT_PUBLISHING_GUIDE.md](CONTENT_PUBLISHING_GUIDE.md) 与 [DEPARTMENT_EDITOR_GUIDE.md](DEPARTMENT_EDITOR_GUIDE.md)
 - 技术细节 → [TECHNICAL_ARCHITECTURE_GUIDE.md](TECHNICAL_ARCHITECTURE_GUIDE.md)
 - 在自己电脑上跑起来 → [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md)
 - 部署到服务器 → [SERVER_DEPLOYMENT_GUIDE.md](SERVER_DEPLOYMENT_GUIDE.md)

@@ -9,7 +9,7 @@
 | **A. Native Development Run** | 日常开发、跑测试 | Python venv + 本机 PostgreSQL + Django development server |
 | **B. Local Production-like Docker Validation** | 部署前的生产同构验证 | `deploy/` 下的 Docker Compose(PostgreSQL 容器 + Gunicorn + Caddy + scheduler) |
 
-> **状态提醒(2026-09-02 基线)**:方式 B 是**下一个要实际执行的验证**——Docker 镜像构建与容器启动此前从未实跑过(仅 `docker compose config` 静态校验通过,见 [../FINAL_FULL_PROJECT_REVIEW.md](../FINAL_FULL_PROJECT_REVIEW.md) V-4)。方式 A 是被 CI 与 600+ 项测试持续验证的成熟路径。
+> **状态(2026-09-02 基线)**:两条路径均已在本地实跑通过。方式 A 是被 CI 与 600+ 项测试持续验证的日常路径;方式 B 已于 2026-09-02 完整执行一轮并通过(证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md),过程中发现的 5 个运行时问题已修复合并回 `main`)。尚未在真实服务器上执行过——那是 [SERVER_DEPLOYMENT_GUIDE.md](SERVER_DEPLOYMENT_GUIDE.md) 的范围。
 
 ---
 
@@ -143,7 +143,21 @@ python manage.py createsuperuser        # 技术维护/应急 superuser(R3 载�
 
 ## 方式 B:Local Production-like Docker Validation
 
-**这是当前阶段的下一个实际动作**:用生产同构的四容器编排(db / web / scheduler / caddy)在本机完整走一遍「构建 → 启动 → 初始化 → 验收」。
+用生产同构的四容器编排(db / web / scheduler / caddy)在本机完整走一遍「构建 → 启动 → 初始化 → 验收」。
+
+### 已验证基线(2026-09-02)
+
+方式 B 已完整实跑一轮,**全部阶段 PASS**,含:
+
+- 四容器构建与启动;db / web healthcheck 通过;
+- `/healthz/`、`/readyz/`、首页、`/admin/` 登录、static 资源;
+- 人工验收:后台建部门与部门容器、建内容页、上传图片、前台可见;
+- 重启后数据与 media 卷持久化;
+- scheduler 端到端定时发布(内容到点自动上线);
+- `ops_report` 快照、`backup_run` 备份集生成;
+- 备份集在隔离环境 `backup_restore` 演练通过。
+
+证据与逐项结论见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md)。该轮验证发现的 5 个运行时问题(Dockerfile / compose 层)已修复并合并回 `main`,当前代码即验证后的形态。下文 B0–B5 保留为**复现步骤**——重新执行一轮验证时照做即可。
 
 ### B0. 前提
 
@@ -217,7 +231,7 @@ dcr python manage.py createsuperuser      # 交互式;应急 superuser
 
 ### B4. Docker 验证清单
 
-一次合格的本地生产同构验证,至少勾完这些:
+一次合格的本地生产同构验证,至少勾完这些(2026-09-02 那轮验证已全部勾完):
 
 - [ ] `docker compose ps`:db / web / scheduler / caddy 四服务全部 running;db 与 web 显示 healthy(仅这两者配置了 healthcheck)
 - [ ] `curl -fk https://localhost/healthz/` 返回 `{"status":"ok"}`(存活)
