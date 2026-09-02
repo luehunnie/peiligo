@@ -44,7 +44,7 @@ COPY deploy/docker-entrypoint.sh ./deploy/docker-entrypoint.sh
 # 运行身份：非 root；/data 为卷挂载点（media＋static，归属 peiligo，
 # 命名卷首挂即继承该属主）。
 RUN set -eux; \
-    pip install --no-cache-dir --no-deps -e ./src; \
+    pip install --no-cache-dir --no-deps -e .; \
     useradd --create-home --shell /usr/sbin/nologin peiligo; \
     mkdir -p /data/media /data/static; \
     chown -R peiligo:peiligo /app /data
