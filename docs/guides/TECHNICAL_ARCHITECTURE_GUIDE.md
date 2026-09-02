@@ -2,9 +2,9 @@
 
 写给**全栈工程师、未来维护者、项目老师**。这里只讲「系统是怎么搭起来的、为什么这样搭」;操作步骤见 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 与 [SERVER_DEPLOYMENT_GUIDE.md](SERVER_DEPLOYMENT_GUIDE.md);正式决策原文见 [../adr/](../adr/README.md)。
 
-> **基线**:`main` 分支(2026-09-02,HEAD `0069953`)。文中版本号、命令、变量名均逐字核对自当前代码。
+> **基线**:`main` 分支(2026-09-02,HEAD `2992b1a`,含本地 Docker 实跑验证后合入的 5 个运行时修复)。文中版本号、命令、变量名均逐字核对自当前代码。
 >
-> **状态声明**:下文「生产架构」描述的是**已工程化的目标形态**——Docker/Compose/Caddy 等文件齐备并通过静态校验与测试覆盖,但**尚未在真实服务器上运行过**,容器实跑、TLS/DNS、性能与无障碍正式验证均属部署阶段工作(见 [../POST_G2_IMPLEMENTATION_GAP_AUDIT.md](../POST_G2_IMPLEMENTATION_GAP_AUDIT.md))。
+> **状态声明**:下文「生产架构」已在本地以 Production-like 方式**完整实跑验证通过**(2026-09-02,四容器构建、启动、健康检查、内容发布、定时发布、备份与恢复,证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md));但**尚未在真实服务器上部署过**——正式域名/TLS/DNS、生产密钥、性能与无障碍正式验证均属部署阶段工作。
 
 ---
 
@@ -63,7 +63,7 @@ flowchart TB
     M -.->|ops_report / backup_run| WEB
 ```
 
-**这是生产目标架构,不代表当前已部署。** 冻结口径:Linux/PVE 虚拟机(或同等 Linux 服务器)+ Docker Compose + PostgreSQL 容器 + Caddy;明确**不含** Redis、Celery、Elasticsearch、SPA、K8s([../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) 头注)。
+**这是生产目标架构:已在本地同构实跑验证,但尚未部署到真实服务器。** 冻结口径:Linux/PVE 虚拟机(或同等 Linux 服务器)+ Docker Compose + PostgreSQL 容器 + Caddy;明确**不含** Redis、Celery、Elasticsearch、SPA、K8s([../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) 头注)。
 
 ### 请求路径(Caddy 路由,`deploy/Caddyfile`)
 
@@ -210,8 +210,8 @@ python manage.py clear_password_must_change --username <账号>   # 强制改密
 ### 镜像(`deploy/Dockerfile`)
 
 - 基础 `python:3.13-slim`;装 PostgreSQL 18 客户端(PGDG 源,供 backupkit 在容器内调 `pg_dump`/`pg_restore`);
-- `pip install -e ./src` 装项目包;代码多源 COPY;`.dockerignore` 排除 .env/.git/tests 等;
-- 非 root 运行(用户 `peiligo`);`/data` 为卷挂载点(media + static);
+- 依赖层先行(`requirements.txt` 未变则缓存命中);代码按目录**逐源 COPY** 落位(manage.py、八 app、src/、static/、templates/、locale/、entrypoint;`.dockerignore` 排除 .env/.git/tests 等),项目配置包以 `pip install --no-deps -e .` editable 安装;
+- 非 root 运行(用户 `peiligo`);`/data` 为卷挂载点(media + static + backups 三个子目录);
 - **构建期 collectstatic**(`ManifestStaticFilesStorage` 哈希清单固化进镜像,仅用哑值 env 满足快速失败);
 - 启动:`gunicorn peiligo.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-2} --timeout 60`,日志全走 stdout。
 
@@ -223,8 +223,8 @@ web 容器启动时串行完成:①循环等数据库**真实可达**(Django 连
 
 | 服务 | 镜像/构建 | 关键配置 |
 |---|---|---|
-| `db` | `postgres:18` | `POSTGRES_DB/USER/PASSWORD` 注入;`pg_isready` 健康检查;`pgdata` 卷 |
-| `web` | 本仓 Dockerfile | production settings;env 显式透传(含 `WAGTAILADMIN_BASE_URL:?` 必填快速失败);media/static/backups 三卷;容器内 `/healthz/` 探针(start_period 60s);depends_on db healthy |
+| `db` | `postgres:18` | `POSTGRES_DB/USER/PASSWORD` 注入;`pg_isready` 健康检查;`pgdata` 卷(挂载点取 `/var/lib/postgresql`,适配 postgres:18+ 镜像的 pg_ctlcluster 布局) |
+| `web` | 本仓 Dockerfile | production settings;env 显式透传(含 `WAGTAILADMIN_BASE_URL:?` 必填快速失败);media/static/backups 三卷;容器内 `/healthz/` 探针(start_period 60s,请求 Host 取 `ALLOWED_HOSTS` 首项);depends_on db healthy |
 | `scheduler` | 同镜像 | 命令 `python manage.py publish_scheduler`;`SCHED_INTERVAL_SECONDS`(缺省 60);depends_on **web healthy** |
 | `caddy` | `caddy:2` | 80/443;`DOMAIN` 注入 Caddyfile;`caddy_data`/`caddy_config` 卷;static/media 只读挂载 |
 
@@ -273,7 +273,7 @@ web 容器启动时串行完成:①循环等数据库**真实可达**(Django 连
 | 会话 | 24 小时;`SameSite=Lax`+`Secure`+`HttpOnly`;CSRF Cookie 同锁 | SB §3.2 |
 | 强制改密 | 后台设置/重置密码后须先自行改密(`PasswordChangeGateMiddleware` + `PasswordState` 表);ORM/CLI 建号不触发;应急 `clear_password_must_change` | SB §2.4;RUNBOOK §7 |
 | 传输安全 | `SECURE_SSL_REDIRECT`;`SECURE_PROXY_SSL_HEADER`;HSTS 终态一年(`HSTS_SECONDS` 可先短观察,无 preload);healthz/readyz 豁免重定向 | `settings/production.py`;F-10 |
-| 上传校验 | 文档扩展名白名单 `doc docx pdf ppt pptx xls xlsx`;图片 `jpg jpeg png webp`;**20 MiB** 硬上限;扩展名 + 声明 MIME + 内容签名三级一致;文件名清洗(拒路径形式、剥控制字符、255 字节截断) | `WAGTAILDOCS_*` 设置 + `upload_validation.py`;SB §4 |
+| 上传校验 | 文档扩展名白名单 `doc docx pdf ppt pptx xls xlsx`,**20 MiB** 硬上限(仅文档);图片 `jpg jpeg png webp`(无单独大小上限);扩展名 + 声明 MIME + 内容签名三级一致;文件名清洗(拒路径形式、剥控制字符、255 字节截断) | `WAGTAILDOCS_*` 设置 + `upload_validation.py`;SB §4 |
 | 外链确认 | 仅 http/https 绝对 URL;拒 userinfo/相对形式/缺协议;前台不直出裸跳转,统一确认页(域名/来源/时间/声明四要素)+ go 端点二次校验后才 302 | `link_validation.py` + `home/views.py`;SB §10-7 |
 | 登录面 | 后台允许公网访问(V1 不做校园网/IP 白名单);不开放公开注册;不强制 MFA | SB §1(Q4) |
 | 治理审计 | 用户/组变更全量 DB 级审计(`/admin/gov-audit/`);页面操作走 Wagtail 内建日志,保留 ≥1 年 | R-05 方案 B |
