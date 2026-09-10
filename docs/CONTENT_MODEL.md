@@ -5,7 +5,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 文档 | `docs/CONTENT_MODEL.md` |
-| 日期 | 2026-08-21（首落盘，A3.1 批次＝M3.1＋M3.2；同日 A3.2 批次＝M3.3 增补 §14–§19；同日 A3.3 批次＝M3.4 增补 §20–§24） |
+| 日期 | 2026-08-21（首落盘，A3.1 批次＝M3.1＋M3.2；同日 A3.2 批次＝M3.3 增补 §14–§19；同日 A3.3 批次＝M3.4 增补 §20–§24）；2026-09-10 首页升级批次＝Phase 3.5 模型落地后同步增补 §25，并对 §1.3/§5.1/§8.1/§9.1/§10.1 作定点修订（位点登记见 §25.4） |
 | 本步范围 | §1–§13：M3.1 类型清单与 Page/Snippet 载体分配（§1–§4）＋ M3.2 字段级定义、StreamField 白名单、受控标签（§5–§13）。§14–§19：M3.3 状态机、修订/预览/锁、预约与到期字段映射、删除政策（A3.2 批次增补，§1–§13 零改动）。§20–§24：M3.4 搜索索引字段映射、筛选维度契约、D7 三方案对接点、金标集挂接点与断言（A3.3 批次增补，§1–§19 零改动） |
 | 引源 | 00_MASTER_PLAN §10 M3.1/M3.2；02_ARCHITECTURE_DOMAIN_PLAN §5 S3.1/S3.2（L74-75 映射）、§0.1 C4；PRD §7/§10/§11；ADR-0004、ADR-0005（Accepted，只读）；INFORMATION_ARCHITECTURE §1–§5（只读）；上游审计 §3.1（定向）；现有代码 `home/models.py`、`departments/models.py`、`src/peiligo/settings/base.py`（只读事实）。M3.4 增补引源：00 §10 M3.4（含 v1.1）＋§2.2 D7；02 §5 S3.4、§8 S6.1；PRD §10/§12；IA §8–§11（M2.2 产物，只读承接）；ADR-0001（C1：wagtail 7.4.2＋modelsearch 1.3.2）；上游审计 §3.4；wagtail 7.4.2/modelsearch 1.3.2/Django 5.2.17 源码亲证（位点见 §20.0）；`search/views.py`、`src/peiligo/urls.py`、各 app `models.py`、`requirements.txt`（只读事实） |
 | 分支 | `arch/a3.1-content-model-design`（基于 `rebuild/v1` @ a34d75a）；M3.3 增补分支 `arch/a3.2-state-machine-design`（基于 `rebuild/v1` @ c89acd6）；M3.4 增补分支 `arch/a3.3-search-contract-design`（基于 `rebuild/v1` @ 8baf26f） |
@@ -74,6 +74,7 @@
 | 受控标签 | `Tag`（自定义，继承 taggit `Tag`；词表经 Snippet 管理） | Snippet（词表）＋`ClusterTaggableManager` 挂 Page 侧 | 通知/文章/学习资料的受控关键词（机制终判见 §12） | §7.1/§7.2/§7.4、§10；#12 |
 | 首页推荐位 | `FeaturedItem` | Snippet | 数量固定、带起止时间的运营位（载体确认见 §3） | §9、§8；#13 |
 | 站点设置 | `SiteSettings` | settings（`BaseSiteSetting`） | 紧急提示、统一反馈邮箱、跳转页文案（载体确认见 §3） | §9、§8、§7.5；#14 |
+| 首页轮播项 | `CarouselItem` | Snippet | 首页轮播位条目（V1 基线后首页升级新增，无 ADR-0005 载体表编号；独立 Snippet 不复用 FeaturedItem；字段与校验见 §25.2） | 首页升级 PRD §11/§15；§25.2 |
 
 V1 部门岗位账号不持有任何 Snippet 权限，上述词表/部门/推荐位均由总管理员管理（ADR-0004 决策 3；ADR-0005）。受控标签的"部门账号不能新建自由标签"机制见 §12（CM-08）。
 
@@ -157,6 +158,7 @@ V1 部门岗位账号不持有任何 Snippet 权限，上述词表/部门/推荐
 | 发布时间 | `first_published_at`（Page 内建，只读） | DateTimeField；首次转公开时刻落定并持久（改版重发不重置） | 必填（发布即有） | PRD §7.1 |
 | 有效期 | `expire_at`（Page 内建列，本类型经 clean 强制非空） | DateTimeField；到期行为 DEFERRED_TO_M3_3，此处只冻结"必填" | **必填**（CM-01） | PRD §7.1 |
 | 图片 | `image` | ForeignKey(`wagtailimages.Image`, null=True, blank=True, on_delete=SET_NULL)——专属题图/列表图 | 可选 | PRD §7.1 |
+| 轮播封面图 | `cover_image` | ForeignKey(`wagtailimages.Image`, null=True, blank=True, on_delete=SET_NULL, related_name="+")——首页轮播封面（首页升级批次增补，见 §25.1；ArticlePage 经 §6"逐行相同"同获本行） | 可选 | 首页升级 PRD §12；§25.1 |
 | 附件 | `attachments` | ParentalManyToManyField(`wagtaildocs.Document`, blank=True)（0..n；类型/大小/扩展名限制为全站上传策略，见 §11.4） | 可选 | PRD §7.1、§11 |
 | 外部链接 | `external_url` | URLField(blank=True)；输出经统一确认跳转页（§11.4） | 可选 | PRD §7.1、§11 |
 | 受控标签 | `tags` | ClusterTaggableManager(through=…，§12；blank=True)；仅词表内标签 | 可选（0..n） | PRD §7.1；§12 |
@@ -233,8 +235,9 @@ V1 部门岗位账号不持有任何 Snippet 权限，上述词表/部门/推荐
 | 所属板块 | —（无存储字段） | 推导 property（§1.4）；clean 校验 ∈ {`materials`} | 推导必得 | PRD §7.4；IA §5 |
 | 发布部门 | `department` | 同 §4 | 必填 | PRD §4.3 |
 | 发布时间 | `first_published_at`（Page 内建，只读） | DateTimeField | 必填（发布即有） | PRD §10（搜索覆盖发布部门与时间语境） |
+| 轮播封面图 | `cover_image` | 同 §25.1（首页升级批次增补） | 可选 | 首页升级 PRD §12；§25.1 |
 
-无字段声明：**无专属图片字段**（PRD §7.4 未列"图片"——通知/文章的 §7.1/§7.2 可选项不外溢；插图经正文图片块 §7.7）；无有效期字段（PRD §7.4 无有效期要求；文章/资源手动下线属 PRD §8，行为 DEFERRED_TO_M3_3）。
+无字段声明：无正文插图/列表图字段（PRD §7.4 未列"图片"——通知/文章的 §7.1/§7.2 可选项不外溢；插图经正文图片块 §7.7）；**轮播封面图 `cover_image` 为本类型唯一图片字段**（首页升级批次增补，非 PRD §7.4 原始范围——首页升级 PRD §12，§25.1）；无有效期字段（PRD §7.4 无有效期要求；文章/资源手动下线属 PRD §8，行为 DEFERRED_TO_M3_3）。
 
 ### 8.2 校验与 panels
 
@@ -257,8 +260,9 @@ V1 部门岗位账号不持有任何 Snippet 权限，上述词表/部门/推荐
 | 发布时间或最后更新时间 | `first_published_at` / `last_published_at`（Page 内建，只读） | DateTimeField ×2；二者居一即满足"或"（展示取较近者由模板冻结，B 阶段） | 必填（发布即有） | PRD §7.5 |
 | 所属板块 | —（无存储字段） | 推导 property（§1.4）；clean 校验 ∈ {`software`} | 推导必得 | PRD §7.5；IA §5 |
 | 发布部门 | `department` | 同 §4 | 必填 | PRD §4.3 |
+| 轮播封面图 | `cover_image` | 同 §25.1（首页升级批次增补） | 可选 | 首页升级 PRD §12；§25.1 |
 
-无字段声明：**无附件字段且正文白名单不含附件块**（不托管安装包，PRD §7.5——附件仅可能经全站 §11 白名单存在于通知/文章/学习资料正文）；无专属图片字段（PRD §7.5 未列；插图经正文图片块）；无摘要字段（PRD §7.5 六项无摘要）。
+无字段声明：**无附件字段且正文白名单不含附件块**（不托管安装包，PRD §7.5——附件仅可能经全站 §11 白名单存在于通知/文章/学习资料正文）；无正文插图字段（PRD §7.5 未列；插图经正文图片块；**轮播封面图 `cover_image` 为本类型唯一图片字段**——首页升级 PRD §12，§25.1）；无摘要字段（PRD §7.5 六项无摘要）。
 
 ### 9.2 校验与 panels
 
@@ -282,9 +286,9 @@ V1 部门岗位账号不持有任何 Snippet 权限，上述词表/部门/推荐
 | 8 | 维护方式 | `maintenance_mode` | CharField(max_length=20, choices= [("self", "责任部门后台自维护"), ("curated", "统一邮箱投稿·总管理员代维护")])——两选项逐源 PRD §7.6 两句原文 | 必填 | PRD §7.6 |
 | 9 | 最后确认日期或更新时间 | `last_confirmed_on` | DateField——显式业务字段（承载"每学期复核/更短人工复核周期"的人工确认语义，CMS 时间戳不承载此语义） | 必填 | PRD §7.6 |
 
-公共内建行：`slug`（IA §4.3）；`department`（§4，责任部门）；所属板块推导 ∈ {`guide`}（§1.4）；`first_published_at`（内建，非九字段项，不另列展示）。CM-06 必填集＝#1–#5、#7–#9（仅 #6 补充说明可选）。
+公共内建行：`slug`（IA §4.3）；`department`（§4，责任部门）；所属板块推导 ∈ {`guide`}（§1.4）；`first_published_at`（内建，非九字段项，不另列展示）；另含轮播封面图 `cover_image`（首页升级批次增补，可选，非九字段项——§25.1）。CM-06 必填集＝#1–#5、#7–#9（仅 #6 补充说明可选）。
 
-无字段声明：**无 StreamField 正文**（九字段无"正文"项，补充说明以纯文本承载——表单最简，适配邮箱投稿代维护动线）；无图片/附件/外部链接/标签字段（PRD §7.6 未列）。
+无字段声明：**无 StreamField 正文**（九字段无"正文"项，补充说明以纯文本承载——表单最简，适配邮箱投稿代维护动线）；无附件/外部链接/标签字段（PRD §7.6 未列）；轮播封面图 `cover_image` 为本类型唯一图片字段（首页升级批次增补——首页升级 PRD §12，§25.1；非 PRD §7.6 九字段原始范围）。
 
 ### 10.2 校验与 panels
 
@@ -878,3 +882,72 @@ V1 **不新增任何公开时间参数**（五参数之外零参数）。时间�
 - **B 阶段不越界**：search 视图/模板/分页/合并实现、boost 数值微调、update_index 接线、SEARCH_CONFIG/后端配置切换、tag 预解析回退实测——本文冻结契约语义。
 - **M7.2 不越界**：搜索性能口径（§20.2 仅供引用）。
 - **本批零代码/零迁移/零测试**（纯设计）；§1–§19 与全部代码零改动；单 commit 收口，未 push。
+
+## 25. 首页轮播与轮播封面图（首页升级批次，2026-09-10）
+
+**引源**：「首页升级 PRD」＝《Peiligo 首页增量升级产品需求文档》（2026-09-10 封口版）§10–§15；首页升级 Phase 2 架构模型冻结设计（下称"冻结决策 N"）；ADR-0007（Accepted）；**实现事实**：commit 21909e1（`home/models.py` CarouselItem、`src/peiligo/cover.py` CoverImageMixin、notices/resources/guides 三 app 迁移）＋ `tests/test_carousel_item.py`。本节为**事后同步**：数据模型已实现、已测试并经 Phase 3.5 审查收口，本节按真实模型落档；**轮播前台（SSR 模板与 JS）尚未实现**，归后续前端阶段（ADR-0007）——本节与 ADR-0007 均不声称轮播前台已上线。
+
+### 25.1 轮播封面图 `cover_image`（五类内容页统一可选字段）
+
+| 字段 | 属性 | 类型与约束 | 必填 | 引源 |
+| --- | --- | --- | --- | --- |
+| 轮播封面图 | `cover_image` | ForeignKey(`wagtailimages.Image`, null=True, blank=True, on_delete=SET_NULL, related_name="+")；经抽象 Mixin `peiligo.cover.CoverImageMixin` 单源挂五类内容页（实现形态：Mixin 仅挂五类，未引发内容模型重构——首页升级 PRD §12.1 优先项） | 可选 | 首页升级 PRD §12；冻结决策 |
+
+- **适用对象**：五类内容页（§1.2 正式名）——`NoticePage`/`ArticlePage`/`MaterialPage`/`SoftwareToolPage`/`GuidePage`（commit 21909e1 实证五类均已挂载；字段表定点修订见 §25.4）。
+- **语义**：首页轮播位引用站内内容时的**封面单一来源**——轮播项不重复配置站内标题与图片，直接取目标内容页 `cover_image`（冻结决策 5）；作者在正常内容编辑时上传，不为轮播重复上传站内 Banner（首页升级 PRD §12.2）。
+- **可空与发布**：nullable/blank，不上传封面**不阻止发布**——普通内容无封面照常发布（首页升级 PRD §12.2）。
+- **删除语义**：封面图删除仅 SET_NULL 置空，页面本体保留；`related_name="+"` 不建 Image→Page 反向关系。
+- **尺寸提示**：推荐 1600×600（8:3）＝编辑界面 help_text 软提示；**无比例/尺寸硬校验**（首页升级 PRD §12.3）。
+- **与既有 `image` 的关系（仅 Notice/Article）**：`image`（§5.1）仍是正文插图/题图列表位，`cover_image` 是首页轮播封面位——两者语义独立、可同时存在（冻结决策 14），不互改、不互替；本批未改写 §5.1 `image` 行任何语义。
+- **前台消费**（轮播有/无封面的 Banner 呈现规则，首页升级 PRD §13）归后续前端阶段，本节不冻结模板细节；`cover_image` 不进站内搜索索引（§20.3 `image` 同类口径——媒体资产）。
+
+### 25.2 CarouselItem（首页轮播项，Snippet）
+
+**载体与定位**：`home.CarouselItem`，`register_snippet`（§1.3 表已增行）。**独立 Snippet，不复用 `FeaturedItem`**——轮播是首页顶部可点击 Banner 位，推荐位是标题/摘要列表位，职责不同、并存互不替代（首页升级 PRD §11：不得为轮播删除现有推荐功能；冻结决策）。不建独立"轮播文章"内容类型（首页升级 PRD §15 末句）。仅总管理员可管理（与 FeaturedItem 同一权限口径；越权测试实证见 `tests/test_carousel_item.py`）。
+
+| 字段 | 属性 | 类型与约束 | 必填 | 引源 |
+| --- | --- | --- | --- | --- |
+| 站内内容页 | `internal_page` | ForeignKey(`wagtailcore.Page`, null=True, blank=True, on_delete=CASCADE, related_name="+")；选择器过滤仅五类内容页（`CAROUSEL_INTERNAL_PAGE_TYPES`——首页/板块/容器等结构页不可选，与 FeaturedItem 选择器同一集合） | 与 `external_url` 二选一（XOR） | 首页升级 PRD §11.1/§11.3；冻结决策 3/4 |
+| 外部链接 | `external_url` | URLField(blank=True, validators=[`peiligo.link_validation.validate_external_url`])——**复用现有外链 validator，不重新实现**；外链确认跳转安全通道继续适用（首页升级 PRD §11.2） | 与 `internal_page` 二选一（XOR） | 首页升级 PRD §11.2/§11.3；冻结决策 3/7 |
+| 外链标题 | `external_title` | CharField(max_length=255, blank=True)；外链项必填（clean 强制非空），站内项必须为空 | 外链项必填 | 首页升级 PRD §11.2；冻结决策 5 |
+| 外链封面图 | `external_cover_image` | ForeignKey(`wagtailimages.Image`, null=True, blank=True, on_delete=SET_NULL, related_name="+")；站内项必须为空 | 外链项可选 | 首页升级 PRD §11.2；冻结决策 5/9 |
+| 排序 | `sort_order` | PositiveSmallIntegerField(default=0)；`Meta.ordering = (sort_order, pk)`——重复排序值允许，pk 兜底稳定序（冻结决策 10） | 必填（有默认） | 首页升级 PRD §15；冻结决策 10 |
+
+**校验（clean，已实现，断言载体＝`tests/test_carousel_item.py`）**：
+
+1. **XOR**（冻结决策 3；首页升级 PRD §11.3）：`internal_page` 与 `external_url` 只能二选一，两者皆空或皆有效即 `ValidationError`；外链空白按空处理（strip 口径）。
+2. **站内目标白名单**（冻结决策 4）：仅五类内容页（§1.2）；且目标须**当前可展示**——`lifecycle_state == LIFECYCLE_LIVE`（§16.4 CURRENT_DEFAULT 同一谓词，与 `FeaturedItem.is_on_display` 同口径；draft/scheduled/unpublished/expired 一律拒绝，零新增 lifecycle 规则）。
+3. **站内项零重复配置**（冻结决策 5）：站内项的标题/URL/封面一律取自目标 Page（标题＝`Page.title`、URL＝页面 URL、封面＝目标页 `cover_image`）；`external_title` 与 `external_cover_image` 必须全空。
+4. **外链项**：`external_title` 必填；`external_cover_image` 可选。
+5. **容量上限**（冻结决策 11；首页升级 PRD §10.1/§15）：最多 5 条（`CAROUSEL_MAX_ITEMS`）——clean 拒第 6 条**新建**（exclude 自身 pk，编辑既有项不受限）；前台消费侧防御性最多取 5。
+
+**删除语义**（冻结决策 8/9）：站内目标内容页删除 → 轮播项 **CASCADE** 随删（随目标消失，零悬挂）；外链封面图删除 → **SET_NULL** 置空、条目保留。
+
+**前台消费边界**：0/1/2–5 项的渲染档位、自动播放、外链确认跳转页等前台行为归后续前端阶段（ADR-0007；首页升级 PRD §10/§13），本节不冻结、不预设。
+
+### 25.3 与 FeaturedItem 的边界（并存，不混用）
+
+| 维度 | `FeaturedItem`（§13.3/§15.4，零改动） | `CarouselItem`（本节） |
+| --- | --- | --- |
+| 职责 | 首页推荐位（呈现所指内容标题/摘要） | 首页顶部轮播 Banner 位（整图可点击） |
+| 目标 | 仅站内五类内容页（单 FK） | 站内五类内容页 XOR 外链 |
+| 文案/图片 | 无自有字段 | 站内项取目标页；外链项自带标题＋可选封面 |
+| 时效 | `start_at`/`end_at`＋`enabled` 窗口 | 无窗口字段，即时配置 |
+| 顺序 | 无排序字段（pk 序） | `sort_order`＋`pk` 稳定序 |
+| 上限 | 展示前 3（前台消费侧） | 存量 ≤5（模型 clean） |
+
+两者并存、互不替代；本节未修改 §13.3/§15.4 任何冻结语义。
+
+### 25.4 本批修订登记（位点处置表）
+
+| 位点 | 修订 | 依据 |
+| --- | --- | --- |
+| 文档信息·日期行 | 增补本批次记 | 文档惯例 |
+| §1.3 受控数据清单 | 增补 `CarouselItem` 一行（V1 基线后新增 Snippet，无 ADR-0005 编号） | 首页升级 PRD §11/§15 |
+| §5.1 字段表 | 增补 `cover_image` 行（ArticlePage 经 §6"逐行相同"同获） | 首页升级 PRD §12 |
+| §8.1 无字段声明 | "无专属图片字段"修订为"无正文插图字段；`cover_image` 为唯一图片字段例外" | 同上 |
+| §9.1 字段表＋无字段声明 | 同 §8.1 口径增补行与修订声明 | 同上 |
+| §10.1 公共内建行＋无字段声明 | 增补 `cover_image` 说明；"无图片…字段"修订为"无附件/外部链接/标签字段＋cover_image 例外" | 同上 |
+| 本节 §25 | 新增 | 首页升级 PRD §10–§15；commit 21909e1 |
+
+§1–§24 其余内容零改动；§13"字段只到 M3.2 当前需要"的 M3.2 时点口径不变（`CarouselItem` 为该时点之后经首页升级批令新增的模型，不入 §13 各表）。

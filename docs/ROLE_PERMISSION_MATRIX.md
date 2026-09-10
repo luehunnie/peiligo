@@ -20,7 +20,7 @@
 - 冻结原则（全文档有效，实现与测试均不得偏离）：
   1. **部门岗位账号只管自己部门的子树**：部门容器节点是其唯一授权锚点，出子树一律无权（PRD §4.3）。
   2. **部门岗位账号不能永久删除**：任何对象、任何路径（含自己创建的页面）均无永久删除权（PRD §8）。
-  3. **部门岗位账号默认不管治理类**：Department、词表、受控标签、FeaturedItem、SiteSettings、用户与组、板块与容器结构，全部零权限（PRD §4.3；ADR-0004 决策 3）。
+  3. **部门岗位账号默认不管治理类**：Department、词表、受控标签、FeaturedItem、CarouselItem（首页轮播项，首页升级新增）、SiteSettings、用户与组、板块与容器结构，全部零权限（PRD §4.3；ADR-0004 决策 3）。
   4. **技术维护人员严格按矩阵行权，不凭常识扩权**：其职责在运维通道（依赖/备份/环境/恢复），不经 CMS 权限系统获得任何内容操作面（PRD §4.4"技术维护与日常内容管理是不同职责"）；§2.3 第 N11 条逐项列明其"无权"边界。
 
 ## 1. 角色定义（§1）
@@ -45,7 +45,7 @@
 | O1 | 本部门子树内容页（六类：通知/文章/活动/学习资料/软件与工具/校园指南） | 六类内容形态落于五类 Page 类型——`NoticePage`、`ArticlePage`、`MaterialPage`、`SoftwareToolPage`、`GuidePage`，活动类经 Notice/Article 的 EventFieldsMixin 结构化字段承载（ADR-0005 载体表 #1–#6） |
 | O2 | 他部门子树内容页（同上六类，归属其他部门） | 同上 |
 | O3 | 树治理结构：首页、五个一级板块页、部门容器节点（含其部门绑定与子树移动/复制） | `HomePage`、`SectionPage`×5、`DepartmentContainerPage`（`home/models.py`、`departments/models.py`） |
-| O4 | 治理类 Snippet：Department（部门）、四个内容词表（学科·专业方向/资料类型/指南类别/适用平台）、受控标签、FeaturedItem（首页推荐位） | ADR-0005 载体表 #7–#13；`departments.Department`、`home.FeaturedItem` |
+| O4 | 治理类 Snippet：Department（部门）、四个内容词表（学科·专业方向/资料类型/指南类别/适用平台）、受控标签、FeaturedItem（首页推荐位）、CarouselItem（首页轮播项——首页升级新增） | ADR-0005 载体表 #7–#13；`departments.Department`、`home.FeaturedItem`、`home.CarouselItem`（首页升级 PRD §15；CONTENT_MODEL §25.2） |
 | O5 | SiteSettings（紧急提示、统一反馈邮箱、跳转页文案等站点级配置） | `home.SiteSettings(BaseSiteSetting)`（ADR-0005 #14） |
 | O6 | 图片与文档（按 Collection 划分部门集合） | Wagtail images/documents + Collections（每部门一个 Collection，见 §3.2） |
 | O7 | 用户与组（后台账号生命周期、组与权限分配） | Django auth + wagtailusers（PRD §5 不自建用户中心） |
@@ -101,6 +101,7 @@
 | M-D2 | 四个内容词表（学科·专业方向/资料类型/指南类别/适用平台） | 管理 | ✅ 推导（受控数据治理） | ❌ §4.3 | ❌ §4.4 | ➖ | §4.2/§4.3 | T10、T14 |
 | M-D3 | 受控标签 | 管理（维护受控标签集） | ✅ 推导 | ❌ §4.3（注：在自己页面**选用**既有受控标签属 M-A4 编辑的一部分，不是管理标签集） | ❌ §4.4 | ➖ | §4.2/§4.3 | T10 |
 | M-D4 | FeaturedItem（首页推荐位/置顶） | 管理（指向/起止/启用） | ✅ §4.2、§8、§9 | ❌ §4.3、§8（部门如需置顶，通过统一工作邮箱申请） | ❌ §4.4 | ➖（前台被动消费） | §4.2/§4.3/§8/§9 | T10、T14 |
+| M-D5 | CarouselItem（首页轮播项，首页升级新增） | 管理（增/改/删/排序，上限 5 条） | ✅ §4.2 推导（全局运营配置，同 M-D4 口径） | ❌ §4.3 推导（首页轮播配置属全局运营配置，非本部门内容维护面） | ❌ §4.4 | ➖（前台被动消费） | 首页升级 PRD §15；推导（同 M-D4）；CONTENT_MODEL §25.2 | 首页升级 Phase 3 权限测试（`tests/test_carousel_item.py`：superuser/总管理员组 allowed、部门编辑 denied） |
 
 #### 表 E · O5 SiteSettings（站点级配置）
 
@@ -140,7 +141,7 @@
 | N04 | R2 | 不得修改账号（创建/停用/重置/分组） | M-G1–M-G4 | §4.3 | T12 |
 | N05 | R2 | 不得修改板块与容器结构（含子树移动/复制、容器绑定部门变更） | M-C2–M-C5 | §4.3 | T09 |
 | N06 | R2 | 不得设置全站重要内容或首页置顶状态（申请走统一工作邮箱） | M-D4 | §4.3、§8 | T10 |
-| N07 | R2 | 零 Snippet 权限：不管理 Department、四个内容词表、受控标签集、FeaturedItem | M-D1–M-D4 | §4.3（+ADR-0004 决策 3，本矩阵 §3.2 正式确认） | T10 |
+| N07 | R2 | 零 Snippet 权限：不管理 Department、四个内容词表、受控标签集、FeaturedItem、CarouselItem（首页轮播项） | M-D1–M-D5 | §4.3（+ADR-0004 决策 3，本矩阵 §3.2 正式确认） | T10；M-D5 另有首页升级 Phase 3 权限测试 |
 | N08 | R2 | 不得跨集合操作素材/管理集合结构 | M-F3、M-F4 | §4.3 | T13 |
 | N09 | R3 技术维护人员 | 不得进行任何日常内容管理（创建/编辑/发布/下线/归档/删除/治理类管理，全对象 ❌） | 表 A–表 G 全部 R3 列 | §4.4 | T16（记录性核查） |
 | N10 | R3 | 不得以 superuser 做日常操作（superuser 仅故障恢复、留痕） | M-G5 | §4.4 推导 | T16（记录性核查） |
@@ -206,7 +207,7 @@
 | wagtailusers 模型权限 | 用户与组管理仅总管理员组 | M-G1–M-G4 |
 | 设置编辑权限 | SiteSettings 仅总管理员组（ADR-0005 #14 遗留要求在此落实） | M-E1 |
 
-置顶/推荐位机制说明（S4.1 指定项）：V1 落地形态 = FeaturedItem 独立 Snippet（模型级权限仅总管理员组；CONTENT_MODEL §3"仅总管理员可管理"）；`FieldPanel(permission=...)` 面板级权限是页面内字段的官方机制（审计 §3.3），V1 无页面内置顶字段，仅作机制预留记载——若未来增设页面内置顶字段，必须以该机制限定仅总管理员可见可编辑，并新増越权测试。
+置顶/推荐位/轮播机制说明（S4.1 指定项＋首页升级增补）：V1 落地形态 = FeaturedItem 独立 Snippet（模型级权限仅总管理员组；CONTENT_MODEL §3"仅总管理员可管理"）；首页升级新增的 CarouselItem（首页轮播项，M-D5）同口径——首页轮播配置属**全局运营配置**，模型级权限仅总管理员组（CONTENT_MODEL §25.2；实测证据 `tests/test_carousel_item.py`：superuser 与总管理员组 allowed、部门编辑 denied；superuser 的日常使用仍受 M-G5/N10 边界约束，不因轮播管理产生新授权面）；`FieldPanel(permission=...)` 面板级权限是页面内字段的官方机制（审计 §3.3），V1 无页面内置顶字段，仅作机制预留记载——若未来增设页面内置顶字段，必须以该机制限定仅总管理员可见可编辑，并新増越权测试。
 
 ### 3.3 对象 → 机制一览
 
