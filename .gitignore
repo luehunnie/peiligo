@@ -25,3 +25,6 @@ src/peiligo/settings/local.py
 
 # F-12：本地备份输出目录（BACKUP_ROOT 缺省位；真实备份不入库）
 backups/
+
+# Local Obsidian workspace
+/.obsidian/
