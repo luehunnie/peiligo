@@ -11,10 +11,19 @@
 import datetime as dt
 
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.test import TestCase
 from notices.models import ArticlePage, NoticePage
 
-from .helpers import article_data, build_sections, make_container, make_department, notice_data
+from .helpers import (
+    article_data,
+    build_sections,
+    make_container,
+    make_department,
+    make_image,
+    make_notice,
+    notice_data,
+)
 
 UTC = dt.UTC
 
@@ -158,3 +167,39 @@ class RequiredOptionalFormTests(NoticeArticleBase):
         self.assertNotEqual(NoticePage, ArticlePage)
         self.assertFalse(issubclass(NoticePage, ArticlePage))
         self.assertFalse(issubclass(ArticlePage, NoticePage))
+
+
+class CoverImageTests(NoticeArticleBase):
+    """轮播封面图（CoverImageMixin，首页升级 Phase 3）：与既有 image 独立共存。"""
+
+    def test_cover_image_field_shape(self):
+        """可空/blank、Image FK、SET_NULL、related_name='+'、软提示 help_text。"""
+        for model in (NoticePage, ArticlePage):
+            field = model._meta.get_field("cover_image")
+            self.assertTrue(field.null and field.blank)
+            self.assertEqual(field.remote_field.model._meta.label, "wagtailimages.Image")
+            self.assertEqual(field.remote_field.on_delete, models.SET_NULL)
+            self.assertEqual(field.remote_field.related_name, "+")
+            self.assertEqual(field.help_text, "推荐尺寸 1600×600（8:3）")
+
+    def test_image_and_cover_image_coexist(self):
+        """既有 image（正文插图）与 cover_image（轮播封面）同时存在互不影响。"""
+        illustration = make_image("正文插图")
+        cover = make_image("轮播封面")
+        notice = make_notice(self.container, slug="cover-coexist", publish=True)
+        notice.image = illustration
+        notice.cover_image = cover
+        notice.save()
+        notice.refresh_from_db()
+        self.assertEqual(notice.image, illustration)
+        self.assertEqual(notice.cover_image, cover)
+
+    def test_cover_image_delete_sets_null_page_kept(self):
+        cover = make_image("轮播封面")
+        notice = make_notice(self.container, slug="cover-setnull", publish=True)
+        notice.cover_image = cover
+        notice.save()
+        cover.delete()
+        notice.refresh_from_db()
+        self.assertIsNone(notice.cover_image)
+        self.assertTrue(NoticePage.objects.filter(pk=notice.pk).exists())

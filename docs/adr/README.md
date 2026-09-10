@@ -12,6 +12,8 @@
 
 本目录（`docs/adr/`）**仅收录技术架构决策**——V1 范围即下表预列的 ADR-0001–0006，此外不收录任何其他内容。
 
+> 收录范围变更记录（2026-09-10）：首页升级经项目负责人 Phase 4 批令（§5 治理要求的批准载体）扩展收录 **ADR-0007**（首页升级 JS 架构决策，细化 ADR-0002 边界）；仅新增一行，其余收录范围口径不变。
+
 以下**治理 / 流程类决策记录一律归 `docs/decisions/`，不得写入本目录**（两类决策记录混放会造成口径漂移）：
 
 - **D0 基线**：`docs/decisions/D0_BASELINE_CONFIRMATION.md`（已入库）及 M0.2 入库清单 `docs/decisions/M0-2-BASELINE-MANIFEST.md`；
@@ -32,6 +34,7 @@
 | 0004 | 部门权限容器树（不构成前台部门主页） | Accepted | 2026-08-18 | C3（=D5） | M1.5 · `0004-department-permission-container-tree.md` | G1 |
 | 0005 | 公开内容 Page / 受控数据 Snippet·设置 | Accepted | 2026-08-18 | C4（=D6） | M1.6 · `0005-page-vs-snippet-allocation.md` | G1 |
 | 0006 | 中文搜索后端 | Accepted | 2026-08-31 | D7（保留决策门，待 M6.3 PoC 裁决） | M6.3 · [0006-chinese-search-backend.md](0006-chinese-search-backend.md) | 已通过（G2 · Human 2026-08-31 签收） |
+| 0007 | 前端架构细化：SSR-first ＋ 最小原生 JS 渐进增强（细化 ADR-0002，不推翻） | Accepted | 2026-09-10 | 首页升级 PRD §16＋Phase 2 冻结设计（项目负责人批令） | 首页升级 Phase 4 · [0007-minimal-vanilla-js-progressive-enhancement.md](0007-minimal-vanilla-js-progressive-enhancement.md) | 已通过（项目负责人 Phase 4 批令直批 · 2026-09-10） |
 
 预列说明：
 
@@ -42,12 +45,12 @@
 
 ## 3. 状态看板
 
-统计时点：2026-08-31（G2 门签收 0006 后；0001–0005 于 2026-08-18 经 G1 门、0006 于 2026-08-31 经 G2 门，均由项目负责人批准由 Proposed 转 Accepted）。
+统计时点：2026-09-10（首页升级 Phase 4 落盘 0007 后；0001–0005 于 2026-08-18 经 G1 门、0006 于 2026-08-31 经 G2 门、0007 于 2026-09-10 经项目负责人批令直批，均由项目负责人批准）。
 
 | 状态 | 数量 | 编号 |
 | --- | --- | --- |
 | Proposed | 0 | — |
-| Accepted | 6 | 0001、0002、0003、0004、0005（2026-08-18 G1 门批准）、0006（Accepted·G2 已签收 2026-08-31） |
+| Accepted | 7 | 0001、0002、0003、0004、0005（2026-08-18 G1 门批准）、0006（Accepted·G2 已签收 2026-08-31）、0007（Accepted·项目负责人批令直批 2026-09-10） |
 | Superseded | 0 | — |
 | Rejected | 0 | — |
 

@@ -237,13 +237,26 @@ main.wrap {
     padding-block: var(--space-xs);
 }
 
-/* 品牌字标：青绿色识别色 */
+/* 品牌区：校徽归属锚点 + 青绿字标，同行垂直居中 */
 .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
     font-size: var(--font-size-h3);
     font-weight: 700;
     color: var(--brand-color);
     letter-spacing: 0.01em;
     white-space: nowrap;
+}
+
+/* 校徽：26px 视觉高，贴近字标 26px 行盒而非 64px 页头；方形白底融入
+ * 白色页头表面，无需另加圆角/边框。固定高 + contain 防变形，flex:none
+ * 防受挤压。全断点同尺寸（≤600px 品牌独占一行，无需缩小）。 */
+.brand-logo {
+    height: 26px;
+    width: auto;
+    object-fit: contain;
+    flex: none;
 }
 
 .brand:hover {

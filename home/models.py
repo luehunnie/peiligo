@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -20,6 +20,8 @@ from wagtail.contrib.settings.models import BaseSiteSetting
 from wagtail.contrib.settings.registry import register_setting
 from wagtail.models import Page
 from wagtail.snippets.models import register_snippet
+
+from peiligo.link_validation import validate_external_url
 
 # 五板块冻结清单（IA §2，中文名与 PRD §6 一字不差；slug 为 §4.3 默认值，
 # B 阶段可微调并留痕）。旧站 3 个不一致命名的具体字面量见 IA §2（禁复入），
@@ -267,6 +269,137 @@ class FeaturedItem(models.Model):
             and self.start_at <= now <= self.end_at
             and self.content.specific.lifecycle_state == LIFECYCLE_LIVE
         )
+
+
+# 首页轮播位容量（首页升级 Phase 2 冻结决策 11）：上限 5——模型层 clean
+# 拒第 6 条新建（编辑既有项不受限）；前台消费侧仍防御性最多取 5。
+CAROUSEL_MAX_ITEMS = 5
+
+# CarouselItem 站内目标白名单（Phase 2 冻结决策 4）：仅五类内容页——首页/
+# 板块/容器等结构页不可选；与 FeaturedItem 选择器过滤同一集合（本模块顶部
+# 直引五类的加载期原因见文件头注）。站内项标题/URL/封面一律取自目标页，
+# 本侧不重复配置（冻结决策 5）。
+CAROUSEL_INTERNAL_PAGE_TYPES = (
+    NoticePage,
+    ArticlePage,
+    MaterialPage,
+    SoftwareToolPage,
+    GuidePage,
+)
+
+
+@register_snippet
+class CarouselItem(models.Model):
+    """首页轮播位条目（首页升级 Phase 2 冻结架构；仅总管理员可管理，§3）。
+
+    站内项与外链项二选一（clean 强制 XOR，冻结决策 3）：站内项只选目标
+    内容页，标题/URL 取自目标 Page、封面取自目标页 ``cover_image``；
+    外链项自带标题与可选封面，URL 复用
+    ``peiligo.link_validation.validate_external_url``（SB §10-7，冻结
+    决策 7，不重新实现 validator）。
+    """
+
+    internal_page = models.ForeignKey(
+        "wagtailcore.Page",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,  # 站内项随目标内容页删除而消失（冻结决策 8）
+        related_name="+",
+        verbose_name="站内内容页",
+    )
+    external_url = models.URLField("外部链接", blank=True, validators=[validate_external_url])
+    external_title = models.CharField("外链标题", max_length=255, blank=True)
+    external_cover_image = models.ForeignKey(
+        "wagtailimages.Image",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,  # 封面图删除仅置空，条目保留（冻结决策 9）
+        related_name="+",
+        verbose_name="外链封面图",
+    )
+    sort_order = models.PositiveSmallIntegerField("排序", default=0)
+
+    panels = [
+        FieldPanel(
+            "internal_page",
+            widget=AdminPageChooser(target_models=CAROUSEL_INTERNAL_PAGE_TYPES),
+        ),
+        FieldPanel("external_title"),
+        FieldPanel("external_url"),
+        FieldPanel("external_cover_image"),
+        FieldPanel("sort_order"),
+    ]
+
+    class Meta:
+        verbose_name = "首页轮播项"
+        verbose_name_plural = "首页轮播项"
+        ordering = ("sort_order", "pk")  # 重复排序值允许，pk 兜底稳定序（冻结决策 10）
+
+    def __str__(self):
+        if self.internal_page_id:
+            return self.internal_page.title
+        return self.external_title.strip() or "（未指定内容）"
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        # XOR（冻结决策 3）：二选一；外链空白按空处理（strip 口径同 SB §10-7）。
+        has_internal = self.internal_page_id is not None
+        has_external = bool((self.external_url or "").strip())
+        if has_internal and has_external:
+            message = ["站内内容页与外部链接只能二选一"]
+            errors["internal_page"] = message
+            errors["external_url"] = message
+        elif not has_internal and not has_external:
+            message = ["站内内容页与外部链接必须填写其中一项"]
+            errors["internal_page"] = message
+            errors["external_url"] = message
+        if has_internal:
+            # 站内项标题/封面一律取自目标页：外链侧字段必须全空（冻结决策 5）。
+            if self.external_title.strip():
+                errors["external_title"] = ["站内轮播项不得填写外链标题（标题取自目标内容页）"]
+            if self.external_cover_image_id is not None:
+                errors["external_cover_image"] = [
+                    "站内轮播项不得上传外链封面图（封面取自目标内容页轮播封面图）"
+                ]
+        if has_external and not self.external_title.strip():
+            errors["external_title"] = ["外链轮播项必须填写标题"]
+        if has_internal:
+            self._clean_internal_target(errors)
+        # 位容量（冻结决策 11）：新建第 6 条拒绝；编辑既有项放行——exclude
+        # 自身 pk（创建期 pk=None 不排除任何行），GPT REFINEMENT #2。
+        if CarouselItem.objects.exclude(pk=self.pk).count() >= CAROUSEL_MAX_ITEMS:
+            errors[NON_FIELD_ERRORS] = [f"首页轮播最多 {CAROUSEL_MAX_ITEMS} 条，已达上限"]
+        if errors:
+            raise ValidationError(errors)
+
+    def _clean_internal_target(self, errors):
+        """站内目标类型白名单（冻结决策 4）＋可展示性 canonical 判定
+        （GPT REFINEMENT #1）：与 FeaturedItem.is_on_display 同一权威口径
+        lifecycle_state == LIFECYCLE_LIVE（§16.4 CURRENT_DEFAULT）——
+        draft/scheduled/unpublished/expired 一律拒绝，零新 lifecycle 规则。
+        """
+        specific = self.internal_page.specific
+        if not isinstance(specific, CAROUSEL_INTERNAL_PAGE_TYPES):
+            errors["internal_page"] = [
+                "轮播站内目标仅支持五类内容页：通知/文章/学习资料/软件工具/校园指南"
+            ]
+            return
+        if specific.lifecycle_state != LIFECYCLE_LIVE:
+            errors["internal_page"] = [
+                "轮播站内目标当前不可展示：须为已发布且未过期的内容页（当前有效）"
+            ]
+
+    def is_on_display(self):
+        """前台可展示最小判定（轮播 SSR 消费归后续阶段，本阶段无调用位）。
+
+        站内项＝目标页 lifecycle_state == LIFECYCLE_LIVE（§16.4
+        CURRENT_DEFAULT，FeaturedItem.is_on_display 同一谓词）；外链项＝
+        URL 与标题均已填（封面可选）。数量/顺序规则归前台消费侧。
+        """
+        if self.internal_page_id:
+            return self.internal_page.specific.lifecycle_state == LIFECYCLE_LIVE
+        return bool(self.external_url.strip()) and bool(self.external_title.strip())
 
 
 @register_setting

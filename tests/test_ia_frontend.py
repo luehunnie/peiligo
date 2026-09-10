@@ -18,13 +18,18 @@ IA-14 载入中/出错态（纯 SSR 无客户端加载，ADR-0002）。
 
 无障碍语义（PRD §13 / IA §6.1）：html lang、跳转主内容链接、landmark
 （header/nav/main/footer）、每页唯一 h1、当前导航项 aria-current。
+
+页头品牌区校徽（Phase 5 增补）：学校归属锚点走站内 static 资产、
+纯装饰 alt=""，品牌字标仍在、导航七类与无 hamburger 不变量随测。
 """
 
 import re
 from io import StringIO
+from pathlib import Path
 
 from departments.models import DepartmentContainerPage
 from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.core.management import call_command
 from home.models import SectionPage
 from wagtail.test.utils import WagtailPageTestCase
@@ -124,6 +129,85 @@ class GlobalNavigationTests(FrontendIATestCase):
         nav = self._extract_block(response.content.decode(), "全局导航")
         current = re.findall(r'<a href="([^"]+)" aria-current="page">', nav)
         self.assertEqual(current, ["/search/"])
+
+
+class HeaderBrandLogoTests(FrontendIATestCase):
+    """页头品牌区校徽（Phase 5 增补，IA §6.1）：归属锚点不破坏页头不变量。
+
+    校徽为小尺寸视觉归属锚点（纯装饰 alt=""，品牌 link accessible name
+    仍为 site_brand）；资产入库仓库 static，禁热链与 Desktop 绝对路径，
+    被替换的旧背景版资产零残留；加校徽后导航仍固定七类，不新增
+    hamburger/隐藏入口。
+    """
+
+    # 与模板 {% static 'img/peiligo-school-logo.png' %} 对应的渲染路径
+    # （STATIC_URL = "/static/"，settings/base.py §静态资源）。
+    BRAND_LOGO_STATIC_PATH = "/static/img/peiligo-school-logo.png"
+
+    @staticmethod
+    def _extract_header(html: str) -> str:
+        match = re.search(r"<header.*?</header>", html, re.DOTALL)
+        assert match, "未找到 <header> 区块"
+        return match.group(0)
+
+    def test_brand_keeps_peiligo_wordmark_and_decorative_logo(self):
+        """品牌 link 仍含 Peiligo 字标；校徽走 Django static 路径且 alt=""
+        （读屏 accessible name 不因校徽重复或混乱）。"""
+        for url in PUBLIC_SURFACES:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                header = self._extract_header(response.content.decode())
+                brand = re.search(r'<a class="brand" href="/">.*?</a>', header, re.DOTALL)
+                self.assertIsNotNone(brand)
+                self.assertIn("<span>Peiligo</span>", brand.group(0))
+                self.assertIn(f'src="{self.BRAND_LOGO_STATIC_PATH}"', brand.group(0))
+                self.assertRegex(brand.group(0), r'<img class="brand-logo"[^>]*alt=""')
+
+    def test_logo_asset_ships_in_repo_static(self):
+        """Logo 资产实际存在于仓库 static 目录且可被 static 系统定位（非外链）。"""
+        found = finders.find("img/peiligo-school-logo.png")
+        self.assertIsNotNone(found)
+        expected = settings.BASE_DIR / "static" / "img" / "peiligo-school-logo.png"
+        self.assertEqual(Path(found), expected)
+
+    def test_superseded_logo_assets_absent(self):
+        """被替换的旧背景版 Logo 零残留：页头不引用 images.jpeg /
+        peiligo-school-logo.jpeg，static/img 无 jpeg 文件遗留。"""
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertNotIn("images.jpeg", html)
+        self.assertNotIn("peiligo-school-logo.jpeg", html)
+        img_dir = settings.BASE_DIR / "static" / "img"
+        self.assertEqual(list(img_dir.glob("*.jpeg")) + list(img_dir.glob("*.jpg")), [])
+
+    def test_logo_not_hotlinked_and_no_desktop_path(self):
+        """Logo src 为站内 /static/ 相对路径；页头无远程热链与绝对路径依赖。"""
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        header = self._extract_header(response.content.decode())
+        logo_src = re.search(r'<img class="brand-logo"[^>]*src="([^"]+)"', header)
+        self.assertIsNotNone(logo_src)
+        self.assertTrue(logo_src.group(1).startswith("/static/"))
+        self.assertFalse(logo_src.group(1).startswith(("http://", "https://")))
+        self.assertNotIn("/Users/", header)
+        self.assertNotIn("Desktop", header)
+
+    def test_navigation_invariants_with_brand_logo(self):
+        """加校徽后：导航仍固定七类；header 无 hamburger/切换按钮等新增入口。"""
+        for url in PUBLIC_SURFACES:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                header = self._extract_header(response.content.decode())
+                nav = self._extract_block(header, "全局导航")
+                items = re.findall(r"<li>(.*?)</li>", nav, re.DOTALL)
+                labels = [re.sub(r"<[^>]+>|\s+", "", item) for item in items]
+                self.assertEqual(labels, NAV_EXPECTED_LABELS)
+                header_lower = header.lower()
+                for forbidden in ("hamburger", "nav-toggle", "menu-toggle", "<button"):
+                    self.assertNotIn(forbidden, header_lower)
 
 
 class BreadcrumbTests(FrontendIATestCase):
