@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load wagtailcore_tags %}
+{% load wagtailcore_tags wagtailimages_tags %}
 
 {% block body_class %}template-homepage{% endblock %}
 
@@ -16,6 +16,10 @@
 搜索工作台位置维持 M2 既有版式（首屏主任务，合同 §4.2）；①–④ 相对
 顺序冻结，层 4 之后为五板块固定入口网格。空数据区块整体不渲染（§7.1，
 无数据不得显示假内容）。
+首页轮播位（首页升级 Phase 6 SSR 基座）：Hero 与 Search 之间（冻结顺序），
+运行时口径见 home.models._carousel_entries（按序至多 5 个有效项，0 项整区
+不渲染）。本阶段无 JS/无自动切换——无 JS 时全部条目按文档流自然可达
+（权威 SSR fallback），data-carousel* 仅为后续渐进增强 hook，不承载内容。
 {% endcomment %}
 
 {# ① 紧急提示（IA §7.1 层 1；§13.4：空文案不展示，窗口语义同 §15.4） #}
@@ -30,6 +34,36 @@
     <h1>{{ page.title }}</h1>
     <p class="hero-lede">按五大板块汇集校园通知、活动、学习资料、软件与指南，帮你快速找到需要的信息。</p>
 </section>
+
+{# 首页轮播位（首页升级 Phase 6 SSR 基座，冻结顺序＝Hero → Carousel → Search）： #}
+{# 有封面＝整幅图片 banner，不叠加可见标题/描述/CTA 文字，link accessible #}
+{# name＝img alt（读屏可得目标内容，TASK E）；无封面＝fallback 结构（可见 #}
+{# 转义标题），供后续 CSS 构建几何视觉，本阶段不做最终图形（CSS POLICY）。 #}
+{# 外链一律经既有确认链路 href（F-03 contract，无裸外链，TASK D/I）； #}
+{# 无 JS 时条目按文档流全部自然呈现，后续 JS 仅在此 DOM 上增强（TASK G/H）。 #}
+{% if carousel_items %}
+<section class="carousel" data-carousel aria-label="首页轮播">
+    <ul class="carousel-list">
+        {% for item in carousel_items %}
+        <li class="carousel-item carousel-item-{{ item.kind }}" data-carousel-item>
+            {% if item.cover %}
+            <a class="carousel-link" href="{{ item.href }}">
+                {% if forloop.first %}
+                {% image item.cover width-1600 alt=item.title %}
+                {% else %}
+                {% image item.cover width-1600 alt=item.title loading="lazy" %}
+                {% endif %}
+            </a>
+            {% else %}
+            <a class="carousel-link" href="{{ item.href }}">
+                <span class="carousel-item-title">{{ item.title }}</span>
+            </a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
 
 {# 首页搜索工作台（合同 §4.2）：首屏主任务，GET 到现有 /search/，服务端搜索。 #}
 {# 搜索参数名＝q（与 /search/ 表单及视图一致，F-04 修复 name="query" 串参数 bug）。 #}

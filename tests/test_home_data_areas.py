@@ -12,14 +12,21 @@ bug 回归）；层 1 紧急提示（空文案/窗口内外不渲染，§13.4 �
 import datetime as dt
 import json
 import re
+import shutil
+import tempfile
 from io import StringIO
+from urllib.parse import quote
 
 from django.core.management import call_command
+from django.test import override_settings
 from django.utils import timezone
 from home.models import (
+    CAROUSEL_MAX_ITEMS,
     FEATURED_DEFAULT_DAYS,
     FEATURED_MAX_SLOTS,
+    CarouselItem,
     FeaturedItem,
+    HomePage,
     SectionPage,
     SiteSettings,
 )
@@ -395,6 +402,295 @@ class UpcomingEventsTests(HomeAreasTestCase):
         section = self._section_html(html, "upcoming-events-title")
         self.assertLessEqual(section.count("<li>"), HOMEPAGE_UPCOMING_EVENTS_COUNT)
         self.assertLess(section.index("合并活动M1"), section.index("合并活动M2"))
+
+
+# ---------------------------------------------------------------------------
+# 首页轮播位（首页升级 Phase 6 SSR 基座）：Hero → Carousel → Search 冻结顺序；
+# 运行时选择＝home.models._carousel_entries（is_on_display 唯一口径、失效
+# 静默跳过、有效项至多 5 个）；外链一律既有确认链路 href；无 JS 时全部
+# 条目按文档流自然可达（权威 SSR fallback）。
+# ---------------------------------------------------------------------------
+
+
+def _cover_image(title="轮播封面"):
+    """真实 PNG 的 Wagtail Image（依赖调用方类级临时 MEDIA_ROOT，源文件存续
+    供 rendition 生成；文件随类末临时目录清理，不入仓库 media/）。"""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from wagtail.images.models import Image
+
+    from .permission_helpers import png_bytes
+
+    img = Image(title=title)
+    img.file = SimpleUploadedFile("cover.png", png_bytes(), content_type="image/png")
+    img.save()
+    return img
+
+
+class CarouselAreaTestCase(HomeAreasTestCase):
+    """轮播位公共基类：类级临时 MEDIA_ROOT 承载封面源图与 rendition 文件
+    （进程临时目录类末即清，不落仓库 media/ 与开发者本地 media）。"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._media_tmp = tempfile.mkdtemp(prefix="peiligo-carousel-media-")
+        cls._media_override = override_settings(MEDIA_ROOT=cls._media_tmp)
+        cls._media_override.enable()
+        cls.addClassCleanup(cls._media_override.disable)
+        cls.addClassCleanup(shutil.rmtree, cls._media_tmp, ignore_errors=True)
+
+    @classmethod
+    def _notice_with_cover(cls, slug, title):
+        notice = make_notice(cls.container, slug=slug, title=title, publish=True)
+        notice.cover_image = _cover_image(f"{title}·封面")
+        notice.save()
+        return notice
+
+    @staticmethod
+    def _carousel_section(html):
+        """截取 data-carousel 的 <section>…</section> 片段（区块不嵌套）。"""
+        match = re.search(r"<section[^>]*data-carousel[^>]*>(.*?)</section>", html, re.DOTALL)
+        return match.group(1) if match else ""
+
+
+class CarouselZeroItemTests(CarouselAreaTestCase):
+    """0 项：Carousel 整区不渲染（§7.1 空区不渲染同语义）。"""
+
+    def test_no_items_carousel_section_absent(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "data-carousel")
+        self.assertNotContains(response, "carousel-item")
+
+
+class CarouselPlacementTests(CarouselAreaTestCase):
+    """SSR 位次（冻结顺序）：Hero 之后、Search 之前。"""
+
+    def test_carousel_between_hero_and_search(self):
+        notice = make_notice(self.container, slug="pos-notice", title="位次通知POS", publish=True)
+        CarouselItem(internal_page=notice).save()
+        html = self.client.get("/").content.decode()
+        self.assertLess(html.index('class="hero"'), html.index("data-carousel"))
+        self.assertLess(html.index("data-carousel"), html.index('class="search-bench"'))
+
+
+class CarouselInternalItemTests(CarouselAreaTestCase):
+    """站内项：title/URL/封面一律取自目标内容页（冻结决策 5），封面取
+    cover_image（与正文 image 语义独立）；有封面＝无可见标题叠加。"""
+
+    def test_with_cover_renders_rendition_banner(self):
+        notice = self._notice_with_cover("cov-in", "封面通知IN")
+        CarouselItem(internal_page=notice).save()
+        html = self.client.get("/").content.decode()
+        section = self._carousel_section(html)
+        # 目标页站内 URL 直达（不经确认链路）；输出 rendition 而非裸原图。
+        self.assertIn(f'href="{notice.url}"', section)
+        self.assertIn("width-1600", section)
+        self.assertNotIn("images/cover.png", section)
+        # accessible name＝img alt＝目标页 title；无可见标题 fallback 结构。
+        self.assertIn(f'alt="{notice.title}"', section)
+        self.assertNotIn("carousel-item-title", section)
+        # title 仅出现在 alt 属性一处（无视觉 overlay 文本）。
+        self.assertEqual(section.count("封面通知IN"), 1)
+
+    def test_without_cover_renders_fallback_title(self):
+        notice = make_notice(self.container, slug="nocov-in", title="无封面通知IN", publish=True)
+        CarouselItem(internal_page=notice).save()
+        html = self.client.get("/").content.decode()
+        section = self._carousel_section(html)
+        self.assertIn(f'href="{notice.url}"', section)
+        self.assertIn('<span class="carousel-item-title">无封面通知IN</span>', section)
+
+
+class CarouselExternalItemTests(CarouselAreaTestCase):
+    """外链项：一律既有确认链路 href（F-03 contract，无裸外链）；标题为
+    accessible name（alt 或 fallback 可见文本），不做视觉叠加。"""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.home_pk = HomePage.objects.get().pk
+
+    @staticmethod
+    def _item(**overrides):
+        defaults = {"external_url": "https://example.com/carousel", "external_title": "外链标题EX"}
+        defaults.update(overrides)
+        return CarouselItem(**defaults)
+
+    def _confirm_href(self):
+        """与 external_link_jump.html 的 urlencode 过滤器同口径（quote(safe="/")）。"""
+        encoded = quote("https://example.com/carousel", safe="/")
+        return f"/link-confirm/?url={encoded}&amp;from={self.home_pk}"
+
+    def test_with_cover_uses_confirm_href(self):
+        item = self._item(external_cover_image=_cover_image("外链封面EX"))
+        item.save()
+        html = self.client.get("/").content.decode()
+        section = self._carousel_section(html)
+        self.assertIn(self._confirm_href(), section)
+        self.assertNotIn('<a href="https://example.com/carousel"', html)
+        self.assertIn('alt="外链标题EX"', section)
+        self.assertNotIn("carousel-item-title", section)
+        self.assertEqual(section.count("外链标题EX"), 1)
+
+    def test_without_cover_renders_fallback_and_confirm_href(self):
+        self._item().save()
+        html = self.client.get("/").content.decode()
+        section = self._carousel_section(html)
+        self.assertIn(self._confirm_href(), section)
+        self.assertIn('<span class="carousel-item-title">外链标题EX</span>', section)
+        self.assertNotIn('<a href="https://example.com/carousel"', html)
+
+    def test_confirm_href_lands_on_existing_confirm_page(self):
+        """端到端：轮播 confirm href 落在既有确认页（go 阶段二次校验不变）。"""
+        self._item().save()
+        response = self.client.get(
+            "/link-confirm/", {"url": "https://example.com/carousel", "from": str(self.home_pk)}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "https://example.com/carousel")
+        self.assertContains(response, "域名：")
+        self.assertContains(response, "继续访问")
+
+    def test_dirty_nonconforming_url_skipped_at_runtime(self):
+        """绕过 validator 落库的脏 URL：运行时静默跳过（validate_external_url
+        同源复核），不产生任何外链出口，首页不 500。"""
+        self._item(external_url="https://user:pass@evil.com/x").save()
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("data-carousel", html)
+        self.assertNotIn("evil.com", html)
+
+
+class CarouselLifecycleRuntimeTests(CarouselAreaTestCase):
+    """站内目标 lifecycle 运行时复核：配置保存后目标转非 live → 运行时
+    跳过、首页不 500（§16.4 CURRENT_DEFAULT 同一权威谓词的消费位）。"""
+
+    def test_live_target_shown_then_unpublish_hidden(self):
+        notice = make_notice(self.container, slug="lcrt-unpub", title="运行时下线LC", publish=True)
+        CarouselItem(internal_page=notice).save()
+        self.assertContains(self.client.get("/"), "运行时下线LC")
+        notice.unpublish()
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("运行时下线LC", html)
+        self.assertNotIn("data-carousel", html)
+
+    def test_non_live_target_states_all_skipped(self):
+        """draft/scheduled/expired 直建即不可见（expired 经 E7 到期路径）。"""
+        draft = make_notice(self.container, slug="lcrt-draft", title="运行时草稿LC")
+        scheduled = make_notice(
+            self.container, slug="lcrt-sched", title="运行时预约LC", schedule_at=future(days=1)
+        )
+        expired = make_notice(self.container, slug="lcrt-exp", title="运行时到期LC", publish=True)
+        type(expired).objects.filter(pk=expired.pk).update(
+            expire_at=timezone.now() - dt.timedelta(hours=1)
+        )
+        call_command("publish_scheduled", verbosity=0)
+        expired.refresh_from_db()
+        for notice in (draft, scheduled, expired):
+            CarouselItem(internal_page=notice).save()
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("data-carousel", html)
+        for title in ("运行时草稿LC", "运行时预约LC", "运行时到期LC"):
+            self.assertNotIn(title, html)
+
+
+class CarouselOrderingTests(CarouselAreaTestCase):
+    """排序（冻结决策 10）：sort_order 升序、同值 pk 稳定。"""
+
+    def test_sort_order_then_pk(self):
+        """乱序创建：A/B 同 sort_order=0（A 先建 pk 小），C=10 最后呈现。"""
+        for i, order in enumerate((0, 0, 10)):
+            CarouselItem(
+                internal_page=make_notice(
+                    self.container, slug=f"ord-{i}", title=f"轮播序{'ABC'[i]}", publish=True
+                ),
+                sort_order=order,
+            ).save()
+        section = self._carousel_section(self.client.get("/").content.decode())
+        self.assertLess(section.index("轮播序A"), section.index("轮播序B"))
+        self.assertLess(section.index("轮播序B"), section.index("轮播序C"))
+
+
+class CarouselRuntimeCapTests(CarouselAreaTestCase):
+    """运行时防御上限（冻结决策 11 消费侧）：按序扫描、过滤后至多 5 个
+    有效项；前部失效项被跳过后，后部合法配置补位（不永久遮蔽）。"""
+
+    def test_more_than_five_valid_items_capped(self):
+        """绕过 clean 直存 >5 条（save 不触发 full_clean）：前台仍至多 5。"""
+        for i in range(CAROUSEL_MAX_ITEMS + 2):
+            notice = make_notice(
+                self.container, slug=f"cap-{i:02d}", title=f"容量轮播{i:02d}", publish=True
+            )
+            CarouselItem(internal_page=notice, sort_order=i).save()
+        section = self._carousel_section(self.client.get("/").content.decode())
+        self.assertEqual(section.count("data-carousel-item"), CAROUSEL_MAX_ITEMS)
+        for i in range(CAROUSEL_MAX_ITEMS):
+            self.assertIn(f"容量轮播{i:02d}", section)
+        for i in (CAROUSEL_MAX_ITEMS, CAROUSEL_MAX_ITEMS + 1):
+            self.assertNotIn(f"容量轮播{i:02d}", section)
+
+    def test_invalid_head_items_backfilled_by_valid_tail(self):
+        for i in range(2):
+            draft = make_notice(self.container, slug=f"bfill-d{i}", title=f"失效头部{i}")
+            CarouselItem(internal_page=draft, sort_order=i).save()
+        for i in range(CAROUSEL_MAX_ITEMS):
+            notice = make_notice(
+                self.container, slug=f"bfill-v{i}", title=f"补位轮播{i}", publish=True
+            )
+            CarouselItem(internal_page=notice, sort_order=10 + i).save()
+        section = self._carousel_section(self.client.get("/").content.decode())
+        self.assertEqual(section.count("data-carousel-item"), CAROUSEL_MAX_ITEMS)
+        for i in range(CAROUSEL_MAX_ITEMS):
+            self.assertIn(f"补位轮播{i}", section)
+        for i in range(2):
+            self.assertNotIn(f"失效头部{i}", section)
+
+
+class CarouselEscapingTests(CarouselAreaTestCase):
+    """XSS（TASK I）：external_title 为不可信运营输入，恒经默认转义，
+    任何输出上下文不得出现可执行 markup。"""
+
+    def test_hostile_external_title_escaped_in_img_attribute(self):
+        """最严上下文＝img alt 属性：script 标签与引号逃逸均不得存活。"""
+        item = CarouselItem(
+            external_url="https://example.com/xss",
+            external_title='<script>alert(1)</script>"onmouseover="x',
+            external_cover_image=_cover_image("XSS封面"),
+        )
+        item.save()
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("<script>alert(1)</script>", html)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
+
+    def test_hostile_external_title_escaped_in_fallback_text(self):
+        item = CarouselItem(
+            external_url="https://example.com/xss2",
+            external_title="<script>alert(2)</script>",
+        )
+        item.save()
+        html = self.client.get("/").content.decode()
+        self.assertNotIn("<script>alert(2)</script>", html)
+        self.assertIn("&lt;script&gt;alert(2)&lt;/script&gt;", html)
+
+
+class CarouselNoJsFallbackTests(CarouselAreaTestCase):
+    """无 JS 权威 fallback（TASK H）：多 item 全部按文档流 SSR 输出，
+    无隐藏态；data hooks 仅作结构标记，不承载内容与 inline JS。"""
+
+    def test_all_items_present_in_document_flow(self):
+        for i in range(3):
+            notice = make_notice(
+                self.container, slug=f"nojs-{i}", title=f"无JS轮播{i}", publish=True
+            )
+            CarouselItem(internal_page=notice).save()
+        html = self.client.get("/").content.decode()
+        section = self._carousel_section(html)
+        self.assertEqual(section.count("data-carousel-item"), 3)
+        for i in range(3):
+            self.assertIn(f"无JS轮播{i}", section)
+        self.assertNotIn("hidden", section)
+        self.assertNotIn("display:none", section)
+        self.assertNotIn("<script", section)
 
 
 class TemplateNibTests(HomeAreasTestCase):
