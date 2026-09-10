@@ -52,9 +52,14 @@
 
         {# IA §6.1 页头：品牌区 + 一级导航（首页+五板块+站内搜索，固定七类， #}
         {# 数据源=固定清单，永不查询部门容器，§6.2）；当前板块 aria-current。 #}
+        {# 校徽为视觉归属锚点（纯装饰 alt=""），品牌 link accessible name 仍为 #}
+        {# site_brand，读屏不重复朗读，不在页头额外显示完整校名。 #}
         <header class="site-header">
             <div class="wrap header-inner">
-                <a class="brand" href="/">{{ site_brand }}</a>
+                <a class="brand" href="/">
+                    <img class="brand-logo" src="{% static 'img/peiligo-school-logo.png' %}" width="256" height="256" alt="">
+                    <span>{{ site_brand }}</span>
+                </a>
                 <nav aria-label="全局导航">
                     <ul class="nav-list">
                         <li><a href="/" {% if request.path == "/" %}aria-current="page"{% endif %}>首页</a></li>
