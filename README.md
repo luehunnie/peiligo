@@ -186,3 +186,11 @@ Docker 修复与文档），ruff 通过。CI 侧同一套检查由 GitHub Action
 | READY_FOR_HANDOFF | **YES** |
 | READY_FOR_STAGING | YES |
 | READY_FOR_PRODUCTION | **NO**（待正式部署与部署阶段验证） |
+
+## 关联项目
+
+Peiligo、Peilige、Peilike 是三个相互独立的同级项目，各自维护独立仓库，
+互不隶属：
+
+- Peilige: https://github.com/luehunnie/peilige.git
+- Peilike: https://github.com/luehunnie/peilike.git
