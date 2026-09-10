@@ -1,7 +1,9 @@
 from datetime import timedelta
+from urllib.parse import quote
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 # 五类内容页模型类直引（FeaturedItem 选择器过滤仅五类，CONTENT_MODEL
@@ -122,6 +124,68 @@ def _upcoming_events(now, events_section):
     return pages[:HOMEPAGE_UPCOMING_EVENTS_COUNT]
 
 
+def _carousel_entries(source_page_id):
+    """首页轮播位运行时条目（首页升级 Phase 6 SSR 基座；Hero 与 Search 之间）。
+
+    - 顺序＝模型 ``Meta.ordering``（``sort_order`` 升序、pk 兜底稳定序，
+      冻结决策 10），``.all()`` 即按该稳定序读取，不另立排序口径；
+    - 运行时逐项复核 ``CarouselItem.is_on_display``（前台可展示最小判定的
+      唯一权威消费位）：轮播配置保存后目标内容可能随即 draft/scheduled/
+      unpublished/expired，运行时不得继续展示；
+    - 失效项静默跳过（单个失效配置不得拖垮首页渲染）。绕过 clean 落库的
+      脏数据（站内目标为白名单外结构页——无 lifecycle 推导可得）同按失效
+      处理，防 AttributeError；
+    - 数量＝按序扫描、过滤后收集至多 ``CAROUSEL_MAX_ITEMS`` 个有效项——
+      「先取前 5 再过滤」会让前部失效项永久遮蔽后部合法配置（前台消费侧
+      防御语义，冻结决策 11）；
+    - 外链项 URL 运行时复用 ``validate_external_url`` 复核（SB §10-7 同源
+      规则，零新安全规则），并按既有确认链路 contract 构建 confirm href
+      （F-03：/link-confirm/ → /link-confirm/go/ 输出层二次校验不变；编码
+      与 ``external_link_jump.html`` 的 ``urlencode`` 过滤器同口径＝
+      ``quote(value, safe="/")``；``from`` 引当前首页，仅作确认页来源展示）。
+    """
+    entries = []
+    for item in CarouselItem.objects.all():
+        specific = None
+        if item.internal_page_id:
+            specific = item.internal_page.specific
+            if not isinstance(specific, CAROUSEL_INTERNAL_PAGE_TYPES):
+                continue
+        if not item.is_on_display():
+            continue
+        if specific is not None:
+            href = specific.url
+            if not href:
+                continue  # 无站内 URL（站点归属异常等）：按失效静默跳过
+            entries.append(
+                {
+                    "kind": "internal",
+                    "title": specific.title,
+                    "href": href,
+                    "cover": specific.cover_image,
+                }
+            )
+        else:
+            try:
+                external_url = validate_external_url(item.external_url)
+            except ValidationError:
+                continue
+            entries.append(
+                {
+                    "kind": "external",
+                    "title": item.external_title.strip(),
+                    "href": (
+                        f"{reverse('link-confirm')}"
+                        f"?url={quote(external_url, safe='/')}&from={source_page_id}"
+                    ),
+                    "cover": item.external_cover_image,
+                }
+            )
+        if len(entries) == CAROUSEL_MAX_ITEMS:
+            break
+    return entries
+
+
 class HomePage(Page):
     """首页（第 1 层，全站唯一实例；挂载约束 IA §5）。"""
 
@@ -134,15 +198,17 @@ class HomePage(Page):
     subpage_types = ["home.SectionPage"]  # 仅五个一级板块页
 
     def get_context(self, request, *args, **kwargs):
-        """首页模板上下文：四数据区＋五板块入口网格（IA §7.1 层 1–4）。
+        """首页模板上下文：轮播位＋四数据区＋五板块入口网格（IA §7.1 层 1–4）。
 
-        层 1 紧急提示（SiteSettings 站点级配置）、层 2 推荐位（FeaturedItem
-        snippet）、层 3 最新通知、层 4 近期活动——各数据区空则模板整区不
-        渲染（§7.1），层内相对顺序冻结、查询与渲染口径见各 helper。层 4
-        之后的五板块入口网格仅查询本页下已发布的 SectionPage 并按
-        ``SECTIONS`` 冻结顺序排列（§2 #1–#5）；容器不是入口、永不进入
-        网格（§6.2——经 ``subpage_types`` 白名单 + ``type()`` 过滤天然
-        只含板块页）。
+        页面结构冻结顺序（首页升级 Phase 6）：Header → 紧急提示 → Hero →
+        轮播位 → Search → 后续数据区。层 1 紧急提示（SiteSettings 站点级
+        配置）、层 2 推荐位（FeaturedItem snippet）、层 3 最新通知、层 4
+        近期活动——各数据区空则模板整区不渲染（§7.1），层内相对顺序冻结、
+        查询与渲染口径见各 helper；轮播位运行时条目见 ``_carousel_entries``
+        （0 项整区不渲染，至多 5 个有效项）。层 4 之后的五板块入口网格仅
+        查询本页下已发布的 SectionPage 并按 ``SECTIONS`` 冻结顺序排列
+        （§2 #1–#5）；容器不是入口、永不进入网格（§6.2——经
+        ``subpage_types`` 白名单 + ``type()`` 过滤天然只含板块页）。
         """
         context = super().get_context(request, *args, **kwargs)
         children = {page.slug: page for page in self.get_children().live().type(SectionPage)}
@@ -151,6 +217,7 @@ class HomePage(Page):
         ]
         now = timezone.now()
         context["alert"] = _active_alert(SiteSettings.for_request(request), now)
+        context["carousel_items"] = _carousel_entries(self.pk)
         context["featured_entries"] = _featured_entries(now)
         context["latest_notices"] = _latest_notices()
         context["upcoming_events"] = _upcoming_events(now, children.get("events"))
