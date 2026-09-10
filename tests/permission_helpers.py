@@ -25,7 +25,7 @@ from django.core.management import call_command
 from django.test import Client
 from django.urls import reverse
 from guides.models import GuideCategory
-from home.models import FeaturedItem, SectionPage, SiteSettings
+from home.models import CarouselItem, FeaturedItem, SectionPage, SiteSettings
 from notices.models import Tag
 from resources.models import Discipline, MaterialType, Platform
 from wagtail.images.models import Image
@@ -215,6 +215,7 @@ def permission_snapshot() -> dict:
             "platform": Platform.objects.count(),
             "guidecategory": GuideCategory.objects.count(),
             "featureditem": FeaturedItem.objects.count(),
+            "carouselitem": CarouselItem.objects.count(),
             "image": Image.objects.count(),
         },
         "gpp": sorted(

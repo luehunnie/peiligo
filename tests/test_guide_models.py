@@ -6,11 +6,12 @@
 - last_confirmed_on 为显式业务日期（非自动时间戳，CM-06）。
 """
 
+from django.db import models
 from django.test import TestCase
 from guides.models import GuideCategory, GuidePage
 from wagtail.fields import StreamField
 
-from .helpers import build_sections, make_container, make_department
+from .helpers import build_sections, make_container, make_department, make_guide, make_image
 
 NINE_FIELDS = [
     "title",  # #1 服务名称（title 映射，不双轨命名）
@@ -141,3 +142,26 @@ class GuideFormTests(GuideBase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("maintenance_mode", form.errors)
+
+
+class CoverImageTests(GuideBase):
+    """轮播封面图（CoverImageMixin，首页升级 Phase 3）：指南页新增可空字段。"""
+
+    def test_cover_image_field_shape(self):
+        """可空/blank、Image FK、SET_NULL、related_name='+'、软提示 help_text。"""
+        field = GuidePage._meta.get_field("cover_image")
+        self.assertTrue(field.null and field.blank)
+        self.assertEqual(field.remote_field.model._meta.label, "wagtailimages.Image")
+        self.assertEqual(field.remote_field.on_delete, models.SET_NULL)
+        self.assertEqual(field.remote_field.related_name, "+")
+        self.assertEqual(field.help_text, "推荐尺寸 1600×600（8:3）")
+
+    def test_cover_image_delete_sets_null_page_kept(self):
+        cover = make_image("指南轮播封面")
+        guide = make_guide(self.container, slug="cover-setnull", publish=True)
+        guide.cover_image = cover
+        guide.save()
+        cover.delete()
+        guide.refresh_from_db()
+        self.assertIsNone(guide.cover_image)
+        self.assertTrue(GuidePage.objects.filter(pk=guide.pk).exists())

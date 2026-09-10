@@ -16,6 +16,7 @@ from wagtail.models import Page
 from wagtail.search import index
 from wagtail.snippets.models import register_snippet
 
+from peiligo.cover import CoverImageMixin
 from peiligo.seo import SeoControlMixin
 
 
@@ -40,7 +41,7 @@ class GuideCategory(models.Model):
         return self.name
 
 
-class GuidePage(SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page):
+class GuidePage(SectionContextMixin, LifecycleStateMixin, CoverImageMixin, SeoControlMixin, Page):
     """校园指南页（CONTENT_MODEL §10；PRD §7.6）。
 
     九字段＝#1 服务名称（title 映射，不双轨命名）/#2 指南类别/#3 地点/
@@ -94,7 +95,7 @@ class GuidePage(SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page)
         FieldPanel("responsible_party"),
         FieldPanel("maintenance_mode"),
         FieldPanel("last_confirmed_on"),
-    ]
+    ] + CoverImageMixin.cover_panels  # 轮播封面图（CoverImageMixin，peiligo/cover.py）
 
     # F-06（IA §10 #7）：promote 面板尾挂「禁止搜索引擎收录」位。
     promote_panels = Page.promote_panels + SeoControlMixin.seo_panels

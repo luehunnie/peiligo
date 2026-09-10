@@ -28,6 +28,7 @@ from notices.lifecycle import (
     LifecycleStateMixin,
     clean_publish_window,
 )
+from peiligo.cover import CoverImageMixin
 from peiligo.link_validation import validate_external_url
 from peiligo.seo import SeoControlMixin
 
@@ -217,7 +218,14 @@ def _notice_article_panels():
     ]
 
 
-class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page):
+class NoticePage(
+    EventFieldsMixin,
+    SectionContextMixin,
+    LifecycleStateMixin,
+    CoverImageMixin,
+    SeoControlMixin,
+    Page,
+):
     """通知页（CONTENT_MODEL §5；PRD §7.1）。
 
     与 ArticlePage 字段集同构，唯一差异：有效期必填（CM-01，clean 强制）；
@@ -257,7 +265,14 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Seo
     external_url = models.URLField("外部链接", blank=True, validators=[validate_external_url])
     tags = ControlledTaggableManager(through=NoticeTag, blank=True)
 
-    content_panels = Page.content_panels + _notice_article_panels() + EventFieldsMixin.event_panels
+    # 轮播封面图（CoverImageMixin）尾挂内容面板：与既有 image（正文插图）
+    # 独立共存，见 peiligo/cover.py 模块注。
+    content_panels = (
+        Page.content_panels
+        + _notice_article_panels()
+        + EventFieldsMixin.event_panels
+        + CoverImageMixin.cover_panels
+    )
     # promote_panels＝官方默认＋F-06 noindex 位（settings_panels 仍官方默认，
     # §5.3：含 PublishingPanel 的 go_live_at/expire_at 位点）。
     promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
@@ -284,7 +299,12 @@ class NoticePage(EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, Seo
 
 
 class ArticlePage(
-    EventFieldsMixin, SectionContextMixin, LifecycleStateMixin, SeoControlMixin, Page
+    EventFieldsMixin,
+    SectionContextMixin,
+    LifecycleStateMixin,
+    CoverImageMixin,
+    SeoControlMixin,
+    Page,
 ):
     """文章页（CONTENT_MODEL §6；PRD §7.2）。
 
@@ -325,7 +345,12 @@ class ArticlePage(
     external_url = models.URLField("外部链接", blank=True, validators=[validate_external_url])
     tags = ControlledTaggableManager(through=ArticleTag, blank=True)
 
-    content_panels = Page.content_panels + _notice_article_panels() + EventFieldsMixin.event_panels
+    content_panels = (
+        Page.content_panels
+        + _notice_article_panels()
+        + EventFieldsMixin.event_panels
+        + CoverImageMixin.cover_panels
+    )
     # F-06（IA §10 #7）：promote 面板尾挂「禁止搜索引擎收录」位（同 NoticePage）。
     promote_panels = Page.promote_panels + SeoControlMixin.seo_panels
 

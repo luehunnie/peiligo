@@ -113,6 +113,32 @@ def past(days=1):
     return timezone.now() - dt.timedelta(days=days)
 
 
+def make_image(title="测试图片"):
+    """真实 PNG 的 Wagtail Image（文件落进程临时 MEDIA_ROOT，不入仓库 media/）。
+
+    临时目录即建即清：DB 行随测试事务回滚自清，文件不落仓库 media/；
+    删除该 Image 时文件已不在（FileSystemStorage.delete 容忍缺失）。
+    """
+    import shutil
+    import tempfile
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from django.test import override_settings
+    from wagtail.images.models import Image
+
+    from .permission_helpers import png_bytes
+
+    media_tmp = tempfile.mkdtemp(prefix="peiligo-test-media-")
+    try:
+        with override_settings(MEDIA_ROOT=media_tmp):
+            img = Image(title=title)
+            img.file = SimpleUploadedFile("test.png", png_bytes(), content_type="image/png")
+            img.save()
+    finally:
+        shutil.rmtree(media_tmp, ignore_errors=True)
+    return img
+
+
 def _save(page, container, publish=False, schedule_at=None):
     """入树＋按需发布/预约（E1/E2 的 ORM 等价路径）。
 

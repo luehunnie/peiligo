@@ -11,10 +11,11 @@
 import datetime as dt
 
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.test import TestCase
 from resources.models import Discipline, MaterialPage, MaterialType, Platform, SoftwareToolPage
 
-from .helpers import build_sections, make_container, make_department
+from .helpers import build_sections, make_container, make_department, make_image, make_material
 
 UTC = dt.UTC
 
@@ -213,3 +214,27 @@ class SoftwareFormTests(MaterialSoftwareBase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("license_note", form.errors)
+
+
+class CoverImageTests(MaterialSoftwareBase):
+    """轮播封面图（CoverImageMixin，首页升级 Phase 3）：资料/工具两页新增可空字段。"""
+
+    def test_cover_image_field_shape(self):
+        """可空/blank、Image FK、SET_NULL、related_name='+'、软提示 help_text。"""
+        for model in (MaterialPage, SoftwareToolPage):
+            field = model._meta.get_field("cover_image")
+            self.assertTrue(field.null and field.blank)
+            self.assertEqual(field.remote_field.model._meta.label, "wagtailimages.Image")
+            self.assertEqual(field.remote_field.on_delete, models.SET_NULL)
+            self.assertEqual(field.remote_field.related_name, "+")
+            self.assertEqual(field.help_text, "推荐尺寸 1600×600（8:3）")
+
+    def test_cover_image_delete_sets_null_page_kept(self):
+        cover = make_image("资料轮播封面")
+        material = make_material(self.materials_container, slug="cover-setnull", publish=True)
+        material.cover_image = cover
+        material.save()
+        cover.delete()
+        material.refresh_from_db()
+        self.assertIsNone(material.cover_image)
+        self.assertTrue(MaterialPage.objects.filter(pk=material.pk).exists())
