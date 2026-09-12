@@ -2,7 +2,7 @@
 
 > **这是 Deployment Guide(部署指南),不是 Deployment Record(部署记录)。**
 >
-> **截至本文基线(`main` @ `2992b1a`,2026-09-02),Peiligo 尚未在任何真实服务器上完成生产部署**:staging / production 部署、DNS、TLS 证书均**未执行**。生产同构的 Docker 编排已在**本地完整实跑验证通过**(2026-09-02,见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md) 与 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 方式 B),但本文所述的真实服务器操作步骤仍属**待执行**方案。
+> **截至本文基线(`main` @ `725f6d1`,2026-09-12 复核;初稿基线 `2992b1a`,2026-09-02),Peiligo 尚未在任何真实服务器上完成生产部署**:staging / production 部署、DNS、TLS 证书均**未执行**。生产同构的 Docker 编排已在**本地完整实跑验证通过**(2026-09-02,见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md) 与 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 方式 B);其后 Phase 9 发布安全加固(公开页 CSP、HSTS、Secure Cookie、django-axes 防爆破、Wagtail 7.4.3 安全升级)已并入 main(2026-09-12,发布安全审查 PASS),本文已同步对齐(见 §6.1)。**本文定位:未来公网部署参考——本阶段未执行**;文中真实服务器操作步骤仍属**待执行**方案。
 >
 > 配套事实源:[../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md)(运维手册,本文与其口径一致)、[../FINAL_FULL_PROJECT_REVIEW.md](../FINAL_FULL_PROJECT_REVIEW.md)(终审与部署就绪判定)。
 
@@ -114,6 +114,23 @@ git pull --ff-only origin main
 > `backup_prune` 另支持 `--days` 参数(缺省 35 天,冻结下限 30);`BACKUP_RETENTION_DAYS` 环境变量**未被 compose 透传进容器**,在容器内调整保留期请直接用 `--days`。
 
 **邮件姿势决策(部署时必须显式处理)**:当前镜像未配置 SMTP(`EMAIL_BACKEND` 未外置),后台「密码自助重置」邮件链路**不可用**;V1 账号恢复路径 = 总管理员后台改密 / 命令行。若要启用邮件,属新增配置工作,需先行决策(终审 V-2)。
+
+### 6.1 已随代码固定的安全基线(Phase 9,2026-09-12 合入 main)
+
+以下安全行为**不经环境变量开关**,已固化在 `src/peiligo/settings/production.py`、`src/peiligo/csp.py` 与 `deploy/` 工程文件中,部署时无法也不应用 env 改动它们:
+
+| 项 | 现状 |
+|---|---|
+| DEBUG | 固定 `False` |
+| Cookie | 会话 / CSRF Cookie 强制 `Secure` |
+| 传输安全 | `SECURE_SSL_REDIRECT` + `SECURE_PROXY_SSL_HEADER`(Caddy 反代形态);`/healthz/`、`/readyz/` 豁免重定向 |
+| HSTS | Django 侧由 `HSTS_SECONDS` 控制(首期建议 `3600` 观察期,无 preload;未来生产验收通过后回到缺省一年);Caddy 侧站点响应**另带** `max-age=31536000`(两路各出各的,不叠加) |
+| CSP | 公开页面统一内容安全策略(脚本/样式仅本源);**`/admin/`、`/django-admin/` 豁免**(后台编辑器需要)——`src/peiligo/csp.py` |
+| 登录防爆破 | django-axes:连续 10 次失败锁定 15 分钟(用户名+IP),保护 `/admin/` |
+| 数据库暴露面 | PostgreSQL 仅容器网络内部可达(compose 仅 `caddy` 发布 80/443),不对外发布端口 |
+| Caddy 响应头 | 全站点 `Strict-Transport-Security: max-age=31536000` 与 `X-Content-Type-Options: nosniff`(`deploy/Caddyfile`) |
+
+技术细节见 [TECHNICAL_ARCHITECTURE_GUIDE.md](TECHNICAL_ARCHITECTURE_GUIDE.md) §11。
 
 ## 7. 首次部署(执行顺序)
 
@@ -324,6 +341,7 @@ docker compose ... logs -f web    # 或等待下一轮 ops_report
 - [ ] 搜索可用(关键词 + 筛选 + 过期内容标注)
 - [ ] 上传可用(文档/图片,超限与非法类型被拒)
 - [ ] 外链确认页正常(外链不裸跳)
+- [ ] 公开页面响应带 `Content-Security-Policy` 头(`/admin/` 豁免;Phase 9 安全基线,见 §6.1)
 - [ ] 部门权限隔离验证通过(A 部门不可见/不可改 B 部门;部门无删除权)
 - [ ] scheduler 心跳更新(`ops_report` 的 publish_scheduled = ok)
 - [ ] `backup_run` 成功且 `ops_report` 的 backup_freshness = ok
@@ -334,13 +352,14 @@ docker compose ... logs -f web    # 或等待下一轮 ops_report
 - [ ] **性能验证**完成(FCP ≤2s、千条搜索亚秒、100 并发——未来验证)
 - [ ] **无障碍验证**完成(WCAG 2.2 AA 正式走查——未来验证)
 
-## 16. 当前部署状态(逐级,截至 2026-09-02)
+## 16. 当前部署状态(逐级,截至 2026-09-12)
 
 | 层级 | 状态 |
 |---|---|
 | 生产工程(Dockerfile / Compose / Caddyfile / entrypoint / .env.example) | **IMPLEMENTED**(实现完毕) |
 | 静态校验(`docker compose config` 等) | **COMPLETED**(通过) |
 | 本地 Docker 运行时实跑验证 | **COMPLETED / PASS**(2026-09-02,含备份与恢复演练;证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md),复现步骤见 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 方式 B) |
+| 发布安全审查(Phase 9 Release Security Gate) | **PASS**(2026-09-12,`main` @ `725f6d1`:公开页 CSP、HSTS、Secure Cookie、django-axes、Wagtail 7.4.2 → 7.4.3 安全升级) |
 | Staging 部署 | **NOT YET PERFORMED** |
 | Production 部署 | **NOT YET PERFORMED** |
 | DNS / TLS(真实域名与证书) | **NOT YET PERFORMED**(Caddy 自动证书能力已就绪,未对接) |

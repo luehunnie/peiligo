@@ -11,6 +11,8 @@
 | 分支 | `arch/m5.1-scheduling`（基于 `main` @ 7b622db） |
 | 步骤约束 | 只产出本文档；不写代码/迁移/测试/部署；不改其他文档；不进入 M5.2（§6–§10）、M6/M7/G2 |
 
+> **历史状态注记（2026-09-12，Phase 9.5 复核）**：本文是 M5.1 时点的**设计契约**（引源中的 Wagtail 7.4.2 源码亲证为当时依据），其预约发布 / 到期下线 / 调度语义仍然有效；但两处「当时口径」已被后续人类决策与实际实现取代，仅作历史保留、不再逐条改写：① §5.1「前台消费尚未实装……首页渲染属 B 阶段（MB8）」——首页已实现，最终形态为「紧急提示 → 首页轮播（≤5 条）→ 五大板块入口 → 校园快讯（≤3 条）」，推荐位（FeaturedItem）**不再单独成块**，而是作为校园快讯的第一优先来源（`home/templates/home/home_page.html`；合并逻辑 `home/models.py` `_campus_news_entries`）；② PA-18「槽位常量……V1 默认建议 6」——已由 Human 确认（2026-08-31，INFORMATION_ARCHITECTURE §7.2 Q14）与代码定案为 **3**（`FEATURED_MAX_SLOTS`，`home/models.py`，测试 `tests/test_home_data_areas.py`）。现状导览见 [guides/PROJECT_OVERVIEW.md](guides/PROJECT_OVERVIEW.md)。
+
 ## 阅读约定
 
 - **DEFERRED_TO_M5_2**：到期归档视图、历史搜索、下线/归档/删除三态对比表、可见性规则总表——属 M5.2（本文 §6–§10 预留位），本文只登记指针，不设计。

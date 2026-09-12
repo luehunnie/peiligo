@@ -36,8 +36,9 @@
   到期 / 手动下线全状态管理，含常驻定时发布调度器（`publish_scheduler`）。
 - **中文搜索**：关键词搜索 + 结构化筛选（板块、部门、分类、标签），
   采用 icontains 语义（ADR-0006 E1 选型，显式后端选择）。
-- **首页运营内容**：紧急提示、推荐位（最多 3 条、30 天默认有效期）、
-  最新通知、近期活动四个运营数据区。
+- **首页运营内容**：紧急提示（站点级起止窗口，可空）、首页轮播（最多 5 条，
+  站内内容或经确认跳转页的外部链接）、五大板块入口、校园快讯（最多 3 条，
+  由推荐位 → 最新通知 → 即将开始的活动合并去重生成，已结束内容不进入）。
 - **上传安全**：文档附件限白名单格式（doc/docx/pdf/ppt/pptx/xls/xlsx）、
   单文件 20 MiB 上限、声明类型与文件内容一致性校验、文件名清洗；
   图片限 jpg/jpeg/png/webp。
@@ -66,7 +67,7 @@
 | --- | --- |
 | Python | 3.13 |
 | Django | 5.2 LTS（锁定 5.2.17） |
-| Wagtail | 7.4 LTS（锁定 7.4.2） |
+| Wagtail | 7.4 LTS（锁定 7.4.3，2026-09 安全升级） |
 | 数据库 | PostgreSQL 18 |
 | 前端 | Django Templates 服务端渲染（SSR），零客户端 JS 框架 |
 | 应用服务器 | Gunicorn |
@@ -86,6 +87,9 @@
   发布、定时发布、备份与隔离恢复全部实跑通过；过程中发现的 5 个
   运行时问题已修复并合并回 main（PR#14）。证据见
   [docs/reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](docs/reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md)。
+- **发布安全审查（Phase 9 Release Security Gate）：PASS**（2026-09-12）。
+  生产配置安全加固合并入 main：公开页面 CSP、HSTS、Secure Cookie、
+  登录防爆破（django-axes）、Wagtail 7.4.2 → 7.4.3 安全升级。
 - **服务器 Production 部署：尚未执行**。正式域名 / DNS / TLS、生产
   密钥、备份独立存储、性能与无障碍验证、生产告警接线等属于部署
   阶段工作，见下方「部署」。
@@ -154,7 +158,7 @@ DNS / TLS 配置、生产密钥与 `.env` 准备、`SECONDARY_BACKUP_DIR`
 - [docs/guides/SERVER_DEPLOYMENT_GUIDE.md](docs/guides/SERVER_DEPLOYMENT_GUIDE.md) — 服务器部署指南
 - [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md) —
   生产运行手册（首次部署、备份、监控、恢复演练）
-- [docs/adr/](docs/adr/README.md) — 架构决策记录（ADR-0001～0006）
+- [docs/adr/](docs/adr/README.md) — 架构决策记录（ADR-0001～0007）
 
 历史审查与签收记录（冻结，不再更新）：`docs/G2_FREEZE_EVIDENCE.md`、
 `docs/POST_G2_IMPLEMENTATION_GAP_AUDIT.md`、`docs/reviews/`。
@@ -171,8 +175,10 @@ ruff format --check .
 
 当前基线实测：pytest **604 passed + 269 subtests**（2026-09-02 于
 main @ 0069953 实测；至 2992b1a 测试与业务代码无变更，仅合并
-Docker 修复与文档），ruff 通过。CI 侧同一套检查由 GitHub Actions
-在每次 push / PR 时执行。
+Docker 修复与文档），ruff 通过。其后的首页升级与 Phase 9 发布安全
+批次（2026-09-10～12）继续扩充了测试（现为 54 个测试文件）并完成
+Wagtail 7.4.3 安全升级——当前全量结果以 CI 最新运行为准。CI 侧
+同一套检查由 GitHub Actions 在每次 push / PR 时执行。
 
 ## 项目状态声明
 

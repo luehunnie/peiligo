@@ -132,7 +132,7 @@ python manage.py createsuperuser        # 技术维护/应急 superuser(R3 载�
 |---|---|
 | `python manage.py check` | Django 系统检查(配置/模型明显问题) |
 | `python manage.py makemigrations --check --dry-run` | 校验模型改动都已生成迁移(防漂移,CI 同款) |
-| `pytest -q` | 全量测试套件(48 个测试文件;库取 `TEST_DATABASE_URL`) |
+| `pytest -q` | 全量测试套件(54 个测试文件;库取 `TEST_DATABASE_URL`) |
 | `ruff check .` | Lint(规则集 E/F/W/I/B/UP,line-length 100) |
 | `ruff format --check .` | 格式检查(不改动,只报告) |
 | `pip-audit` | 依赖漏洞审计(可选,dev 依赖已含) |
@@ -256,6 +256,8 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml down
 # 仅在确认要完全重来时使用,绝不作为常规关闭方式。
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml down -v
 ```
+
+> 💡 **清理磁盘时的安全边界**:清本项目用 `down`(保留数据)或 `down -v`(连数据卷一起删,仅限确认重来)即可,**不要**用 `docker system prune -a --volumes` 这类全机清理命令——它们会把同一台 Docker 上**其他项目**(例如 Peilige、Peilike 等)的镜像、卷、网络一并删除,可能毁掉别的工程的数据。确需回收镜像层时,先用 `docker image ls` 确认对象,再按镜像 ID 或 `docker image prune`(仅悬空层)精确清理。
 
 ---
 

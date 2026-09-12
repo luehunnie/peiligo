@@ -30,7 +30,7 @@
 
 ## 网站运营人员
 
-负责内容审核、板块运营等日常工作(首页推荐位与紧急提示由总管理员统一维护,需要时联系;会操作网站后台,但不写代码):
+负责内容审核、板块运营等日常工作(首页轮播、首页推荐位与紧急提示均由总管理员统一维护,需要时联系;会操作网站后台,但不写代码):
 
 | 文档 | 一句话用途 |
 |---|---|
@@ -54,6 +54,7 @@
 
 - **Pure Development(纯开发)**:**COMPLETE(已完成)**
 - **本地 Production-like Docker 运行时验证**:**PASS(2026-09-02)**,证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md)
+- **发布安全审查(Phase 9 Release Security Gate)**:**PASS(2026-09-12)**,安全加固(公开页 CSP、HSTS、Secure Cookie、登录防爆破、Wagtail 7.4.3 升级)已合并 main @ `725f6d1`
 - **Production(生产环境)**:**尚未部署**
 
 也就是说:代码、测试、CI、Docker 生产工程、备份与监控工具都已写完,且 Docker 容器已在本地完整实跑验证通过;但真实服务器部署、域名/TLS、生产密钥、备份独立存储、性能与无障碍正式验证、生产告警接线、恢复演练等仍属于**待执行**事项。各技术文档中对每一项能力都会标注它处在哪一档:
@@ -68,7 +69,7 @@
 ## 相关正式文档(不在本目录)
 
 - 运维手册:[../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md)
-- 架构决策记录:[../adr/](../adr/README.md)(ADR-0001 ~ ADR-0006,全部 Accepted)
+- 架构决策记录:[../adr/](../adr/README.md)(ADR-0001 ~ ADR-0007,全部 Accepted)
 - 内容模型 / 信息架构:[../CONTENT_MODEL.md](../CONTENT_MODEL.md)、[../INFORMATION_ARCHITECTURE.md](../INFORMATION_ARCHITECTURE.md)
 - 角色权限:[../ROLE_PERMISSION_MATRIX.md](../ROLE_PERMISSION_MATRIX.md)
 - 安全基线:[../SECURITY_BASELINE.md](../SECURITY_BASELINE.md)
