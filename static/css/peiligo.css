@@ -15,8 +15,8 @@
  *   2. 共享外壳：页头（校徽＋字标＋搜索）/ 页脚 / 面包屑 / 通用按钮
  *   3. 列表与搜索共享语言（ls-head / big-search / r-row / 分页 / 空态）
  *   4. 板块身份（sec-ico 五色 + tag 五深字 tone）
- *   5. 既有页面组件（首页 Hero/板块卡、详情页、确认跳转页、过期体系
- *      等——本阶段不改版式，仅换用新令牌，保持可用）
+ *   5. 首页（Phase 8C 定稿：Hero 轮播 / 五分类导航 / 校园快讯）＋既有
+ *      页面组件（详情页、确认跳转页、过期体系等——本阶段不改版式）
  *   6. 响应式与动效偏好
  */
 
@@ -124,6 +124,12 @@ a:hover {
   outline: 2px solid var(--teal);
   outline-offset: 3px;
   border-radius: 2px;
+}
+
+/* 轮播增强态的条目隐藏切换（carousel.js 提交阶段改写 hidden 属性；
+   author 层显式兜底，防组件 display 覆写 UA 的 [hidden] 缺省）。 */
+[hidden] {
+  display: none !important;
 }
 
 .wrap {
@@ -773,266 +779,407 @@ a.pg:hover {
   color: var(--teal-deep);
 }
 
-/* ========== 5. 既有页面组件（本阶段不改版式，仅换令牌保持可用） ========== */
+/* ========== 5. 首页（Phase 8C 定稿）＋ 既有页面组件（详情/过期/确认页，
+   本阶段不改版式） ========== */
+/*
+ * R4-A「Peiligo POP」冻结稿转译：深青大板 × 几何海报的 split hero、
+ * 五 accent 分类 tile、每张有性格的快讯大卡。令牌与既有组件一致，不另造色值。
+ * 轮播条目隐藏由 [hidden] 兜底（文件头基础层）；控件（prev/next/dots）由
+ * carousel.js 动态创建，SSR 恒不输出（无 JS 绝无死按钮）。
+ */
 
-/* --- 首页 Hero / 板块卡 / 快讯卡 --- */
+/* --- Hero 轮播（深青大板 × 封面/几何海报） --- */
 
-.eyebrow {
-  margin: 0 0 10px;
+.hero {
+  position: relative;
+  padding-top: 2px;
+}
+
+.hero-slide {
+  min-width: 0;
+}
+
+.hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 6.4fr) minmax(0, 5.6fr);
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  box-shadow: 0 8px 22px rgb(29 90 80 / 0.14), 0 26px 54px rgb(29 90 80 / 0.16);
+}
+
+.hero-card:hover {
+  text-decoration: none;
+}
+
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(30px, 4.5vw, 54px);
+  background: var(--teal-deep);
+}
+
+/* 增强态（carousel.js 提交后）面板底部为控件行预留净空；静态单项不产生 */
+.hero[data-carousel-enhanced] .hero-panel {
+  padding-bottom: calc(clamp(30px, 4.5vw, 54px) + 36px);
+}
+
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  right: -110px;
+  top: -110px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.07);
+}
+
+.hero-panel::after {
+  content: "";
+  position: absolute;
+  right: 44px;
+  bottom: 30px;
+  width: 148px;
+  height: 66px;
+  background-image: radial-gradient(rgb(255 255 255 / 0.22) 2.2px, transparent 2.6px);
+  background-size: 18px 18px;
+}
+
+.hero-chip {
+  display: inline-block;
+  padding: 5px 15px;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--ink);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--teal-deep);
 }
 
-.hero {
-  padding-top: 40px;
-  padding-bottom: 8px;
-}
-
-.hero h1 {
-  font-size: clamp(28px, 4vw, 42px);
+.hero-title {
+  margin: 18px 0 0;
+  font-size: clamp(30px, 3.6vw, 43px);
   font-weight: 800;
+  line-height: 1.28;
+  letter-spacing: 0.005em;
 }
 
-.hero-lede {
-  max-width: 640px;
-  margin: 0;
+.hero-sub {
+  max-width: 34em;
+  margin: 14px 0 0;
   font-size: 15.5px;
-  color: var(--ink-2);
+  color: rgb(255 255 255 / 0.78);
 }
 
-.search-bench {
-  max-width: 720px;
-  margin: 22px 0 0;
-  padding: 20px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-}
-
-.search-controls {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-}
-
-.search-controls label {
-  grid-column: 1 / -1;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--ink-2);
-}
-
-.search-controls input {
-  min-height: 44px;
-  padding: 0 16px;
-  background: var(--teal-soft);
-  border: 2px solid transparent;
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  margin-top: 26px;
+  padding: 0 30px;
   border-radius: 999px;
-  font: inherit;
-  font-size: 15px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.hero-card:hover .hero-cta {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+}
+
+.hero-art {
+  position: relative;
+  min-height: 420px;
+  background: var(--teal-soft);
+}
+
+.hero-art svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 深底上的焦点环换 yellow（design-system 交互动效规则） */
+.carousel-controls :focus-visible {
+  outline-color: var(--yellow);
+}
+
+/* --- 轮播控件（carousel.js 动态创建，仅 ≥2 项出现；SSR 恒不输出） --- */
+
+.carousel-controls {
+  position: absolute;
+  left: clamp(30px, 4.5vw, 54px);
+  bottom: 26px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.carousel-prev,
+.carousel-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+
+.carousel-prev:hover,
+.carousel-next:hover {
+  background: rgb(255 255 255 / 0.28);
+}
+
+.carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.carousel-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.34);
+  cursor: pointer;
+  transition: width 0.18s ease, background-color 0.18s ease;
+}
+
+.carousel-dot[aria-current] {
+  width: 30px;
+  background: var(--coral);
+}
+
+/* --- 五分类导航（冻结身份映射：jishi=coral huodong=amber ziliao=blue
+       gongju=violet zhinan=teal；hover 深一档 = final-reference 原值） --- */
+
+.cats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 22px;
+}
+
+.cat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 15px;
+  border-radius: 18px;
+  transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.cat:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgb(25 31 28 / 0.08);
+  text-decoration: none;
+}
+
+.cat .sec-ico {
+  transition: transform 0.18s ease;
+}
+
+.cat:hover .sec-ico {
+  transform: rotate(-6deg) scale(1.05);
+}
+
+.cat-label {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: var(--ink);
 }
 
-.search-controls input:focus {
-  outline: none;
-  background: var(--bg);
-  border-color: var(--teal);
+.cat-jishi {
+  background: var(--coral-soft);
 }
 
-.search-controls button {
-  min-height: 44px;
-  padding: 0 26px;
-  background: var(--teal-deep);
-  color: #fff;
-  font: inherit;
-  font-size: 14.5px;
-  font-weight: 700;
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
+.cat-jishi:hover {
+  background: #f9ddcc;
 }
 
-.search-controls button:hover {
-  background: var(--teal);
-}
-
-.search-hint {
-  margin: 10px 0 0;
-  font-size: 12.5px;
-  color: var(--ink-2);
-}
-
-/* 首页轮播（carousel.js 渐进增强，钩子类名保持不变） */
-
-.carousel {
-  margin-top: 28px;
-}
-
-.carousel-list {
-  display: grid;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.carousel-item {
-  position: relative;
-  display: block;
-  padding: 22px 24px;
-  border-radius: 18px;
-  background: var(--teal-soft);
-}
-
-.carousel-item-kind-notice {
-  background: var(--teal-soft);
-}
-
-.carousel-item-kind-event {
+.cat-huodong {
   background: var(--amber-soft);
 }
 
-.carousel-link {
-  display: block;
-  color: inherit;
+.cat-huodong:hover {
+  background: #fae7c3;
 }
 
-.carousel-link:hover {
-  text-decoration: none;
+.cat-ziliao {
+  background: var(--blue-soft);
 }
 
-.carousel-item-title {
+.cat-ziliao:hover {
+  background: #d9e6f7;
+}
+
+.cat-gongju {
+  background: var(--violet-soft);
+}
+
+.cat-gongju:hover {
+  background: #e2dcf6;
+}
+
+.cat-zhinan {
+  background: var(--teal-soft);
+}
+
+.cat-zhinan:hover {
+  background: #d8e8e2;
+}
+
+/* --- 校园快讯（大图卡；封面回落＝板块静态几何插画） --- */
+
+.news {
+  padding-top: 52px;
+}
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sec-head h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 25px;
   font-weight: 800;
-  color: var(--ink);
+  letter-spacing: 0.01em;
 }
 
-.carousel-link:hover .carousel-item-title {
-  color: var(--teal-deep);
-}
-
-.carousel-item p {
-  margin: 4px 0 0;
-  font-size: 13.5px;
-  color: var(--ink-2);
-}
-
-.appear {
-  animation: plg-appear 0.35s ease;
-}
-
-@keyframes plg-appear {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* 首页板块网格与快讯列表 */
-
-.section-grid {
+.news-rail {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 14px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
 }
 
-.section-grid .card {
+.news-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 18px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.section-grid .card:hover {
-  border-color: var(--teal);
+.news-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgb(25 31 28 / 0.07), 0 22px 44px rgb(25 31 28 / 0.1);
   text-decoration: none;
 }
 
-.section-grid .card h2,
-.section-grid .card h3 {
-  margin: 0;
-  font-size: 16.5px;
-  font-weight: 800;
-  color: var(--ink);
+.news-art {
+  aspect-ratio: 400 / 260;
+  overflow: hidden;
+  background: var(--teal-soft);
 }
 
-.section-grid .card:hover h2,
-.section-grid .card:hover h3 {
+.news-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.25s ease;
+}
+
+.news-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.news-card:hover .news-art svg,
+.news-card:hover .news-img {
+  transform: scale(1.02);
+}
+
+.news-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px 18px 18px;
+}
+
+.news-body h3 {
+  margin: 10px 0 0;
+  font-size: 19.5px;
+  font-weight: 800;
+  line-height: 1.4;
+  transition: color 0.18s ease;
+}
+
+.news-card:hover .news-body h3 {
   color: var(--teal-deep);
 }
 
-.section-grid .card p {
-  margin: 0;
-  font-size: 13px;
+.news-body p {
+  margin: 6px 0 0;
+  font-size: 14px;
   color: var(--ink-2);
 }
 
-.card-go {
-  margin-top: auto;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--teal-deep);
+.news-meta {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #97a39d;
+  font-variant-numeric: tabular-nums;
 }
 
-.content-list {
-  display: grid;
-  gap: 12px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
+/* 低数据构图：1 条＝一张有分量的大卡；2 条＝两等分（无 :has 支持时
+   自然回落三等分网格，仍为合法构图） */
+
+.news-rail:has(.news-card:only-child) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.content-list .card {
-  padding: 16px 18px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+.news-rail:has(.news-card:only-child) .news-card {
+  max-width: 720px;
 }
 
-.content-list .card a {
-  font-size: 15.5px;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.content-list .card a:hover {
-  color: var(--teal-deep);
-  text-decoration: none;
+.news-rail:has(.news-card:nth-child(2):last-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .content-meta {
   margin: 4px 0 0;
   font-size: 12.5px;
   color: var(--ink-2);
-}
-
-.card-desc {
-  margin: 6px 0 0;
-  font-size: 13.5px;
-  color: var(--ink-2);
-}
-
-.site-note {
-  margin: 26px 0 0;
-  padding: 14px 18px;
-  background: var(--teal-soft);
-  border-radius: 14px;
-  font-size: 13.5px;
-  color: var(--teal-deep);
 }
 
 .site-alert {
@@ -1332,6 +1479,12 @@ a.pg:hover {
 
 /* ========== 6. 响应式与动效偏好 ========== */
 
+@media (max-width: 980px) {
+  .cats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .header-grid {
     grid-template-columns: 1fr;
@@ -1353,12 +1506,105 @@ a.pg:hover {
     grid-template-columns: 84px 1fr;
   }
 
-  .search-controls {
-    grid-template-columns: 1fr;
+  /* Hero：图先声夺人（art 提到面板上方），面板收窄 */
+  .hero {
+    padding-top: 0;
   }
 
-  .search-controls button {
+  .hero-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .hero-art {
+    order: -1;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+
+  .hero-panel {
+    padding: 26px 20px 30px;
+  }
+
+  .hero-panel::after {
+    display: none;
+  }
+
+  .hero[data-carousel-enhanced] .hero-panel {
+    padding-bottom: 88px;
+  }
+
+  .hero-title {
+    font-size: 27px;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+  }
+
+  .hero-cta {
     width: 100%;
+    justify-content: center;
+  }
+
+  /* 分类：横向滑动条（仅该轨滚动，文档不横向溢出），保留 POP 色彩 */
+  .cats {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -20px;
+    padding-inline: 20px;
+    padding-top: 18px;
+    scroll-snap-type: x proximity;
+  }
+
+  .cats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cat {
+    flex: none;
+    width: 132px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    scroll-snap-align: start;
+  }
+
+  .news {
+    padding-top: 40px;
+  }
+
+  /* 快讯：横向 rail，右侧露出下一张的一角（仅该轨滚动） */
+  .news-rail {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -20px;
+    padding-inline: 20px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .news-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .news-card {
+    flex: none;
+    width: 82%;
+    scroll-snap-align: start;
+  }
+
+  .news-card:only-child {
+    width: 100%;
+  }
+
+  .news-body h3 {
+    font-size: 18px;
   }
 }
 

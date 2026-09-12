@@ -5,6 +5,7 @@ from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import Truncator
 
 # 五类内容页模型类直引（FeaturedItem 选择器过滤仅五类，CONTENT_MODEL
 # §13.3）：AdminPageChooser 的 target_models 传字符串会在本模块加载期
@@ -13,7 +14,7 @@ from django.utils import timezone
 # wagtail，AppConfig 均已创建，类定义合法，无环。
 from guides.models import GuidePage
 from notices.lifecycle import LIFECYCLE_LIVE
-from notices.models import ArticlePage, NoticePage
+from notices.models import ArticlePage, EventFieldsMixin, NoticePage
 from resources.models import MaterialPage, SoftwareToolPage
 from search import services as search_services
 from wagtail.admin.panels import FieldPanel
@@ -124,6 +125,90 @@ def _upcoming_events(now, events_section):
     return pages[:HOMEPAGE_UPCOMING_EVENTS_COUNT]
 
 
+# 首页校园快讯目标上限（Phase 8C 定稿）：单条统一发现轨至多 3 张卡；
+# 上游数据区（推荐位 3/最新通知 8/近期活动 4）维持各自口径不变。
+CAMPUS_NEWS_MAX_ITEMS = 3
+
+
+def _campus_news_entry(page):
+    """单条校园快讯展示字典（Phase 8C；纯派生，零落库零新字段）。
+
+    只取既有字段：title/href、cover_image（五类内容页统一轮播封面，
+    CoverImageMixin）、一职摘要回落链、板块身份（树上派生 slug）、部门名
+    与发布日期（有则展示）、活动状态（既有 event_status 纯计算属性，仅
+    填了活动字段的通知/文章存在，其余静默为 None）。
+    """
+    department = getattr(page, "department", None)
+    return {
+        "title": page.title,
+        "href": page.url,
+        "cover": getattr(page, "cover_image", None),
+        "summary": Truncator(_content_summary(page)).chars(50),
+        "section_slug": _section_slug_of(page),
+        "department": str(department) if department else "",
+        "date": page.first_published_at,
+        "event_status": getattr(page, "event_status", None),
+    }
+
+
+def _campus_news_entries(featured_entries, latest_notices, upcoming_events):
+    """校园快讯统一组稿（Phase 8C 定稿：旧首页「推荐/最新通知/近期活动」
+    三个独立数据区在本页合并为一条发现轨；后端能力与可见性口径原样保留，
+    不删任何 helper/查询）。
+
+    组稿规则（确定性，无推荐引擎）：
+    1. 优先已策展的推荐位条目（创建序），再以最新通知（发布倒序）、近期
+       活动（开始时间邻近升序）补位——三层输入各自已按上游可见性谓词
+       （§15.4/§16.4）过滤，本层不重复判定；
+    2. 已结束的活动载体不入轨（8C 产品修订）：候选的既有 ``event_status``
+       纯计算属性（§7.1，与卡面「已结束」标注同源）判为已结束即整条跳过
+       ——仅本页组稿层过滤，三层输入（含策展条目）一视同仁；不改页面
+       可见性（板块/搜索/详情原样可达），也不用已结束内容回填补位；
+    3. 同一页面只出现一次（按 pk 去重，先到先得）；
+    4. 至多 ``CAMPUS_NEWS_MAX_ITEMS``（3）张；不足自然呈现，0 条由模板
+       整区不渲染。纯函数：不改输入、不写库。
+    """
+    entries = []
+    seen = set()
+    for page in (*featured_entries, *latest_notices, *upcoming_events):
+        if getattr(page, "event_status", None) == EventFieldsMixin.STATUS_ENDED:
+            continue
+        if page.pk in seen:
+            continue
+        seen.add(page.pk)
+        entries.append(_campus_news_entry(page))
+        if len(entries) == CAMPUS_NEWS_MAX_ITEMS:
+            break
+    return entries
+
+
+def _content_summary(specific):
+    """内容页一职摘要（现有字段回落链，list_row 同序：summary →
+    license_note → location；无相应字段或空值返回空串）。
+
+    Phase 8C Hero/校园快讯共用的展示派生：只读既有字段，不新增模型
+    字段、不落库；截断长度由消费侧决定（Hero 60 字、快讯卡 50 字）。
+    """
+    if isinstance(specific, (NoticePage, ArticlePage, MaterialPage)):
+        return (specific.summary or "").strip()
+    if isinstance(specific, SoftwareToolPage):
+        return (specific.license_note or "").strip()
+    if isinstance(specific, GuidePage):
+        return (specific.location or "").strip()
+    return ""
+
+
+def _section_slug_of(page):
+    """页面所属一级板块 slug（祖先树上最近 SectionPage；无所属返回 None）。
+
+    板块身份唯一事实源＝冻结 slug（SECTION_IDENTITY），经祖先树查询实时
+    派生，零数据字段零迁移；模板侧经 section_short/section_tone 过滤器
+    映射短名与 tone 类（未识别 slug 一律中性回落，不猜色）。
+    """
+    section = page.get_ancestors().type(SectionPage).first()
+    return section.slug if section is not None else None
+
+
 def _carousel_entries(source_page_id):
     """首页轮播位运行时条目（首页升级 Phase 6 SSR 基座；Hero 与 Search 之间）。
 
@@ -142,7 +227,12 @@ def _carousel_entries(source_page_id):
       规则，零新安全规则），并按既有确认链路 contract 构建 confirm href
       （F-03：/link-confirm/ → /link-confirm/go/ 输出层二次校验不变；编码
       与 ``external_link_jump.html`` 的 ``urlencode`` 过滤器同口径＝
-      ``quote(value, safe="/")``；``from`` 引当前首页，仅作确认页来源展示）。
+      ``quote(value, safe="/")``；``from`` 引当前首页，仅作确认页来源展示）；
+    - Phase 8C 追加两个 DERIVED 展示键（8A 裁决：仅派生、零持久化、零迁移）：
+      ``summary``＝页型化一职摘要（``_content_summary`` 现有字段链，截断
+      60 字）——外链项一律空串（不虚构库外元数据）；``section_slug``＝
+      板块身份（``_section_slug_of`` 树上派生）——外链项与无法判定者
+      None，模板回落中性「推荐」chip，不猜板块。
     """
     entries = []
     for item in CarouselItem.objects.all():
@@ -163,6 +253,8 @@ def _carousel_entries(source_page_id):
                     "title": specific.title,
                     "href": href,
                     "cover": specific.cover_image,
+                    "summary": Truncator(_content_summary(specific)).chars(60),
+                    "section_slug": _section_slug_of(specific),
                 }
             )
         else:
@@ -179,6 +271,8 @@ def _carousel_entries(source_page_id):
                         f"?url={quote(external_url, safe='/')}&from={source_page_id}"
                     ),
                     "cover": item.external_cover_image,
+                    "summary": "",
+                    "section_slug": None,
                 }
             )
         if len(entries) == CAROUSEL_MAX_ITEMS:
@@ -198,17 +292,18 @@ class HomePage(Page):
     subpage_types = ["home.SectionPage"]  # 仅五个一级板块页
 
     def get_context(self, request, *args, **kwargs):
-        """首页模板上下文：轮播位＋四数据区＋五板块入口网格（IA §7.1 层 1–4）。
+        """首页模板上下文（Phase 8C 定稿视觉层级）。
 
-        页面结构冻结顺序（首页升级 Phase 6）：Header → 紧急提示 → Hero →
-        轮播位 → Search → 后续数据区。层 1 紧急提示（SiteSettings 站点级
-        配置）、层 2 推荐位（FeaturedItem snippet）、层 3 最新通知、层 4
-        近期活动——各数据区空则模板整区不渲染（§7.1），层内相对顺序冻结、
-        查询与渲染口径见各 helper；轮播位运行时条目见 ``_carousel_entries``
-        （0 项整区不渲染，至多 5 个有效项）。层 4 之后的五板块入口网格仅
-        查询本页下已发布的 SectionPage 并按 ``SECTIONS`` 冻结顺序排列
-        （§2 #1–#5）；容器不是入口、永不进入网格（§6.2——经
-        ``subpage_types`` 白名单 + ``type()`` 过滤天然只含板块页）。
+        页面结构冻结顺序（Phase 8C，R4-A「Peiligo POP」）：Header → 紧急
+        提示（例外性轻量条，无活动提示不渲染）→ Hero 轮播（即原轮播位，
+        0 项整区不渲染）→ 五分类导航（真实 SectionPage，冻结顺序）→
+        校园快讯 → Footer。旧首页独立「推荐/最新通知/近期活动」区与独立
+        搜索卡不再在本页渲染——后端能力（FeaturedItem/通知/活动查询与
+        可见性口径）原样保留，由 ``_campus_news_entries`` 统一组稿为至多
+        3 条的单一发现轨消费；五分类导航仅查询本页下已发布的 SectionPage
+        并按 ``SECTIONS`` 冻结顺序排列（§2 #1–#5），容器不是入口、永不
+        进入（§6.2）。轮播位运行时条目见 ``_carousel_entries``（含 Phase
+        8C 派生展示键 summary/section_slug）。
         """
         context = super().get_context(request, *args, **kwargs)
         children = {page.slug: page for page in self.get_children().live().type(SectionPage)}
@@ -221,6 +316,9 @@ class HomePage(Page):
         context["featured_entries"] = _featured_entries(now)
         context["latest_notices"] = _latest_notices()
         context["upcoming_events"] = _upcoming_events(now, children.get("events"))
+        context["campus_news"] = _campus_news_entries(
+            context["featured_entries"], context["latest_notices"], context["upcoming_events"]
+        )
         return context
 
 
