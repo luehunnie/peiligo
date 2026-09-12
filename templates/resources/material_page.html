@@ -1,53 +1,52 @@
-{% extends "base.html" %}
+{% extends "article_detail.html" %}
 {% load wagtailcore_tags %}
 
 {% block body_class %}template-materialpage{% endblock %}
 
-{% block content %}
-{% with section_url="/"|add:page.section_slug|add:"/" %}
-{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
-{% endwith %}
+{% block article_meta %}
+{# 受控三维度之二为词表 FK（CM-04），第三维标签在页尾。 #}
+<span>{{ page.department }}</span><span class="dot-sep">·</span>
+<span>{{ page.discipline }}</span><span class="dot-sep">·</span>
+<span>{{ page.material_type }}</span><span class="dot-sep">·</span>
+<time datetime="{{ page.first_published_at|date:"Y-m-d" }}">{{ page.first_published_at|date:"Y-m-d" }} 发布</time>
+{% endblock %}
 
-<article class="content-article">
-    <div class="page-head">
-        <h1>{{ page.title }}</h1>
-        {# 受控三维度之二为词表 FK（CM-04），第三维标签在页尾。 #}
-        <p class="content-meta">
-            {{ page.department }} · {{ page.discipline }} · {{ page.material_type }} · {{ page.first_published_at|date:"Y-m-d" }}
-        </p>
-        {% if page.summary %}<p class="article-lede">{{ page.summary }}</p>{% endif %}
+{% block article_lede %}
+{% if page.summary %}<p class="article-lede">{{ page.summary }}</p>{% endif %}
+{% endblock %}
+
+{% block article_body %}
+<div class="article-body">
+    {% for block in page.body %}{% include_block block %}{% endfor %}
+</div>
+
+{% if page.attachments.all %}
+<section class="article-aside" aria-label="附件">
+    <h2>附件</h2>
+    <ul>
+        {% for doc in page.attachments.all %}
+        <li><a href="{{ doc.url }}">{{ doc.title }}</a>{% if doc.file_size %}（{{ doc.file_size|filesizeformat }}）{% endif %}</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{% comment %}外部链接＝经确认跳转页包装（CM §11.4 不裸跳转；F-03 确认页）。{% endcomment %}
+{% if page.external_url %}
+<section class="article-aside" aria-label="外部链接">
+    <h2>外部链接</h2>
+    <div class="files">
+        {% include "includes/external_link_jump.html" with url=page.external_url file_title=page.external_url from=page.pk only %}
     </div>
+</section>
+{% endif %}
 
-    <div class="article-body">
-        {% for block in page.body %}{% include_block block %}{% endfor %}
-    </div>
-
-    {% if page.attachments.all %}
-    <section class="article-aside" aria-label="附件">
-        <h2>附件</h2>
-        <ul>
-            {% for doc in page.attachments.all %}
-            <li><a href="{{ doc.url }}">{{ doc.title }}</a>{% if doc.file_size %}（{{ doc.file_size|filesizeformat }}）{% endif %}</li>
-            {% endfor %}
-        </ul>
-    </section>
-    {% endif %}
-
-    {% comment %}外部链接＝经确认跳转页包装（CM §11.4 不裸跳转；F-03 确认页四要素 PRD §7.5）。{% endcomment %}
-    {% if page.external_url %}
-    <section class="article-aside" aria-label="外部链接">
-        <h2>外部链接</h2>
-        <p class="url-text">{% include "includes/external_link_jump.html" with url=page.external_url text=page.external_url from=page.pk only %}</p>
-    </section>
-    {% endif %}
-
-    {% if page.tags.all %}
-    <section class="article-aside" aria-label="标签">
-        <h2>标签</h2>
-        <ul class="tag-chips">
-            {% for tag in page.tags.all %}<li>{{ tag.name }}</li>{% endfor %}
-        </ul>
-    </section>
-    {% endif %}
-</article>
-{% endblock content %}
+{% if page.tags.all %}
+<section class="article-aside" aria-label="标签">
+    <h2>标签</h2>
+    <ul class="tag-chips">
+        {% for tag in page.tags.all %}<li>{{ tag.name }}</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+{% endblock %}

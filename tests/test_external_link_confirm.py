@@ -301,8 +301,9 @@ class ConfirmPageTests(ConfirmPageDataTestCase):
             "/link-confirm/", {"url": "https://example.com/doc", "from": str(self.notice.pk)}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "https://example.com/doc")
-        self.assertContains(response, "域名：")
+        # Phase 8D 展示口径：目标只展示主机名（域名），不展示完整 URL。
+        self.assertContains(response, 'c-domain">example.com<')
+        self.assertNotContains(response, "https://example.com/doc")
         self.assertContains(response, "带外链的通知")  # 来源
         self.assertContains(response, "最后更新时间")
         self.assertContains(response, DEFAULT_REDIRECT_NOTICE)
@@ -311,8 +312,50 @@ class ConfirmPageTests(ConfirmPageDataTestCase):
         self.assertContains(response, "返回")
 
     def test_display_is_case_normalized(self):
+        """SB §10-7 规则 2：host 小写化展示（Phase 8D＝仅域名），完整 URL
+        不以明文出页面（页脚 mailto 回执中的百分号编码回显不属展示文本）。"""
         response = self.client.get("/link-confirm/", {"url": "HTTPS://EXAMPLE.com/Path?q=1"})
-        self.assertContains(response, "https://example.com/Path?q=1")
+        self.assertContains(response, 'c-domain">example.com<')
+        self.assertNotContains(response, "HTTPS://EXAMPLE.com/Path?q=1")
+        self.assertNotContains(response, "Path?q=1")
+
+    def test_confirm_page_title_and_copy(self):
+        """Phase 8D 定稿文案：kicker／标题／说明／主次按钮。"""
+        response = self.client.get("/link-confirm/", {"url": "https://example.com/doc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "外部链接")
+        self.assertContains(response, "即将访问外部网站")
+        self.assertContains(response, "你将离开 Peiligo，前往第三方网站。")
+        self.assertContains(response, "继续访问")
+        self.assertContains(response, "返回 Peiligo")
+
+    def test_no_inline_js_and_no_auto_redirect(self):
+        """无 inline JS／javascript:／meta refresh——合法目标与拒绝态均然。"""
+        for params in (
+            {"url": "https://example.com/doc", "from": str(self.notice.pk)},
+            {"url": "https://example.com/doc"},
+            {"url": "javascript:alert(1)"},
+        ):
+            with self.subTest(params=params):
+                response = self.client.get("/link-confirm/", params)
+                self.assertEqual(response.status_code, 200)
+                content = response.content.decode()
+                self.assertNotIn("onclick=", content)
+                self.assertNotIn("javascript:", content)
+                self.assertNotIn("<script", content)
+                self.assertNotIn("http-equiv", content)
+
+    def test_return_action_is_deterministic_internal(self):
+        """「返回 Peiligo」＝确定性站内链接：有来源页→来源页，否则首页；
+        绝不回退到外部来源参数。"""
+        with_source = self.client.get(
+            "/link-confirm/", {"url": "https://example.com/doc", "from": str(self.notice.pk)}
+        )
+        self.assertContains(with_source, '<a class="c-ghost" href="/chronicle/jwc/ext-notice/">')
+        without_source = self.client.get("/link-confirm/", {"url": "https://example.com/doc"})
+        self.assertContains(without_source, '<a class="c-ghost" href="/">')
+        content = without_source.content.decode()
+        self.assertNotIn('href="https://example.com', content)
 
     def test_custom_notice_text_from_site_settings(self):
         site = Site.objects.get(is_default_site=True)

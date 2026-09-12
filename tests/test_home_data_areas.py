@@ -564,8 +564,9 @@ class CarouselExternalItemTests(CarouselAreaTestCase):
             "/link-confirm/", {"url": "https://example.com/carousel", "from": str(self.home_pk)}
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "https://example.com/carousel")
-        self.assertContains(response, "域名：")
+        # Phase 8D 展示口径：确认页只展示主机名，完整 URL 不出现。
+        self.assertContains(response, 'c-domain">example.com<')
+        self.assertNotContains(response, "https://example.com/carousel")
         self.assertContains(response, "继续访问")
 
     def test_dirty_nonconforming_url_skipped_at_runtime(self):
