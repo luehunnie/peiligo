@@ -307,19 +307,38 @@ class SitemapTests(FrontendIATestCase):
 
 
 class HomePageEntryGridTests(FrontendIATestCase):
-    """IA-13（层 4 当前可验证部分）：五板块入口网格恰五项、冻结顺序、链接 200。"""
+    """IA-13（Phase 8C 定稿载体）：五板块入口＝五分类导航条，恰五项、
+    冻结顺序、SECTION_IDENTITY 身份类、链接 200。"""
 
-    def test_ia13_grid_has_five_entries_in_frozen_order(self):
+    def test_ia13_category_nav_has_five_entries_in_frozen_order(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "home/home_page.html")
         html = response.content.decode()
-        grid = re.search(r'<ul class="section-grid">(.*?)</ul>', html, re.DOTALL)
-        self.assertIsNotNone(grid)
-        hrefs = re.findall(r'<a href="([^"]+)">', grid.group(1))
+        nav = re.search(r'<nav class="cats"[^>]*>(.*?)</nav>', html, re.DOTALL)
+        self.assertIsNotNone(nav)
+        hrefs = re.findall(r'<a class="cat[^"]*" href="([^"]+)">', nav.group(1))
         self.assertEqual(hrefs, [f"/{slug}/" for _, slug in FROZEN_SECTION_ORDER])
         for title, _ in FROZEN_SECTION_ORDER:
-            self.assertIn(title, grid.group(1))
+            self.assertIn(title, nav.group(1))
+
+    def test_ia13_category_nav_carries_identity_classes(self):
+        """冻结身份映射（SECTION_IDENTITY）：cat-<tone> 恰各一次，颜色不作
+        唯一区分物（文字标签恒在）。"""
+        # 冻结 tone 映射（§5.2 SECTION_IDENTITY；peiligo_extras.section_tone 同源）。
+        cat_tone_by_slug = {
+            "chronicle": "jishi",
+            "events": "huodong",
+            "materials": "ziliao",
+            "software": "gongju",
+            "guide": "zhinan",
+        }
+        html = self.client.get("/").content.decode()
+        nav = re.search(r'<nav class="cats"[^>]*>(.*?)</nav>', html, re.DOTALL)
+        self.assertIsNotNone(nav)
+        for _, slug in FROZEN_SECTION_ORDER:
+            with self.subTest(slug=slug):
+                self.assertEqual(nav.group(1).count(f"cat-{cat_tone_by_slug[slug]}"), 1)
 
     def test_ia13_grid_links_all_resolve_200(self):
         for _, slug in FROZEN_SECTION_ORDER:
@@ -327,9 +346,11 @@ class HomePageEntryGridTests(FrontendIATestCase):
                 self.assertEqual(self.client.get(f"/{slug}/").status_code, 200)
 
     def test_homepage_h1_is_chinese_title(self):
-        """脚手架种子标题已中文化（M2.2 迁移），首屏 h1 不再输出英文残留。"""
-        response = self.client.get("/")
-        self.assertContains(response, "<h1>首页</h1>")
+        """脚手架种子标题已中文化（M2.2 迁移）；Phase 8C 视觉主位由 Hero
+        大题承担，页面 h1 保留中文标题、视觉隐藏（全页恒一个 h1）。"""
+        html = self.client.get("/").content.decode()
+        self.assertIn('<h1 class="visually-hidden">首页</h1>', html)
+        self.assertEqual(html.count("<h1"), 1)
 
 
 class EmptyStateTests(FrontendIATestCase):

@@ -1,144 +1,124 @@
 {% extends "base.html" %}
-{% load static wagtailcore_tags wagtailimages_tags %}
+{% load static wagtailcore_tags wagtailimages_tags peiligo_extras %}
 
 {% block body_class %}template-homepage{% endblock %}
 
 {% block content %}
 {% comment %}
-首页数据区（IA §7.1，顺序冻结=PRD §9 四层，区块自上而下=优先级；F-04 落地）：
-① 紧急或重要提示（站点级配置，ADR-0005 #14）——页面最顶部（h1 之上），
-   空文案或不在展示窗口整区不渲染；
-② 推荐位/置顶位（FeaturedItem Snippet，ADR-0005 #13）——紧急提示之下、
-   最新通知之上；有效条目按创建顺序最多 3（Q14），0 条整区不渲染，
-   1–2 条自然呈现；默认窗口 30 天（Q15，模型默认值承载）；
-③ 最新且仍有效的通知（自动列表，CURRENT_DEFAULT 口径，发布时间倒序）；
-④ 近期校园活动（自动列表，活动板块子树、未结束、按开始时间邻近升序）。
-搜索工作台位置维持 M2 既有版式（首屏主任务，合同 §4.2）；①–④ 相对
-顺序冻结，层 4 之后为五板块固定入口网格。空数据区块整体不渲染（§7.1，
-无数据不得显示假内容）。
-首页轮播位（首页升级 Phase 6 SSR 基座＋Phase 7 渐进增强）：Hero 与 Search
-之间（冻结顺序），运行时口径见 home.models._carousel_entries（按序至多
-5 个有效项，0 项整区不渲染）。SSR markup 恒为权威：无 JS／JS 初始化失败
-（含回滚后）条目均按文档流自然可达；JS 增强位于 static/js/carousel.js
-（ADR-0007），data-carousel* 仅为该脚本 hook，不承载内容。
+首页（Phase 8C 定稿，R4-A「Peiligo POP」落地；冻结层级）：
+Header → 紧急提示（例外性轻量条）→ Hero 轮播 → 五分类导航 → 校园快讯 → Footer。
+
+- Hero 轮播＝原轮播位的定稿呈现（复用 _carousel_entries 运行时口径与
+  Phase 7 渐进增强 carousel.js；data-carousel/data-carousel-item 仅为该
+  脚本 hook）。0 项整区不渲染；无 JS／增强失败时条目按文档流全部自然
+  可达（SSR 恒为权威）。条目为单一整体链接（无嵌套交互），封面图纯装饰
+  （aria-hidden），链接可访问名＝面板文字；无封面＝冻结几何海报回落。
+  外链 href 仍为既有确认链路（F-03），无裸外链。
+- 五分类导航＝真实 SectionPage（冻结顺序），身份沿用 SECTION_IDENTITY
+  冻结映射（cat-<tone> 类 + 同款线性图标），颜色不作唯一区分物（文字
+  标签恒在）。容器不是入口、永不进入（§6.2）。
+- 校园快讯＝旧「推荐/最新通知/近期活动」三区的统一组稿消费点（至多
+  3 张卡，去重、确定性组稿见 _campus_news_entries；后端能力原样保留）。
+  卡片为单一整体链接；封面回落＝板块静态几何插画（不逐条目生成）。
+- 旧独立搜索卡已移除（站内搜索由页头全局搜索承担）。
 {% endcomment %}
 
-{# ① 紧急提示（IA §7.1 层 1；§13.4：空文案不展示，窗口语义同 §15.4） #}
+{# 紧急提示（SiteSettings 站点级配置；空文案/窗口外不渲染，§13.4 口径不变） #}
 {% if alert %}
 <section class="site-alert" role="alert">
     <p>{{ alert.text }}</p>
 </section>
 {% endif %}
 
-<section class="hero">
-    <p class="eyebrow">校园信息与资源入口</p>
-    <h1>{{ page.title }}</h1>
-    <p class="hero-lede">按五大板块汇集校园通知、活动、学习资料、软件与指南，帮你快速找到需要的信息。</p>
-</section>
+{# 页面主标题（视觉上由 Hero 大题承担；轮播条目标题用 h2，全页恒一个 h1） #}
+<h1 class="visually-hidden">{{ page.title }}</h1>
 
-{# 首页轮播位（首页升级 Phase 6 SSR 基座，冻结顺序＝Hero → Carousel → Search）： #}
-{# 有封面＝整幅图片 banner，不叠加可见标题/描述/CTA 文字，link accessible #}
-{# name＝img alt（读屏可得目标内容，TASK E）；无封面＝fallback 结构（可见 #}
-{# 转义标题），供后续 CSS 构建几何视觉，本阶段不做最终图形（CSS POLICY）。 #}
-{# 外链一律经既有确认链路 href（F-03 contract，无裸外链，TASK D/I）； #}
-{# 无 JS／JS 失败回滚后条目均按文档流全部自然呈现；JS 仅在此 DOM 上增强。 #}
 {% if carousel_items %}
-<section class="carousel" data-carousel aria-label="首页轮播">
-    <ul class="carousel-list">
-        {% for item in carousel_items %}
-        <li class="carousel-item carousel-item-{{ item.kind }}" data-carousel-item>
-            {% if item.cover %}
-            <a class="carousel-link" href="{{ item.href }}">
-                {% if forloop.first %}
-                {% image item.cover width-1600 alt=item.title %}
-                {% else %}
-                {% image item.cover width-1600 alt=item.title loading="lazy" %}
+<section class="hero" data-carousel aria-label="主打推荐">
+    {% for item in carousel_items %}
+    <div class="hero-slide" data-carousel-item>
+        <a class="hero-card" href="{{ item.href }}">
+            <div class="hero-panel">
+                <span class="hero-chip">{{ item.section_slug|section_short|default:"推荐" }}</span>
+                <h2 class="hero-title">{{ item.title }}</h2>
+                {% if item.summary %}
+                <p class="hero-sub">{{ item.summary }}</p>
                 {% endif %}
-            </a>
-            {% else %}
-            <a class="carousel-link" href="{{ item.href }}">
-                <span class="carousel-item-title">{{ item.title }}</span>
-            </a>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
+                <span class="hero-cta">查看全文</span>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+                {% if item.cover %}
+                {% if forloop.first %}
+                {% image item.cover width-1600 alt="" class="hero-img" %}
+                {% else %}
+                {% image item.cover width-1600 alt="" loading="lazy" class="hero-img" %}
+                {% endif %}
+                {% else %}
+                <svg viewBox="0 0 720 620" preserveAspectRatio="xMidYMid slice" focusable="false">
+                    <rect width="720" height="620" fill="#e8f1ee"/>
+                    <circle cx="565" cy="150" r="86" fill="#ffc940"/>
+                    <circle cx="565" cy="150" r="118" fill="none" stroke="#e8590c" stroke-width="7" opacity=".55"/>
+                    <path d="M60 620V330c0-150 105-235 195-235s195 85 195 235v290z" fill="#1d5a50"/>
+                    <path d="M225 620V470c0-45 13-72 30-72s30 27 30 72v150z" fill="#e8f1ee"/>
+                    <path d="M0 560c60-26 120-26 180 0s120 26 180 0 120-26 180 0 120 26 180 0v60H0z" fill="#e8590c" opacity=".85"/>
+                    <g fill="#1d5a50" opacity=".28">
+                        <circle cx="64" cy="84" r="5"/><circle cx="104" cy="84" r="5"/><circle cx="144" cy="84" r="5"/>
+                        <circle cx="64" cy="124" r="5"/><circle cx="104" cy="124" r="5"/><circle cx="144" cy="124" r="5"/>
+                    </g>
+                    <circle cx="120" cy="300" r="14" fill="#2f7a6e"/>
+                    <circle cx="620" cy="420" r="10" fill="#7a5fc9" opacity=".7"/>
+                </svg>
+                {% endif %}
+            </div>
+        </a>
+    </div>
+    {% endfor %}
 </section>
 {% endif %}
 
-{# 首页搜索工作台（合同 §4.2）：首屏主任务，GET 到现有 /search/，服务端搜索。 #}
-{# 搜索参数名＝q（与 /search/ 表单及视图一致，F-04 修复 name="query" 串参数 bug）。 #}
-<section class="search-bench" aria-labelledby="search-bench-title">
-    <h2 id="search-bench-title">站内搜索</h2>
-    <form action="{% url 'search' %}" method="get" role="search">
-        <label for="home-search-input">搜索关键词</label>
-        <div class="search-controls">
-            <input type="search" id="home-search-input" name="q" placeholder="搜索通知、活动、资料、软件或指南">
-            <button type="submit">搜索</button>
-        </div>
-        <p class="search-hint">搜索覆盖全部板块的公开内容页面。</p>
-    </form>
-</section>
+{# 五分类导航（冻结顺序＝SECTIONS；cat-<tone> 对应冻结身份色，图标＝同款线性族） #}
+<nav class="cats" aria-label="校园板块">
+    {% for section in section_entries %}
+    <a class="cat cat-{{ section.slug|section_tone }}" href="{% pageurl section %}">
+        {% include "includes/section_identity.html" with slug=section.slug only %}
+        <span class="cat-label">{{ section.title }}</span>
+    </a>
+    {% endfor %}
+</nav>
 
-{# ② 推荐位（IA §7.2：≤3 条 Q14；0 条整区不渲染；呈现所指内容标题/摘要） #}
-{% if featured_entries %}
-<section aria-labelledby="featured-title">
-    <h2 id="featured-title">推荐</h2>
-    <ul class="content-list">
-        {% for item in featured_entries %}
-        {% include "includes/content_card.html" with item=item only %}
+{# 校园快讯（统一发现轨；0 条整区不渲染，1/2/3 条自然呈现，至多 3 张卡） #}
+{% if campus_news %}
+<section class="news" aria-labelledby="news-title">
+    <div class="sec-head">
+        <h2 id="news-title">校园快讯</h2>
+    </div>
+    <div class="news-rail">
+        {% for item in campus_news %}
+        <a class="news-card{% if item.section_slug %} tone-{{ item.section_slug|section_tone }}{% endif %}" href="{{ item.href }}">
+            <div class="news-art" aria-hidden="true">
+                {% if item.cover %}
+                {% image item.cover fill-800x520 alt="" class="news-img" %}
+                {% else %}
+                {% include "includes/section_art.html" with slug=item.section_slug only %}
+                {% endif %}
+            </div>
+            <div class="news-body">
+                {% if item.section_slug %}
+                <span class="tag tone-{{ item.section_slug|section_tone }}">{{ item.section_slug|section_short }}</span>
+                {% endif %}
+                <h3>{{ item.title }}</h3>
+                {% if item.summary %}
+                <p>{{ item.summary }}</p>
+                {% endif %}
+                <span class="news-meta">
+                    {% if item.department %}{{ item.department }} · {% endif %}<time datetime="{{ item.date|date:'Y-m-d' }}">{{ item.date|date:'m-d' }}</time>{% if item.event_status %} · {{ item.event_status }}{% endif %}
+                </span>
+            </div>
+        </a>
         {% endfor %}
-    </ul>
+    </div>
 </section>
 {% endif %}
-
-{# ③ 最新通知（IA §7.1 层 3：全站最新且仍有效，发布时间倒序） #}
-{% if latest_notices %}
-<section aria-labelledby="latest-notices-title">
-    <h2 id="latest-notices-title">最新通知</h2>
-    <ul class="content-list">
-        {% for item in latest_notices %}
-        {% include "includes/content_card.html" with item=item only %}
-        {% endfor %}
-    </ul>
-</section>
-{% endif %}
-
-{# ④ 近期活动（IA §7.1 层 4：活动板块子树、未结束、开始时间邻近升序） #}
-{% if upcoming_events %}
-<section aria-labelledby="upcoming-events-title">
-    <h2 id="upcoming-events-title">近期活动</h2>
-    <ul class="content-list">
-        {% for item in upcoming_events %}
-        {% include "includes/content_card.html" with item=item only %}
-        {% endfor %}
-    </ul>
-</section>
-{% endif %}
-
-<section aria-labelledby="section-entries-title">
-    <h2 id="section-entries-title">五大板块</h2>
-    {# IA §7.1 层 4：五板块固定入口网格（真实板块页查询，顺序=§2 #1–#5； #}
-    {# 容器不是入口、永不进入，IA §6.2）。定位=IA §2 一句话定位（冻结文案）。 #}
-    <ul class="section-grid">
-        {% for section in section_entries %}
-        <li>
-            <a href="{% pageurl section %}">
-                <h3>{{ section.title }}</h3>
-                <p class="card-desc">{% include "includes/section_positioning.html" with slug=section.slug only %}</p>
-                <span class="card-go">进入板块 →</span>
-            </a>
-        </li>
-        {% endfor %}
-    </ul>
-    {# 非业务数据的站点反馈引导（合同 §4.4）：一行次级说明，不冒充内容区。 #}
-    <p class="site-note">
-        本站内容持续更新；发现内容错误或链接失效，欢迎
-        {% with feedback_subject=page.title|default:"页面反馈" %}
-        <a href="mailto:{{ feedback_email }}?subject={{ feedback_subject|urlencode }}&amp;body={{ request.build_absolute_uri|urlencode }}">联系我们</a>。
-        {% endwith %}
-    </p>
-</section>
 {% endblock content %}
 
 {# 首页轮播渐进增强（首页升级 Phase 7，ADR-0007）：仅首页经 base.html 的 #}

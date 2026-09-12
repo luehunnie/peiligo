@@ -55,6 +55,12 @@ FORBIDDEN_JS_MARKERS = (
 # 本文件无含 "//" 的字符串），非通用 JS 解析器。
 JS_COMMENT_PATTERN = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
 
+# SSR 可见性契约的精确断言面：`hidden` 是 HTML 可见性属性（JS 提交阶段
+# 才允许改写，SSR 恒不带）；Phase 8C 起 Hero 艺术位容器带装饰性
+# aria-hidden（ARIA 标注，与可见性/文档流无关）。故按「属性位 hidden」
+# 匹配（前方不得是连字符/单词字符，排除 aria-hidden），不再做子串匹配。
+SSR_HIDDEN_ATTR_PATTERN = re.compile(r"(?<![-\w])hidden(?![\w-])")
+
 
 class CarouselJsTestCase(WagtailPageTestCase):
     """公共基类：五板块就位＋纪事容器（与首页数据区测试同款装置）。"""
@@ -202,7 +208,8 @@ class CarouselServerPurityTests(CarouselJsTestCase):
     """TASK N：JS 初始化前 SSR 保持纯文档流（无 hidden/controls/增强标记）。"""
 
     def test_single_item_static_no_controls_no_hidden(self):
-        """1 项：SSR 单项输出，零 controls／hidden／增强标记（TASK P #4/#6）。"""
+        """1 项：SSR 单项输出，零 controls／hidden 属性／增强标记（TASK P #4/#6；
+        Phase 8C 起可见性断言为属性级——aria-hidden 装饰标注不算可见性状态）。"""
         self._add_internal_item("p7-single", "单项通知P7")
         html = self.client.get("/").content.decode()
         section = self._carousel_section(html)
@@ -210,18 +217,18 @@ class CarouselServerPurityTests(CarouselJsTestCase):
         self.assertEqual(section.count("data-carousel-item"), 1)
         self.assertNotIn("<button", section)
         self.assertNotIn("data-carousel-controls", section)
-        self.assertNotIn("hidden", section)
+        self.assertIsNone(SSR_HIDDEN_ATTR_PATTERN.search(section))
         self.assertNotIn("data-carousel-enhanced", html)
 
     def test_multi_items_all_output_without_hidden_or_controls(self):
-        """3 项：SSR 全部输出、全部可点链接，零 hidden／controls（TASK P #5/#6）。"""
+        """3 项：SSR 全部输出、全部可点链接，零 hidden 属性／controls（TASK P #5/#6）。"""
         for i in range(3):
             self._add_internal_item(f"p7-multi-{i}", f"多项通知{i}")
         html = self.client.get("/").content.decode()
         section = self._carousel_section(html)
         self.assertEqual(section.count("data-carousel-item"), 3)
         self.assertEqual(section.count("<a "), 3)
-        self.assertNotIn("hidden", section)
+        self.assertIsNone(SSR_HIDDEN_ATTR_PATTERN.search(section))
         self.assertNotIn("<button", section)
 
     def test_two_items_all_output(self):
