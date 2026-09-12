@@ -3,6 +3,11 @@
 适用架构＝冻结口径：Linux/PVE + Docker Compose + PostgreSQL + Caddy(HTTPS)。
 不含 Redis/Celery/Elasticsearch/SPA/K8s。样例配置见 `deploy/.env.example`。
 
+> **状态（2026-09-12 复核）**：本文是**未来公网部署的工程预案**——截至当前阶段
+> 尚未在任何真实服务器上执行过（Peiligo 尚未对公网部署，亦未做 DNS / 域名 /
+> 真实 TLS 配置）。本地 Production-like Docker 验证已 PASS（2026-09-02）；
+> 执行本文操作属于未来部署阶段的工作。
+
 ---
 
 ## 1. 首次部署
@@ -61,7 +66,12 @@
 | login_anomalies | 近 24h 登录失败/锁定（axes） | 有锁定 | —（业务信号，不判停服） |
 | app_errors | 可选 OPS_LOG_FILE 中近 24h ERROR 行 | >0 | —；未配置＝如实报 unknown |
 
-## 4. 备份（F-12：RPO ≤ 24h）
+## 4. 备份（F-12；现行口径 RPO ≤ 12h）
+
+> RPO 口径：**≤ 12 小时**——由 12 小时备份频率直接派生（NFR §5.1/NF-13，
+> Human 确认 2026-08-31）。PRD §15 的「每日备份 / 24 小时损失上限」是立项
+> 原上限，已被更严的 12 小时口径取代；下方 backup_freshness 告警阈值
+> （>12h WARN / >24h CRIT）与此对齐。
 
 一份完整备份集＝`$BACKUP_ROOT/<YYYYmmddTHHMMSSZ>/`：`db.dump`（pg_dump
 自定义格式）+ `media.tar.gz` + `manifest.json` + `sha256sums.txt`。

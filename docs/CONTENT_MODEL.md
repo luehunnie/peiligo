@@ -885,7 +885,7 @@ V1 **不新增任何公开时间参数**（五参数之外零参数）。时间�
 
 ## 25. 首页轮播与轮播封面图（首页升级批次，2026-09-10）
 
-**引源**：「首页升级 PRD」＝《Peiligo 首页增量升级产品需求文档》（2026-09-10 封口版）§10–§15；首页升级 Phase 2 架构模型冻结设计（下称"冻结决策 N"）；ADR-0007（Accepted）；**实现事实**：commit 21909e1（`home/models.py` CarouselItem、`src/peiligo/cover.py` CoverImageMixin、notices/resources/guides 三 app 迁移）＋ `tests/test_carousel_item.py`。本节为**事后同步**：数据模型已实现、已测试并经 Phase 3.5 审查收口，本节按真实模型落档；**轮播前台（SSR 模板与 JS）尚未实现**，归后续前端阶段（ADR-0007）——本节与 ADR-0007 均不声称轮播前台已上线。
+**引源**：「首页升级 PRD」＝《Peiligo 首页增量升级产品需求文档》（2026-09-10 封口版）§10–§15；首页升级 Phase 2 架构模型冻结设计（下称"冻结决策 N"）；ADR-0007（Accepted）；**实现事实**：commit 21909e1（`home/models.py` CarouselItem、`src/peiligo/cover.py` CoverImageMixin、notices/resources/guides 三 app 迁移）＋ `tests/test_carousel_item.py`。本节为**事后同步**：数据模型已实现、已测试并经 Phase 3.5 审查收口，本节按真实模型落档；**轮播前台（SSR 模板与 JS）尚未实现**，归后续前端阶段（ADR-0007）——本节与 ADR-0007 均不声称轮播前台已上线。（**状态更新（2026-09-12，Phase 9.5 复核）**：轮播前台已于后续前端阶段实现——首页模板含轮播区块（`home/templates/home/home_page.html`），交互脚本 `static/js/carousel.js`（自动播放约 5.5 秒、`prefers-reduced-motion` 下停用自动播放、最多 5 条）；上句为 2026-09-10 落档时点口径，保留作历史。）
 
 ### 25.1 轮播封面图 `cover_image`（五类内容页统一可选字段）
 

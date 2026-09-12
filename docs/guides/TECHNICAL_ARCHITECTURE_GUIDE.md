@@ -2,7 +2,7 @@
 
 写给**全栈工程师、未来维护者、项目老师**。这里只讲「系统是怎么搭起来的、为什么这样搭」;操作步骤见 [LOCAL_RUN_AND_VALIDATION_GUIDE.md](LOCAL_RUN_AND_VALIDATION_GUIDE.md) 与 [SERVER_DEPLOYMENT_GUIDE.md](SERVER_DEPLOYMENT_GUIDE.md);正式决策原文见 [../adr/](../adr/README.md)。
 
-> **基线**:`main` 分支(2026-09-02,HEAD `2992b1a`,含本地 Docker 实跑验证后合入的 5 个运行时修复)。文中版本号、命令、变量名均逐字核对自当前代码。
+> **基线**:`main` 分支(初稿 2026-09-02,HEAD `2992b1a`;2026-09-12 对照 `main` @ `725f6d1` 复核更新——首页轮播、Wagtail 7.4.3 安全升级与 Phase 9 发布安全加固已并入)。文中版本号、命令、变量名均逐字核对自当前代码。
 >
 > **状态声明**:下文「生产架构」已在本地以 Production-like 方式**完整实跑验证通过**(2026-09-02,四容器构建、启动、健康检查、内容发布、定时发布、备份与恢复,证据见 [../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md](../reviews/LOCAL_DOCKER_RUNTIME_VALIDATION.md));但**尚未在真实服务器上部署过**——正式域名/TLS/DNS、生产密钥、性能与无障碍正式验证均属部署阶段工作。
 
@@ -14,7 +14,7 @@
 |---|---|---|
 | 语言 | Python | 3.13(`requires-python = ">=3.13,<3.14"`) |
 | Web 框架 | Django | 5.2.17(LTS) |
-| CMS | Wagtail | 7.4.2(LTS) |
+| CMS | Wagtail | 7.4.3(LTS;2026-09 由 7.4.2 安全升级,覆盖 5 项上游安全公告,见 requirements.txt 注) |
 | 数据库 | PostgreSQL | 18(`postgres:18` 镜像;驱动 psycopg 3.3.4) |
 | 模板 | Django Templates(服务器端渲染) | 无 SPA、无 Node 构建链 |
 | 应用服务器 | Gunicorn | 26.1.0(WSGI) |
@@ -24,7 +24,7 @@
 | 数据库连接 | dj-database-url | 3.0.1(`DATABASE_URL` 解析) |
 | 上传内容签名 | filetype | 1.2.0(魔数识别) |
 | 图像处理 | Pillow 12.3 / pillow_heif 1.5 / Willow 1.12 | Wagtail images 依赖 |
-| 测试 | pytest 9.1.1 + pytest-django 4.14.0 | 48 个测试文件 |
+| 测试 | pytest 9.1.1 + pytest-django 4.14.0 | 54 个测试文件 |
 | Lint / 格式 | ruff 0.16.3 | `ruff check` + `ruff format` |
 | 依赖审计 | pip-audit 2.10.1 | dev 依赖 |
 | CI | GitHub Actions | 单 job 质量门(见 §12) |
@@ -89,7 +89,7 @@ flowchart TB
 ├── requirements.txt           # 运行依赖(钉版)
 ├── requirements-dev.txt       # + pytest / ruff / pip-audit
 ├── .env.example               # 本地开发环境变量样例(哑值)
-├── home/                      # 首页、板块页、SiteSettings、FeaturedItem、healthz/readyz
+├── home/                      # 首页、板块页、SiteSettings、FeaturedItem、CarouselItem、healthz/readyz
 ├── notices/                   # 通知页、文章页、活动字段、生命周期状态机(lifecycle.py)
 ├── departments/               # Department Snippet、部门容器页、权限初始化命令
 ├── resources/                 # 学习资料页、软件与工具页、学科/类型/平台词表
@@ -112,7 +112,7 @@ flowchart TB
 │   └── urls.py / wsgi.py
 ├── deploy/                    # Dockerfile / docker-compose.yml / Caddyfile /
 │                              # docker-entrypoint.sh / .env.example
-├── tests/                     # pytest 套件(48 个测试文件)
+├── tests/                     # pytest 套件(54 个测试文件)
 ├── docs/                      # 正式文档(含 adr/ 与本 guides/)
 └── .github/workflows/ci.yml   # CI 质量门
 ```
@@ -149,7 +149,7 @@ Root
 | 载体 | 适合什么 | 本项目实例 |
 |---|---|---|
 | **Page** | 有 URL、有生命周期、要出现在前台/搜索的正式内容 | 五类内容页 + 三种结构页 |
-| **Snippet** | 复用的受控数据(编辑用,无独立 URL) | `Department`(部门:权限锚点、URL 部门段、筛选维度)、`Discipline`(学科)、`MaterialType`(资料类型)、`GuideCategory`(指南类别)、`Platform`(适用平台,软件工具 M2M)、`Tag`(受控标签,仅总管理员可建)、`FeaturedItem`(首页推荐位:所指页面 + 起止时间 + 启用开关) |
+| **Snippet** | 复用的受控数据(编辑用,无独立 URL) | `Department`(部门:权限锚点、URL 部门段、筛选维度)、`Discipline`(学科)、`MaterialType`(资料类型)、`GuideCategory`(指南类别)、`Platform`(适用平台,软件工具 M2M)、`Tag`(受控标签,仅总管理员可建)、`FeaturedItem`(首页推荐位:所指页面 + 起止时间 + 启用开关;前台不再单独成块,作为首页「校园快讯」的第一优先来源)、`CarouselItem`(首页轮播项:站内内容页 XOR 经确认跳转页的外链,≤5 条) |
 | **Site Settings** | 全站单例运营配置 | `SiteSettings`:`alert_text`/`alert_start_at`/`alert_end_at`(首页紧急提示,起止成对且止 ≥ 起)、`feedback_email`(统一反馈邮箱)、`redirect_notice_text`(外链确认页声明,空=只渲染结构化四要素)。编辑权收归总管理员 |
 
 例子:一篇「图书馆期末开放安排」是 `NoticePage`(挂在图书馆部门的容器下、归属校园纪事板块、`expire_at` 设为学期末);「图书馆」本身是 `Department` Snippet;「首页是否挂紧急提示」在 `SiteSettings` 里改。
@@ -226,7 +226,7 @@ web 容器启动时串行完成:①循环等数据库**真实可达**(Django 连
 | `db` | `postgres:18` | `POSTGRES_DB/USER/PASSWORD` 注入;`pg_isready` 健康检查;`pgdata` 卷(挂载点取 `/var/lib/postgresql`,适配 postgres:18+ 镜像的 pg_ctlcluster 布局) |
 | `web` | 本仓 Dockerfile | production settings;env 显式透传(含 `WAGTAILADMIN_BASE_URL:?` 必填快速失败);media/static/backups 三卷;容器内 `/healthz/` 探针(start_period 60s,请求 Host 取 `ALLOWED_HOSTS` 首项);depends_on db healthy |
 | `scheduler` | 同镜像 | 命令 `python manage.py publish_scheduler`;`SCHED_INTERVAL_SECONDS`(缺省 60);depends_on **web healthy** |
-| `caddy` | `caddy:2` | 80/443;`DOMAIN` 注入 Caddyfile;`caddy_data`/`caddy_config` 卷;static/media 只读挂载 |
+| `caddy` | `caddy:2` | 80/443;`DOMAIN` 注入 Caddyfile;`caddy_data`/`caddy_config` 卷;static/media 只读挂载;站点响应统一带 `Strict-Transport-Security: max-age=31536000` 与 `X-Content-Type-Options: nosniff`(Phase 9,`deploy/Caddyfile`) |
 
 全部服务 `restart: unless-stopped`;秘密只经 `${VAR}` 插值自 `deploy/.env`,镜像内不含运行期秘密。变量全表见 [SERVER_DEPLOYMENT_GUIDE.md](SERVER_DEPLOYMENT_GUIDE.md)。
 
@@ -273,6 +273,7 @@ web 容器启动时串行完成:①循环等数据库**真实可达**(Django 连
 | 会话 | 24 小时;`SameSite=Lax`+`Secure`+`HttpOnly`;CSRF Cookie 同锁 | SB §3.2 |
 | 强制改密 | 后台设置/重置密码后须先自行改密(`PasswordChangeGateMiddleware` + `PasswordState` 表);ORM/CLI 建号不触发;应急 `clear_password_must_change` | SB §2.4;RUNBOOK §7 |
 | 传输安全 | `SECURE_SSL_REDIRECT`;`SECURE_PROXY_SSL_HEADER`;HSTS 终态一年(`HSTS_SECONDS` 可先短观察,无 preload);healthz/readyz 豁免重定向 | `settings/production.py`;F-10 |
+| 内容安全策略(CSP) | 公开页面统一响应头:`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'`;**`/admin/`、`/django-admin/` 豁免**(后台编辑器需要内联资源);Caddy 侧静态/媒体响应不带 CSP | `src/peiligo/csp.py` 自定义中间件;Phase 9 |
 | 上传校验 | 文档扩展名白名单 `doc docx pdf ppt pptx xls xlsx`,**20 MiB** 硬上限(仅文档);图片 `jpg jpeg png webp`(无单独大小上限);扩展名 + 声明 MIME + 内容签名三级一致;文件名清洗(拒路径形式、剥控制字符、255 字节截断) | `WAGTAILDOCS_*` 设置 + `upload_validation.py`;SB §4 |
 | 外链确认 | 仅 http/https 绝对 URL;拒 userinfo/相对形式/缺协议;前台不直出裸跳转,统一确认页(域名/来源/时间/声明四要素)+ go 端点二次校验后才 302 | `link_validation.py` + `home/views.py`;SB §10-7 |
 | 登录面 | 后台允许公网访问(V1 不做校园网/IP 白名单);不开放公开注册;不强制 MFA | SB §1(Q4) |
@@ -287,7 +288,7 @@ python manage.py check                      # 系统检查
 python manage.py makemigrations --check --dry-run   # 迁移一致性(无漂移)
 ruff check .                                # Lint
 ruff format --check .                       # 格式
-pytest -q                                   # 全量测试(2026-09-02 本地实测:604 passed + 269 subtests)
+pytest -q                                   # 全量测试(2026-09-02 本地实测 604 passed + 269 subtests;其后首页升级/Phase 9 批次继续扩充,现为 54 个测试文件,当前结果以 CI 为准)
 ```
 
 CI 只做质量门,不做部署;凭据全部哑值。
