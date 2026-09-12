@@ -464,9 +464,7 @@ class T16BoundaryTests(TestCase):
         """
         w = self.world
         client = login_client(w["user_a"])
-        resp = client.get(
-            "/admin/api/main/pages/", {"child_of": w["a_containers"]["chronicle"].id}
-        )
+        resp = client.get("/admin/api/main/pages/", {"child_of": w["a_containers"]["chronicle"].id})
         self.assertEqual(resp.status_code, 200)
         root_id = Page.get_first_root_node().id
         resp = client.get("/admin/api/main/pages/", {"child_of": root_id})
