@@ -2,12 +2,15 @@
 <html lang="zh-hans" dir="ltr">
     <head>
         <meta charset="utf-8" />
-        <title>Internal server error</title>
+        {# Phase 9（H 项）：最小简中错误页（替换英文样板）。DEBUG=False 时本模板 #}
+        {# 以空上下文渲染、中间件可能不运行——故零模板变量、零外链资源、零内联样式， #}
+        {# 纯静态自包含；不泄露任何环境细节。 #}
+        <title>服务暂时不可用</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
     </head>
     <body>
-        <h1>Internal server error</h1>
-
-        <h2>Sorry, there seems to be an error. Please try again soon.</h2>
+        <h1>服务暂时不可用</h1>
+        <p>抱歉，Peiligo 出现了临时故障，请稍后重试。</p>
+        <p><a href="/">返回首页</a></p>
     </body>
 </html>

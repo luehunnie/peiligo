@@ -13,6 +13,11 @@ jobs:
   quality-gate:
     runs-on: ubuntu-latest
 
+    # Phase 9（K 项）：GITHUB_TOKEN 显式最小权限（只读仓库内容），
+    # 不依赖仓库/组织级默认设置。
+    permissions:
+      contents: read
+
     services:
       postgres:
         image: postgres:18

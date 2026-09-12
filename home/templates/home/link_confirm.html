@@ -24,6 +24,14 @@ refresh、无 JS、无 302）；「继续访问」经 /link-confirm/go/ 输出�
 <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}/link-confirm/">
 {% endblock head_canonical %}
 
+{% comment %}
+Phase 9（Q 项·发布前隐私修复）：确认页页脚反馈 mailto 覆盖——正文只带
+站内路径（/link-confirm/），不带完整确认 URL。当前 URL 的查询串即外链
+目标本体（?url=…），目标可携带敏感 token/参数，不得自动进入反馈邮件；
+需要上报目标时由用户自行粘贴。页面其余要素不变。
+{% endcomment %}
+{% block feedback_mailto %}mailto:{{ feedback_email }}?subject={{ "页面反馈"|urlencode }}&amp;body={{ request.path|urlencode }}{% endblock feedback_mailto %}
+
 {% block content %}
 <section class="confirm" aria-labelledby="cf-h">
     <div class="confirm-card">

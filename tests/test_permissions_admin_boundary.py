@@ -456,9 +456,18 @@ class T16BoundaryTests(TestCase):
         self.assertEqual(client.get(reverse("wagtailadmin_home")).status_code, 200)
 
     def test_browser_tree_api_reachable(self):
-        """⑥ 浏览器树 API 可达（OQ-2 记录：可见性≠操作权，越权面由拒绝断言守）。"""
+        """⑥ 浏览器树 API 可达（OQ-2 记录：可见性≠操作权，越权面由拒绝断言守）。
+
+        Wagtail 7.4.3（PYSEC-2026-3939 修复）将 listing 查询集收窄为
+        explorable_instances(user)：可达性探针改取部门 A 自己的容器；
+        越界父节点（root）如今按设计返回 400，一并断言为回归守卫。
+        """
         w = self.world
         client = login_client(w["user_a"])
+        resp = client.get(
+            "/admin/api/main/pages/", {"child_of": w["a_containers"]["chronicle"].id}
+        )
+        self.assertEqual(resp.status_code, 200)
         root_id = Page.get_first_root_node().id
         resp = client.get("/admin/api/main/pages/", {"child_of": root_id})
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 400)

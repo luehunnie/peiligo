@@ -33,5 +33,9 @@ sqlparse==0.6.0
 telepath==0.3.1
 typing_extensions==4.16.0
 urllib3==2.7.0
-wagtail==7.4.2
+# Phase 9（K 项）：7.4.2 → 7.4.3 —— pip-audit 对 7.4.2 报 5 项管理面/
+# API 权限边界公告（PYSEC-2026-3939、GHSA-jm5p-837g-rv8g、GHSA-c2xx-cjmh-9q8f、
+# GHSA-x5cx-w6p2-mxf2、GHSA-92hv-j533-69wc），官方补丁版为 7.4.3（同 minor
+# 补丁，Wagtail 政策仅修 bug/安全）。
+wagtail==7.4.3
 Willow==1.12.0
