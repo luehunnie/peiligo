@@ -50,25 +50,20 @@
         {# 基础无障碍（PRD §13）：跳转主内容链接为首个可聚焦元素 #}
         <a class="skip-link" href="#main-content">跳到主要内容</a>
 
-        {# IA §6.1 页头：品牌区 + 一级导航（首页+五板块+站内搜索，固定七类， #}
-        {# 数据源=固定清单，永不查询部门容器，§6.2）；当前板块 aria-current。 #}
-        {# 校徽为视觉归属锚点（纯装饰 alt=""），品牌 link accessible name 仍为 #}
-        {# site_brand，读屏不重复朗读，不在页头额外显示完整校名。 #}
+        {# Phase 8B 页头（final-reference 定稿）：校徽 + 字标 + 全局搜索， #}
+        {# 七项文字导航移除（人类冻结决策 ①）；板块可达性改由首页板块卡、 #}
+        {# 面包屑、列表页筛选与页脚承担。校徽纯装饰 alt=""，品牌 link #}
+        {# accessible name 仍为 site_brand；搜索为真实 GET 表单，回显当前词。 #}
         <header class="site-header">
-            <div class="wrap header-inner">
-                <a class="brand" href="/">
-                    <img class="brand-logo" src="{% static 'img/peiligo-school-logo.png' %}" width="256" height="256" alt="">
-                    <span>{{ site_brand }}</span>
+            <div class="wrap header-grid">
+                <a class="brand" href="/" aria-label="{{ site_brand }} 首页">
+                    <img class="brand-logo" src="{% static 'img/peiligo-school-logo.png' %}" width="28" height="28" alt="">
+                    <span class="wordmark">{{ site_brand }}<span class="wm-dot">.</span></span>
                 </a>
-                <nav aria-label="全局导航">
-                    <ul class="nav-list">
-                        <li><a href="/" {% if request.path == "/" %}aria-current="page"{% endif %}>首页</a></li>
-                        {% for section in nav_sections %}
-                        <li><a href="/{{ section.slug }}/" {% if section.slug == current_section_slug %}aria-current="page"{% endif %}>{{ section.title }}</a></li>
-                        {% endfor %}
-                        <li><a href="{% url 'search' %}" {% if request.path == "/search/" %}aria-current="page"{% endif %}><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>站内搜索</a></li>
-                    </ul>
-                </nav>
+                <form class="search" role="search" action="{% url 'search' %}" method="get" aria-label="站内搜索">
+                    <svg class="search-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                    <input type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="搜资料、活动、软件…" aria-label="搜索站内内容">
+                </form>
             </div>
         </header>
 
@@ -84,26 +79,28 @@
         {% block content %}{% endblock %}
         </main>
 
-        {# IA §6.1 页脚：关于（站点说明，静态文案承载，不建独立页面）+ 反馈 #}
-        {# （统一工作邮箱；邮件链接自动带上内容标题与页面地址，PRD §8）。 #}
+        {# IA §6.1 页脚（final-reference 定稿：teal-deep 实底、品牌左/说明右）： #}
+        {# 关于（站点说明，静态文案承载，不建独立页面）+ 反馈（统一工作邮箱； #}
+        {# 邮件链接自动带上内容标题与页面地址，PRD §8）文案口径不变。 #}
         <footer class="site-footer">
             <div class="wrap footer-inner">
-                <section aria-label="关于本站">
-                    <h2>关于</h2>
+                <span class="footer-brand">
+                    <img src="{% static 'img/peiligo-school-logo.png' %}" width="24" height="24" alt="">
+                    {{ site_brand }}<span class="wm-dot">.</span>
+                </span>
+                <div class="footer-notes">
                     <p>
-                        本站面向校内学生，按五大板块组织校园信息；内容由各部门经站点后台发布，如对内容有疑问，请以发布部门的官方口径为准。
+                        关于：本站面向校内学生，按五大板块组织校园信息；内容由各部门经站点后台发布，如对内容有疑问，请以发布部门的官方口径为准。
                     </p>
-                </section>
-                <section aria-label="反馈">
-                    <h2>反馈</h2>
                     <p>
-                        发现内容错误、链接失效或版权问题，请反馈至统一工作邮箱：
+                        反馈：发现内容错误、链接失效或版权问题，请致信
                         {% with feedback_subject=page.title|default:"页面反馈" %}
                         <a href="mailto:{{ feedback_email }}?subject={{ feedback_subject|urlencode }}&amp;body={{ request.build_absolute_uri|urlencode }}">{{ feedback_email }}</a>
                         {% endwith %}
+                        。
                     </p>
-                </section>
-                <p class="footer-meta">© {% now "Y" %} {{ site_brand }}</p>
+                    <p class="footer-meta">© {% now "Y" %} {{ site_brand }}</p>
+                </div>
             </div>
         </footer>
 

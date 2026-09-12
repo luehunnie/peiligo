@@ -1,0 +1,11 @@
+{# 板块身份图标块（final-reference 定稿同款线性图标 + accent 实心底）。 #}
+{# 冻结映射（SECTION_IDENTITY）：chronicle=coral events=amber materials=blue #}
+{# software=violet guide=teal——仅 CSS 类映射，零数据字段。 #}
+{# 用法：{% include "includes/section_identity.html" with slug=page.slug only %} #}
+{# 未识别 slug 不输出（不猜色）。 #}
+{% if slug == "chronicle" %}<span class="sec-ico ico-jishi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5A1.5 1.5 0 0 1 5.5 5H16a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 16 19H5.5A1.5 1.5 0 0 1 4 17.5Z"/><path d="M17.5 8H19a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19h-2.6"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg></span>
+{% elif slug == "events" %}<span class="sec-ico ico-huodong" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+{% elif slug == "materials" %}<span class="sec-ico ico-ziliao" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg></span>
+{% elif slug == "software" %}<span class="sec-ico ico-gongju" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><polyline points="7.5 9.5 10.5 12 7.5 14.5"/><line x1="12.5" y1="15.5" x2="16.5" y2="15.5"/></svg></span>
+{% elif slug == "guide" %}<span class="sec-ico ico-zhinan" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><polygon points="16 8 14 14 8 16 10 10 16 8"/></svg></span>
+{% endif %}

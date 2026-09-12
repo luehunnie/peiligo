@@ -246,12 +246,21 @@ class SectionPage(Page):
         ``?section=`` 一律忽略（板块维度由路径唯一决定）。查询委托
         ``search.services``——CURRENT_DEFAULT_SEARCH 可见性（§21.5＝
         §16.4 live∧¬expired 同谓词）、逐类型入口（§20.0 事实 3）、
-        filter-first＋保序（§21.6）与 /search/ 完全同层。分页为 MB 阶段
-        任务，V1 全量单页渲染。
+        filter-first＋保序（§21.6）与 /search/ 完全同层。Phase 8B 起共享
+        分页（search.services.paginate_entries，与 /search/ 同一实现；
+        content_entries 键名不变，值＝当前页条目）。
         """
         context = super().get_context(request, *args, **kwargs)
         filters = search_services.resolve_section_filters(request.GET, self)
-        context["content_entries"] = search_services.search_pages(filters)
+        entries = search_services.search_pages(filters)
+        page_obj, page_links = search_services.paginate_entries(entries, request.GET.get("page"))
+        context["content_entries"] = page_obj.object_list
+        context["total_entries"] = page_obj.paginator.count
+        context["page_obj"] = page_obj
+        context["page_links"] = page_links
+        stripped = request.GET.copy()
+        stripped.pop("page", None)
+        context["querystring"] = stripped.urlencode()
         context["search_filters"] = filters
         context["filter_active"] = filters.filter_active
         return context

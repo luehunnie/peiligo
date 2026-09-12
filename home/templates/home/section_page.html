@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load peiligo_extras %}
 
 {% block body_class %}template-section{% endblock %}
 
@@ -13,36 +14,47 @@
 {% block content %}
 {% include "includes/breadcrumb.html" with crumb_title=page.title only %}
 
-{# 板块页头（合同 §5）：H1 + IA §2 一句话定位（冻结文案 include）； #}
-{# dept 筛选态 H1 换 §8.2 模式文案（部门筛选结果≠部门主页，§8.1）。 #}
-<div class="page-head">
-    <h1>
+{# Phase 8B（final-reference 列表/搜索语言）：板块身份图标块（冻结五色， #}
+{# 零数据字段）+ H1 + IA §2 一句话定位（冻结文案 include）+ 计数 + 板块 #}
+{# 大搜索框（提交回本页，§9.1 板块页生效参数不变）。dept 筛选态 H1 换 #}
+{# §8.2 模式文案（部门筛选结果≠部门主页，§8.1）。 #}
+<section class="ls-head cat-mode" aria-labelledby="cat-title">
+    {% include "includes/section_identity.html" with slug=page.slug only %}
+    <h1 id="cat-title">
         {% if search_filters.department %}{{ page.title }}·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}{{ page.title }}{% endif %}
     </h1>
-    <p class="section-lede">{% include "includes/section_positioning.html" with slug=page.slug only %}</p>
+    <p class="ls-intro">{% include "includes/section_positioning.html" with slug=page.slug only %}</p>
     {# M5.2（§6.1 入口呈现＝页内入口裁定）：板块页头历史归档入口—— #}
     {# 含已过有效期内容，expired 条目带「已过期」徽标。 #}
     <p class="archive-entry"><a href="/{{ page.slug }}/archive/">{{ page.title }}·历史归档</a>（含已过有效期内容）</p>
-</div>
+    <p class="ls-count">共 <strong>{{ total_entries }}</strong> 条</p>
+    <form class="big-search" role="search" action="/{{ page.slug }}/" method="get" aria-label="在本板块内搜索">
+        <svg class="search-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" name="q" value="{{ search_filters.q }}" aria-label="搜索词" placeholder="在本板块内搜索…">
+        <button type="submit">搜索</button>
+    </form>
+</section>
 
 {% comment %}
 板块默认列表与筛选态共用同一过滤层（IA §6.2＋§9；M3.4 起 q/dept/type/tag
 四参数生效，?section= 一律忽略——板块维度由路径唯一决定，§9.1）。列表仅列
 本板块内容页=第 4 层叶子，容器不是列表项、无列表标题；默认与筛选态排序
-同为发布时间倒序（§9.2 #4）。筛选 UI 控件与分页属 MB10/MB 阶段，本页仅
-服务端过滤渲染。本板块零内容且无筛选参数 → 渲染"全空"空态（IA §11 四态
-之一），不渲染列表、不造假条目、不渲染空业务区标题（合同 §4.4/§5）；
-携带筛选参数且结果为 0 → "筛选无匹配"空态（清除动作回退全部＝板块基础
-URL，§9.2；已选条件回显经 search_filters.active_conditions）。"载入中/
-出错+重试"属旧站 SPA 请求态，纯 SSR（ADR-0002）无客户端加载过程，
-服务端异常由 Django 500 页承载。
+同为发布时间倒序（§9.2 #4）。结果行与 /search/ 用同一共享片段（行式，
+Phase 8B）；分页＝search.services 共享实现（Phase 8B），筛选 UI 控件仍属
+MB10。本板块零内容且无筛选参数 → 渲染"全空"空态（IA §11 四态之一），不
+渲染列表、不造假条目、不渲染空业务区标题（合同 §4.4/§5）；携带筛选参数
+且结果为 0 → "筛选无匹配"空态（清除动作回退全部＝板块基础 URL，§9.2；
+已选条件回显经 search_filters.active_conditions）。"载入中/出错+重试"属
+旧站 SPA 请求态，纯 SSR（ADR-0002）无客户端加载过程，服务端异常由
+Django 500 页承载。
 {% endcomment %}
 {% if content_entries %}
-<ul class="content-list">
+<section class="results" aria-label="{{ page.title }}列表">
     {% for item in content_entries %}
-    {% include "includes/content_card.html" with item=item only %}
+    {% include "includes/list_row.html" with item=item only %}
     {% endfor %}
-</ul>
+</section>
+{% if page_links %}{% include "includes/pager.html" with page_obj=page_obj page_links=page_links querystring=querystring only %}{% endif %}
 {% elif filter_active %}
 <div class="empty-state">
     <p class="empty-title">没有符合当前条件的内容</p>
