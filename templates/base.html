@@ -107,7 +107,9 @@
             </div>
         </footer>
 
-        {# 全站无 JS（纯 SSR，ADR-0002）；空静态脚本加载位已移除（F-04）。 #}
+        {# 前台架构＝SSR-first ＋ 最小原生 JS 渐进增强（ADR-0007 细化 #}
+        {# ADR-0002，无 SPA／无构建链边界不变）；页面经下方 extra_js 注入点 #}
+        {# 按需加载自有静态 JS，SSR 内容与链接的权威输出地位不变。 #}
         {% block extra_js %}
         {# Override this in templates to add extra javascript #}
         {% endblock %}
