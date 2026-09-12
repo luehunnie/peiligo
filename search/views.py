@@ -22,13 +22,33 @@ def search(request):
         if filters.filter_active
         else []
     )
+    # Phase 8B：共享分页（search_results 键名与既有契约不变，值＝当前页
+    # 条目）；翻页链接保留全部筛选参数（querystring 已剔除 page）。
+    page_obj, page_links = services.paginate_entries(results, request.GET.get("page"))
+    querystring = _querystring_without_page(request.GET)
     return TemplateResponse(
         request,
         "search/search.html",
         {
             "search_query": filters.q,
             "search_filters": filters,
-            "search_results": results,
+            "search_results": page_obj.object_list,
             "filter_active": filters.filter_active,
+            "page_obj": page_obj,
+            "page_links": page_links,
+            "querystring": querystring,
+            "total_results": page_obj.paginator.count,
+            "section_chips": services.section_chips(
+                request.GET, filters.section.slug if filters.section else None
+            ),
+            # 高亮词＝原始解析后的 q（escape-safe 过滤器内部自行转义）。
+            "highlight_q": filters.q,
         },
     )
+
+
+def _querystring_without_page(params):
+    """剔除 page 后的查询串（翻页保留 q/section/dept/type/tag）。"""
+    restored = params.copy()
+    restored.pop("page", None)
+    return restored.urlencode()

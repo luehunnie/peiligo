@@ -33,11 +33,13 @@ HISTORICAL 集（live ∪ expired）：live 与 expired 条目同序混排、发
 </div>
 
 {% if archive_entries %}
-<ul class="content-list">
+{# Phase 8B：归档行与板块/搜索共享同一行式片段（保留全量渲染与 #}
+{# HISTORICAL 口径不变——分页不属归档页本阶段范围，见证据报告）。 #}
+<section class="results" aria-label="{{ section.title }}历史归档">
     {% for item in archive_entries %}
-    {% include "includes/content_card.html" with item=item only %}
+    {% include "includes/list_row.html" with item=item only %}
     {% endfor %}
-</ul>
+</section>
 {% else %}
 <div class="empty-state">
     <p class="empty-title">本板块暂无历史内容</p>

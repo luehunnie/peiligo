@@ -15,6 +15,7 @@
 """
 
 from departments.models import Department
+from django.core.paginator import Page, Paginator
 from django.db.models import Q
 from guides.models import GuideCategory, GuidePage
 from notices.lifecycle import VISIBILITY_CURRENT_DEFAULT, VISIBILITY_HISTORICAL
@@ -23,6 +24,12 @@ from resources.models import Discipline, MaterialPage, MaterialType, Platform, S
 
 # §21.1：section 合法值＝五冻结 slug（IA §2；P4 伪板块页禁入）。
 SECTION_SLUGS = ("chronicle", "events", "materials", "software", "guide")
+
+# Phase 8B 列表分页常量（搜索页与板块页共享；显式小值，非魔法数）。
+LIST_PAGE_SIZE = 20
+
+# _page_links 缺口占位（模板按该字面值渲染省略号，非页码）。
+PAGE_GAP = "…"
 
 # §21.1/§1.2：type 五值单射（工作名→正式 Model）；中文标签＝§1.1 冻结类型名。
 TYPE_IDENTIFIERS = {
@@ -265,6 +272,77 @@ def search_pages(filters, visibility=VISIBILITY_CURRENT_DEFAULT):
         reverse=True,
     )
     return merged
+
+
+def paginate_entries(entries, page_param):
+    """列表条目分页（Phase 8B 共享语言配套；/search/ 与板块页同一实现）。
+
+    ``Paginator.get_page`` 的宽容语义即需求口径：非整数 → 第 1 页，越界
+    → 最后一页（不 404 不 500，§21.3 非法值不致错同构）。``page_param``
+    取原始 ``request.GET["page"]``。返回 ``(Page, page_links)``，
+    page_links 供共享 pager 片段渲染（含 "…" 缺口）。
+    """
+    paginator = Paginator(entries, LIST_PAGE_SIZE)
+    page = paginator.get_page(page_param)
+    return page, _page_links(page)
+
+
+def _page_links(page: Page, window: int = 1):
+    """当前页窗口页码表：1、末页恒在，当前页 ±window，其余以
+    ``PAGE_GAP``（"…"）折叠——纯 Python 构建供模板直渲染，页码恒为
+    整数、缺口恒为字符串，两者模板可区分。"""
+    number = page.number
+    total = page.paginator.num_pages
+    shown = {1, total}
+    shown.update(range(max(1, number - window), min(total, number + window) + 1))
+    links = []
+    previous = 0
+    for value in sorted(shown):
+        if previous and value - previous > 1:
+            links.append(PAGE_GAP)
+        links.append(value)
+        previous = value
+    return links
+
+
+def section_chips(params, active_slug):
+    """/search/ 栏目筛选 chips（真实链接，非假按钮）。
+
+    ``params``＝当前 request.GET（保留 q/dept/type/tag，剔除 page 与
+    section 自身）；``active_slug``＝None（全部）或冻结 slug。返回
+    [{slug, label, url, active}, ...]，"全部" 置首。板块短名沿用
+    SECTION_SLUGS 冻结顺序。
+    """
+    from home.models import SECTIONS  # 迟导入：home 反向消费本模块（见 _resolve_section）。
+
+    base = params.copy()
+    base.pop("page", None)
+    all_params = base.copy()
+    all_params.pop("section", None)
+    all_query = all_params.urlencode()
+
+    chips = [
+        {
+            "slug": "",
+            "label": "全部",
+            "url": f"/search/{'?' + all_query if all_query else ''}",
+            "active": active_slug is None,
+        }
+    ]
+    for section in SECTIONS:
+        slug, title = section["slug"], section["title"]
+        item = base.copy()
+        item["section"] = slug
+        query = item.urlencode()
+        chips.append(
+            {
+                "slug": slug,
+                "label": title,
+                "url": f"/search/?{query}",
+                "active": slug == active_slug,
+            }
+        )
+    return chips
 
 
 # §23 金标集挂接点（仅契约占位，不建数据集——30 条本体归 M6.1）：条目

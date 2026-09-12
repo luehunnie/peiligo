@@ -173,7 +173,9 @@ class Pa32ArchiveViewTests(ArchivePairBase):
     def test_pa32_badge_targets_expired_entries_only(self):
         """徽标仅挂 expired 条目（live 条目不带；与 §7 总表标注义务一致）。"""
         html = self.client.get("/chronicle/archive/").content.decode()
-        cards = html.split("<li>")  # 逐内容卡切片，避免跨卡窗口误判
+        # Phase 8B 行式结果行（<a class="r-row">，原 <li> 内容卡）：逐行切片，
+        # 避免跨行窗口误判——测试意图（徽标仅挂 expired 行）不变。
+        cards = html.split('<a class="r-row"')
         live_card = next(card for card in cards if self.live.title in card)
         expired_card = next(card for card in cards if self.expired.title in card)
         self.assertNotIn("已过期", live_card)

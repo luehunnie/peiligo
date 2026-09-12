@@ -1,0 +1,27 @@
+{# 列表/搜索共享结果行（final-reference .r-row：行式，非卡片）。 #}
+{# 板块徽标 tone 来自树上下文（entry.section_slug），零数据字段； #}
+{# 小字一律 deep 变体（无障碍），颜色仅伴随文字标签不作唯一区分。 #}
+{# 摘要回落链与旧 content_card 同序（summary → license_note → location）， #}
+{# 用 {% if %} 守卫取值——缺省属性在过滤参数位会硬失败，在 if 守卫位静默。 #}
+{# highlight_q 仅 /search/ 传入（escape-safe 管线，见 peiligo_extras）； #}
+{# show_section 仅 /search/ 传入（跨板块结果需要栏目归属标注）。 #}
+{% load wagtailcore_tags peiligo_extras %}
+<a class="r-row" href="{% pageurl item %}">
+    <span class="tag{% if item.section_slug %} tone-{{ item.section_slug|section_tone }}{% endif %}">{% if item.section_slug %}{{ item.section_slug|section_short }}{% else %}{{ item.section_title }}{% endif %}</span>
+    <div class="r-main">
+        <h2>
+            {% if highlight_q %}{{ item.title|highlight:highlight_q }}{% else %}{{ item.title }}{% endif %}
+            {% if item.expired %}<span class="badge-expired">已过期</span>{% endif %}
+        </h2>
+        <p>
+            {% if item.summary %}
+                {% if highlight_q %}{{ item.summary|truncatechars:90|highlight:highlight_q }}{% else %}{{ item.summary|truncatechars:90 }}{% endif %}
+            {% elif item.license_note %}
+                {% if highlight_q %}{{ item.license_note|truncatechars:90|highlight:highlight_q }}{% else %}{{ item.license_note|truncatechars:90 }}{% endif %}
+            {% else %}
+                {% if highlight_q %}{{ item.location|truncatechars:90|highlight:highlight_q }}{% else %}{{ item.location|truncatechars:90 }}{% endif %}
+            {% endif %}
+        </p>
+        <p class="r-meta">{{ item.department }} · {{ item.first_published_at|date:"Y-m-d" }}{% if item.event_status %} · {{ item.event_status }}{% endif %}{% if show_section and item.section_title %} · {{ item.section_title }}{% endif %}</p>
+    </div>
+</a>

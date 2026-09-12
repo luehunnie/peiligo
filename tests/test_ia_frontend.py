@@ -3,8 +3,10 @@
 断言清单引源 docs/INFORMATION_ARCHITECTURE.md §13（M2.2 增补 IA-06..14；
 本步覆盖其中不依赖 M3 模型的部分）：
 
-- IA-06 导航一级项仅=首页+五板块+搜索入口，不含容器；板块默认列表无容器条目；
+- IA-06（Phase 8B 修订：人类冻结决策①）页头=校徽+字标+全局搜索，七项
+  文字导航移除；板块默认列表无容器条目、全站不链接容器；
 - IA-07 面包屑：首页无、板块页=首页>板块、当前页纯文本、容器段永不出现；
+  Phase 8B 起 /search/ 为中性搜索壳、无面包屑；
 - IA-10 首页/板块页默认可收录（无 noindex meta）且进入 sitemap；
 - IA-12 /search/（含无参数态）与板块 query 态输出 noindex+canonical 去参 URL，
   query 态不入 sitemap；
@@ -44,8 +46,9 @@ FROZEN_SECTION_ORDER = [
     ("校园指南", "guide"),
 ]
 
-# IA §6.1：一级导航固定七类（首页+五板块+站内搜索），仅此七类。
-NAV_EXPECTED_LABELS = ["首页", *(title for title, _ in FROZEN_SECTION_ORDER), "站内搜索"]
+# Phase 8B（人类冻结决策①）：七项文字导航移除——页头不得再出现这些
+# 导航条目（可达性改由首页板块卡/面包屑/列表筛选/页脚承担）。
+FORBIDDEN_NAV_LABELS = ["首页", *(title for title, _ in FROZEN_SECTION_ORDER), "站内搜索"]
 
 # 全部会被断言的前台表面（404 表面单独构造）。
 PUBLIC_SURFACES = ["/", "/chronicle/", "/guide/", "/search/"]
@@ -79,19 +82,39 @@ class FrontendIATestCase(WagtailPageTestCase):
         assert match, f"未找到 aria-label={aria_label!r} 的区块"
         return match.group(1)
 
+    @staticmethod
+    def _extract_header_block(html: str) -> str:
+        match = re.search(r"<header.*?</header>", html, re.DOTALL)
+        assert match, "未找到 <header> 区块"
+        return match.group(0)
+
 
 class GlobalNavigationTests(FrontendIATestCase):
-    """IA-06：导航固定七类、容器零出现、当前项 aria-current（§6.1/§6.2）。"""
+    """IA-06（Phase 8B 页头口径）：品牌+全局搜索、七项导航移除、容器零出现。"""
 
-    def test_ia06_nav_has_exactly_seven_items_on_all_public_surfaces(self):
+    def test_header_has_brand_and_global_search_no_nav_on_all_surfaces(self):
+        """全部公开表面：页头含品牌链接与全局搜索 GET 表单（action=/search/
+        name=q），不再有「全局导航」nav，旧七项导航条目零出现。"""
         for url in PUBLIC_SURFACES:
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
-                nav = self._extract_block(response.content.decode(), "全局导航")
-                items = re.findall(r"<li>(.*?)</li>", nav, re.DOTALL)
-                labels = [re.sub(r"<[^>]+>|\s+", "", item) for item in items]
-                self.assertEqual(labels, NAV_EXPECTED_LABELS)
+                html = response.content.decode()
+                header = self._extract_header_block(html)
+                self.assertIn('class="brand" href="/"', header)
+                self.assertIn('class="wordmark"', header)
+                self.assertIn('action="/search/"', header)
+                self.assertIn('name="q"', header)
+                self.assertNotIn("全局导航", html)
+                nav = self._extract_header_block(html)
+                labels_present = [label for label in FORBIDDEN_NAV_LABELS if f">{label}</a>" in nav]
+                self.assertEqual(labels_present, [])
+
+    def test_header_search_preserves_current_query(self):
+        """页头搜索回显当前搜索词（q 参数 → input value），刷新/改词可用。"""
+        response = self.client.get("/search/", {"q": "开学典礼"})
+        html = response.content.decode()
+        self.assertIn('value="开学典礼"', html)
 
     def test_ia06_container_never_linked_on_any_surface(self):
         """全站模板不生成任何指向 /<板块>/<部门>/ 的链接（§6.2 导航行）。"""
@@ -104,31 +127,11 @@ class GlobalNavigationTests(FrontendIATestCase):
                     response, "/chronicle/jwc/", status_code=response.status_code
                 )
 
-    def test_ia06_section_default_list_has_no_container_entry(self):
+    def test_ia06_section_default_list_has_no_container_entry(self):  # noqa: D102（IA-06 沿用）
         """板块默认列表（当前为全空态）不出现容器条目/容器标题（§6.2 列表行）。"""
         response = self.client.get("/chronicle/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, self.container.title)
-
-    def test_aria_current_home_on_homepage(self):
-        response = self.client.get("/")
-        nav = self._extract_block(response.content.decode(), "全局导航")
-        current = re.findall(r'<a href="([^"]+)" aria-current="page">', nav)
-        self.assertEqual(current, ["/"])
-
-    def test_aria_current_marks_active_section(self):
-        for slug in ("chronicle", "guide"):
-            with self.subTest(slug=slug):
-                response = self.client.get(f"/{slug}/")
-                nav = self._extract_block(response.content.decode(), "全局导航")
-                current = re.findall(r'<a href="([^"]+)" aria-current="page">', nav)
-                self.assertEqual(current, [f"/{slug}/"])
-
-    def test_aria_current_marks_search_entry_on_search_page(self):
-        response = self.client.get("/search/")
-        nav = self._extract_block(response.content.decode(), "全局导航")
-        current = re.findall(r'<a href="([^"]+)" aria-current="page">', nav)
-        self.assertEqual(current, ["/search/"])
 
 
 class HeaderBrandLogoTests(FrontendIATestCase):
@@ -158,9 +161,11 @@ class HeaderBrandLogoTests(FrontendIATestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 header = self._extract_header(response.content.decode())
-                brand = re.search(r'<a class="brand" href="/">.*?</a>', header, re.DOTALL)
+                brand = re.search(r'<a class="brand"[^>]*>.*?</a>', header, re.DOTALL)
                 self.assertIsNotNone(brand)
-                self.assertIn("<span>Peiligo</span>", brand.group(0))
+                # Phase 8B 字标形态：wordmark span（含 coral 句点装饰）。
+                self.assertRegex(brand.group(0), r'<span class="wordmark">\s*Peiligo')
+                self.assertIn('class="wm-dot"', brand.group(0))
                 self.assertIn(f'src="{self.BRAND_LOGO_STATIC_PATH}"', brand.group(0))
                 self.assertRegex(brand.group(0), r'<img class="brand-logo"[^>]*alt=""')
 
@@ -195,16 +200,15 @@ class HeaderBrandLogoTests(FrontendIATestCase):
         self.assertNotIn("Desktop", header)
 
     def test_navigation_invariants_with_brand_logo(self):
-        """加校徽后：导航仍固定七类；header 无 hamburger/切换按钮等新增入口。"""
+        """Phase 8B 页头不变量：无导航列表、无 hamburger/切换按钮等新增入口
+        （可达性改由首页板块卡/面包屑/列表筛选/页脚承担——人类冻结决策①）。"""
         for url in PUBLIC_SURFACES:
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200)
                 header = self._extract_header(response.content.decode())
-                nav = self._extract_block(header, "全局导航")
-                items = re.findall(r"<li>(.*?)</li>", nav, re.DOTALL)
-                labels = [re.sub(r"<[^>]+>|\s+", "", item) for item in items]
-                self.assertEqual(labels, NAV_EXPECTED_LABELS)
+                self.assertNotIn("全局导航", header)
+                self.assertNotIn("<nav", header)
                 header_lower = header.lower()
                 for forbidden in ("hamburger", "nav-toggle", "menu-toggle", "<button"):
                     self.assertNotIn(forbidden, header_lower)
@@ -236,12 +240,12 @@ class BreadcrumbTests(FrontendIATestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)  # 面包屑唯一链接目标即首页
 
-    def test_ia07_search_page_breadcrumb(self):
+    def test_ia07_search_page_has_no_breadcrumb(self):
+        """Phase 8B（final-reference）：/search/ 为中性搜索壳，无面包屑
+        （壳内大搜索框即页面身份；IA-07 载体清单相应修订）。"""
         response = self.client.get("/search/")
-        crumb = self._extract_block(response.content.decode(), "面包屑")
-        links = re.findall(r'<a href="([^"]+)">', crumb)
-        self.assertEqual(links, ["/"])
-        self.assertIn("站内搜索", crumb)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'aria-label="面包屑"')
 
 
 class RobotsMetaTests(FrontendIATestCase):
@@ -432,8 +436,9 @@ class AccessibilitySemanticsTests(FrontendIATestCase):
                 self.assertIn('<main id="main-content"', html)
                 for landmark in ("<header", "<footer"):
                     self.assertIn(landmark, html)
-                for label in ("全局导航",):
-                    self.assertIn(f'aria-label="{label}"', html)
+                # Phase 8B：页头全局搜索表单（role=search + 站内搜索命名）。
+                self.assertIn('role="search"', html)
+                self.assertIn('aria-label="站内搜索"', html)
 
     def test_exactly_one_h1_per_surface(self):
         for url in PUBLIC_SURFACES:
@@ -442,8 +447,10 @@ class AccessibilitySemanticsTests(FrontendIATestCase):
                 html = response.content.decode()
                 self.assertEqual(len(re.findall(r"<h1[ >]", html)), 1)
 
-    def test_search_form_has_explicit_label(self):
-        """M3.4：搜索框参数名改 q（IA §9.1），显式 label 语义不变。"""
+    def test_search_form_has_accessible_name(self):
+        """M3.4：搜索框参数名 q（IA §9.1）；Phase 8B 定稿壳无可见 label，
+        可访问命名经 aria-label 承担（大搜索框 input）。"""
         response = self.client.get("/search/")
-        self.assertContains(response, '<label for="id_q">')
+        self.assertContains(response, 'name="q"')
         self.assertContains(response, 'id="id_q"')
+        self.assertContains(response, 'aria-label="搜索词"')

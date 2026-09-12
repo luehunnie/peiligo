@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load wagtailcore_tags %}
+{% load wagtailcore_tags peiligo_extras %}
 
 {% block body_class %}template-searchresults{% endblock %}
 
@@ -18,27 +18,45 @@
 {% endblock head_canonical %}
 
 {% block content %}
-{% include "includes/breadcrumb.html" with crumb_title="站内搜索" only %}
-<h1>
-    {% if search_filters.department %}站内搜索·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}站内搜索{% endif %}
-</h1>
+{# Phase 8B（final-reference 列表/搜索语言）：中性 teal 外壳大搜索框 + #}
+{# 结果计数 + 真实栏目 chips + 行式结果（list_row 共享片段）。标题模式 #}
+{# 文案、noindex/canonical、可见性口径（§7.1 expired 命中带标注）、空态 #}
+{# 文案契约均不变；h1 视觉隐藏（大搜索框即页面的可读身份，参考稿同款）。 #}
+<section class="ls-head" aria-labelledby="ls-title">
+    <h1 id="ls-title" class="visually-hidden">
+        {% if search_filters.department %}站内搜索·{{ search_filters.department.name }}发布的内容（筛选结果）{% else %}站内搜索{% endif %}
+    </h1>
+    {# M3.4（§9）：五参数全 GET 承载（q/section/dept/type/tag，§9.1），服务端 #}
+    {# 解析过滤（§21.3 非法值视同未提供）；分页由本页 pager 片段承担（MB10 #}
+    {# 的筛选控件 UI 仍留后续，不属本阶段）。 #}
+    <form class="big-search" role="search" action="{% url 'search' %}" method="get">
+        <svg class="search-ico" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="id_q" name="q" value="{{ search_query|default_if_none:'' }}" aria-label="搜索词" placeholder="搜资料、活动、软件…">
+        <button type="submit">搜索</button>
+    </form>
 
-{# M3.4（§9）：五参数全 GET 承载（q/section/dept/type/tag，§9.1），服务端 #}
-{# 解析过滤（§21.3 非法值视同未提供）；完整筛选 UI（参数控件/分页）属 MB10， #}
-{# 本页为最小表单态+结果列表。 #}
-<form action="{% url 'search' %}" method="get" role="search">
-    <label for="id_q">搜索关键词</label>
-    <input type="search" id="id_q" name="q" value="{{ search_query|default_if_none:'' }}">
-    <button type="submit">搜索</button>
-</form>
+    {% if filter_active %}
+    <p class="s-sum">
+        找到 <strong>{{ total_results }}</strong> 条{% if search_query %}与「{{ search_query }}」相关的内容{% else %}符合当前条件的内容{% endif %}
+    </p>
+    {# 栏目 chips＝真实链接（服务端 section_chips 构建，保留其余参数）， #}
+    {# 当前项 aria-current；颜色不做唯一区分（文字标签恒在）。 #}
+    <div class="type-chips" role="group" aria-label="按栏目筛选">
+        {% for chip in section_chips %}
+        <a class="t-chip{% if chip.active %} on{% endif %}" href="{{ chip.url }}"{% if chip.active %} aria-current="true"{% endif %}>{% if chip.slug %}{{ chip.slug|section_short }}{% else %}{{ chip.label }}{% endif %}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
 
 {% if search_results %}
-{# 结果列表＝板块页同一内容卡（IA §6.2 结构合同，M2 视觉 token 零新 CSS）。 #}
-<ul class="content-list">
+{# 结果行＝板块页/归档页同一共享片段（IA §6.2 结构合同，视觉语言统一）。 #}
+<section class="results" aria-label="搜索结果">
     {% for result in search_results %}
-    {% include "includes/content_card.html" with item=result only %}
+    {% include "includes/list_row.html" with item=result show_section=1 highlight_q=highlight_q only %}
     {% endfor %}
-</ul>
+</section>
+{% if page_links %}{% include "includes/pager.html" with page_obj=page_obj page_links=page_links querystring=querystring only %}{% endif %}
 {% elif filter_active %}
 {# IA §11"筛选无匹配"空态：文案与动作区别于"全空"态；清除动作回退全部 #}
 {# （§9.2）；已选条件回显（解析后有效条件，§21.3 回退后的维度不回显）。 #}

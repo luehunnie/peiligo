@@ -90,7 +90,9 @@ class HomeSearchParamTests(HomeAreasTestCase):
         make_notice(self.container, slug="q-e2e", title="量子计算 uniqueztoken 通知", publish=True)
         response = self.client.get("/search/", {"q": "uniqueztoken"})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "量子计算 uniqueztoken 通知")
+        # Phase 8B 关键词高亮：命中词包 <mark>，标题连续串被标记打断——
+        # 断言改为整行渲染形态（意图不变：该内容在 /search/ 命中）。
+        self.assertContains(response, "量子计算 <mark>uniqueztoken</mark> 通知")
 
 
 class AlertAreaTests(HomeAreasTestCase):
