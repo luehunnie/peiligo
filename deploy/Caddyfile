@@ -12,6 +12,9 @@
 		# 与 Django 侧 HSTS（production settings）互补：静态文件响应
 		# 亦带 HSTS；两路各出各的响应头，不会重复叠加。
 		Strict-Transport-Security "max-age=31536000"
+		# Phase 9（F/T 项）：静态/媒体直供响应补 Django 侧同款
+		# X-Content-Type-Options（Django 的 nosniff 只盖动态响应）。
+		X-Content-Type-Options "nosniff"
 		-Server
 	}
 

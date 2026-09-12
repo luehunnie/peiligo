@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 from home import views as home_views
 from home.models import SECTIONS
 from search import views as search_views
@@ -35,6 +35,14 @@ urlpatterns = [
         "robots.txt",
         TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
         name="robots-txt",
+    ),
+    # Phase 9（P 项）：/favicon.ico 缺位即浏览器默认请求 404——既有官方
+    # 校徽资产直充图标（base.html 另有 link rel=icon 声明）；301 落静态
+    # 路径（收集后原文件名不哈希），浏览器缓存后仅首访一次跳转。
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url="/static/img/peiligo-school-logo.png", permanent=True),
+        name="favicon",
     ),
     re_path(
         rf"^({_SECTION_ARCHIVE_SLUGS})/archive/$",

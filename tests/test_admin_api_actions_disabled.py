@@ -176,11 +176,20 @@ class AdminAPIPageActionDisabledTests(TestCase):
         self.assertEqual(diff, "", f"预期零库变更；实际 diff：{diff}")
 
     def test_listing_and_detail_still_reachable_for_r2(self):
-        """正向对照：sidebar 依赖的 GET listing/detail 保持可达（不误伤读面）。"""
+        """正向对照：sidebar 依赖的 GET listing/detail 保持可达（不误伤读面）。
+
+        Wagtail 7.4.3（PYSEC-2026-3939 修复）将 listing 查询集收窄为
+        explorable_instances(user)：可达性探针须落在用户可浏览范围内
+        （此处取部门 B 自己的容器）；越界父节点（root）如今按设计返回
+        400 "parent page doesn't exist"，一并断言为回归守卫。
+        """
         w = self.world
         client = login_client(w["user_b"])
-        root_id = Page.get_first_root_node().id
-        resp = client.get("/admin/api/main/pages/", {"child_of": root_id})
+        resp = client.get("/admin/api/main/pages/", {"child_of": w["b_chron"].id})
         self.assertEqual(resp.status_code, 200)
         resp = client.get(f"/admin/api/main/pages/{w['page_b_live'].id}/")
         self.assertEqual(resp.status_code, 200)
+        # 越界探针（root 不在可浏览集内）→ 400，权限边界按设计收口。
+        root_id = Page.get_first_root_node().id
+        resp = client.get("/admin/api/main/pages/", {"child_of": root_id})
+        self.assertEqual(resp.status_code, 400)
