@@ -1,36 +1,29 @@
-{% extends "base.html" %}
+{% extends "article_detail.html" %}
 {% load wagtailcore_tags %}
 
 {% block body_class %}template-softwaretoolpage{% endblock %}
 
-{% block content %}
-{% with section_url="/"|add:page.section_slug|add:"/" %}
-{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
-{% endwith %}
+{% block article_meta %}
+<span>{{ page.department }}</span><span class="dot-sep">·</span>
+<time datetime="{{ page.first_published_at|date:"Y-m-d" }}">{{ page.first_published_at|date:"Y-m-d" }} 发布</time>
+{% endblock %}
 
-<article class="content-article">
-    <div class="page-head">
-        <h1>{{ page.title }}</h1>
-        <p class="content-meta">
-            {{ page.department }} · {{ page.first_published_at|date:"Y-m-d" }}
-        </p>
-    </div>
+{% block article_body %}
+{% comment %}六项结构化信息（CONTENT_MODEL §9）：适用平台为受控词表 M2M #}
+{% comment %}（≥1）；来源链接（网盘/官网）输出仅经统一确认跳转页（CM-05； #}
+{% comment %}F-03 确认页显示四要素后再由访客决定去留）。软件工具＝普通文章， #}
+{% comment %}无产品目录/版本/体积等元数据（final-reference 冻结口径）。{% endcomment %}
+<section class="event-info" aria-label="软件信息">
+    <h2>基本信息</h2>
+    <dl class="meta-list">
+        <div><dt>适用平台</dt><dd>{{ page.platforms.all|join:"、" }}</dd></div>
+        <div><dt>来源链接</dt><dd class="url-text">{% include "includes/external_link_jump.html" with url=page.source_url text=page.source_url from=page.pk only %}</dd></div>
+        <div><dt>授权或费用说明</dt><dd>{{ page.license_note }}</dd></div>
+    </dl>
+</section>
 
-    {% comment %}六项结构化信息（CONTENT_MODEL §9）：适用平台为受控词表 M2M #}
-    {% comment %}（≥1）；来源链接输出仅经统一确认跳转页（CM-05；F-03 确认 #}
-    {% comment %}页显示 PRD §7.5 四要素后再由访客决定去留）。{% endcomment %}
-    <section class="event-info" aria-label="软件信息">
-        <h2>基本信息</h2>
-        <dl class="meta-list">
-            <div><dt>适用平台</dt><dd>{{ page.platforms.all|join:"、" }}</dd></div>
-            <div><dt>来源链接</dt><dd class="url-text">{% include "includes/external_link_jump.html" with url=page.source_url text=page.source_url from=page.pk only %}</dd></div>
-            <div><dt>授权或费用说明</dt><dd>{{ page.license_note }}</dd></div>
-        </dl>
-    </section>
-
-    <section class="article-body" aria-label="用途说明">
-        <h2>用途说明</h2>
-        {% for block in page.body %}{% include_block block %}{% endfor %}
-    </section>
-</article>
-{% endblock content %}
+<section class="article-body" aria-label="用途说明">
+    <h2>用途说明</h2>
+    {% for block in page.body %}{% include_block block %}{% endfor %}
+</section>
+{% endblock %}

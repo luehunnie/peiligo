@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load wagtailcore_tags wagtailimages_tags peiligo_extras %}
+
+{% comment %}
+共享文章详情壳（Phase 8D；final-reference pages/article-detail「全站唯一详情
+模板」转译）。五类内容页同壳：面包屑 → 栏目 tag → 标题 → 元信息（＋可选
+导语）→ 可选封面 → 逐类型正文片段（article_body override）→ 返回所属板块。
+密度立场＝安静（design-system「文章详情 安静」）：栏目身份只出现在 tag 与
+封面（无封面则整块不渲染，不制造假图），正文区永远中性（白底深字，强调
+与链接保持品牌青），不按栏目给正文/页面染色。正文片段之外无相关推荐、无
+上/下一篇、无任何新增后端字段；return 链接由树上下文（SectionContextMixin）
+派生，无所属板块时整行不输出。
+{% endcomment %}
+
+{% block content %}
+{% with section_slug=page.section_slug section_title=page.section_title %}
+{% if section_slug %}
+{% with section_url="/"|add:section_slug|add:"/" %}
+{% include "includes/breadcrumb.html" with crumb_parent_title=section_title crumb_parent_url=section_url crumb_title=page.title only %}
+{% endwith %}
+{% else %}
+{% include "includes/breadcrumb.html" with crumb_title=page.title only %}
+{% endif %}
+
+<article class="content-article">
+    <header class="art-head">
+        {% if section_slug %}<span class="tag tone-{{ section_slug|section_tone }}">{{ section_title }}</span>{% endif %}
+        <h1>{{ page.title }}</h1>
+        <p class="art-meta">{% block article_meta %}{% endblock %}</p>
+        {% block article_lede %}{% endblock %}
+    </header>
+
+    {% if page.cover_image %}
+    <figure class="art-cover">
+        {# 封面按原始比例整幅呈现（无破坏性裁切）；alt 沿图片库既有策略。 #}
+        {% image page.cover_image width-1400 alt=page.cover_image.default_alt_text %}
+    </figure>
+    {% endif %}
+
+    {% block article_body %}{% endblock %}
+
+    {% if section_slug %}
+    <p class="art-back"><a href="/{{ section_slug }}/">← 返回{{ section_title }}</a></p>
+    {% endif %}
+</article>
+{% endwith %}
+{% endblock content %}

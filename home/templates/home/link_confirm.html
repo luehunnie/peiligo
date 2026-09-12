@@ -3,15 +3,19 @@
 
 {% block body_class %}template-linkconfirm{% endblock %}
 
-{% block title %}外部链接确认{% endblock %}
+{% block title %}即将访问外部网站{% endblock %}
 
 {% comment %}
-F-03 外链统一确认跳转页（PRD §7.5 四要素；CM §11.4 冻结语义；SEC-21）：
-显示目标地址与域名、来源、最后更新时间、第三方内容可能变化的声明，无需
-强制勾选免责协议（PRD §7.5）。无任何自动跳转（无 meta refresh、无 JS、
-无 302）——离开本站须手动点击「继续访问」；目标不合法＝拒绝提示，绝不
-跳转（SEC-22 白名单语义）。自定义视图不入页面树 → 不进 sitemap；整页
-恒 noindex（/search/ 与归档同款，IA §10 家族）。
+F-03 外链统一确认跳转页（PRD §7.5；CM §11.4；SEC-21）· Phase 8D
+final-reference 转译：小标记「外部链接」＋标题「即将访问外部网站」＋一句
+话说明；目标域名经既有 external_url_domain 解析（不重复解析 URL、不展示
+路径/查询，仅主机名）；来源与最后更新时间为次要元信息（from 合法且所指页
+前台可见时才输出）；声明＝DEFAULT_REDIRECT_NOTICE（SiteSettings
+.redirect_notice_text 可覆盖，空回落默认）。无任何自动跳转（无 meta
+refresh、无 JS、无 302）；「继续访问」经 /link-confirm/go/ 输出层二次校验
+通过才 302；「返回 Peiligo」为确定性站内链接（有来源页→来源页，否则首页），
+不依赖浏览器历史、无 inline JS。自定义视图不入页面树 → 不进 sitemap；
+整页恒 noindex。
 {% endcomment %}
 {% block head_robots %}
 <meta name="robots" content="noindex">
@@ -21,26 +25,36 @@ F-03 外链统一确认跳转页（PRD §7.5 四要素；CM §11.4 冻结语义�
 {% endblock head_canonical %}
 
 {% block content %}
-<div class="page-head">
-    <h1>外部链接确认</h1>
-    <p class="section-lede">您即将离开本站，访问外部网站提供的资源。</p>
-</div>
+<section class="confirm" aria-labelledby="cf-h">
+    <div class="confirm-card">
+        <span class="c-kicker">外部链接</span>
+        <h1 id="cf-h">即将访问外部网站</h1>
+        <p class="c-lead">你将离开 Peiligo，前往第三方网站。</p>
 
-{% if target_ok %}
-    <dl class="meta-list confirm-facts">
-        <div><dt>目标地址</dt><dd><span class="url-text">{{ target_display }}</span>（域名：<span class="url-text">{{ target_domain }}</span>）</dd></div>
+        {% if target_ok %}
+        <div class="c-dest">
+            <span class="c-dest-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+            <span class="c-domain">{{ target_domain }}</span>
+        </div>
+
         {% if source_page %}
-        <div><dt>来源</dt><dd><a href="{% pageurl source_page %}">{{ source_page.title }}</a></dd></div>
-        <div><dt>最后更新时间</dt><dd>{{ source_page.last_published_at|date:"Y-m-d H:i" }}</dd></div>
+        <p class="c-source">来源：<a href="{% pageurl source_page %}">{{ source_page.title }}</a><span class="dot-sep">·</span>最后更新时间 {{ source_page.last_published_at|date:"Y-m-d H:i" }}</p>
         {% endif %}
-        <div><dt>声明</dt><dd>{{ notice_text }}</dd></div>
-    </dl>
-    <p class="confirm-actions">
-        <a class="button" href="{{ go_url }}" rel="nofollow">继续访问</a>
-        <a class="button button-secondary" href="/" onclick="history.back(); return false;">返回</a>
-    </p>
-{% else %}
-    <p class="confirm-error">该链接不安全或格式不正确，已阻止访问：{{ problem }}</p>
-    <p class="confirm-actions"><a class="button" href="/">返回首页</a></p>
-{% endif %}
+
+        <div class="c-note">
+            <p>{{ notice_text }}</p>
+        </div>
+
+        <div class="c-actions">
+            <a class="c-primary" href="{{ go_url }}" rel="nofollow">继续访问<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></a>
+            <a class="c-ghost" href="{% if source_page %}{% pageurl source_page %}{% else %}/{% endif %}">返回 Peiligo</a>
+        </div>
+        {% else %}
+        <p class="confirm-error">该链接不安全或格式不正确，已阻止访问：{{ problem }}</p>
+        <div class="c-actions">
+            <a class="c-ghost" href="/">返回 Peiligo</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
 {% endblock content %}

@@ -1,3 +1,18 @@
 {# F-03（CM §11.4/PRD §7.5）：外链出口统一经确认跳转页包装——不裸跳转； #}
 {# 展示保留完整 URL 明文（可辨识目标域名），点击进入确认页再决定去留。 #}
+{# 两种形态： #}
+{# 1) 默认＝行内文本链接（传 text）——活动报名链接、软件来源链接等； #}
+{# 2) file 形态（传 file_title）＝final-reference .file 资源行（图标＋标题 #}
+{#    ＋URL 明文＋外跳箭头），file_note 真值时附 URL 明文副行。 #}
+{# 确认页 href 构造唯一出处＝本文件（urlencode 过滤器＝quote(value, "/")， #}
+{# 与视图层口径一致）。page 上下文不可用时 from 静默为空（确认页相应 #}
+{# 省略来源/时间要素）。 #}
+{% if file_title %}
+<a class="file" href="{% url 'link-confirm' %}?url={{ url|urlencode }}&from={{ from }}">
+    <span class="file-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+    <span class="file-text"><strong class="url-text">{{ file_title }}</strong>{% if file_note %}<em class="url-text">{{ url }}</em>{% endif %}</span>
+    <span class="file-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></span>
+</a>
+{% else %}
 <a href="{% url 'link-confirm' %}?url={{ url|urlencode }}&from={{ from }}">{{ text }}</a>
+{% endif %}

@@ -21,11 +21,7 @@ from search import services
 from search.services import SearchFilters
 from wagtail.models import Page
 
-from peiligo.link_validation import (
-    display_external_url,
-    external_url_domain,
-    validate_external_url,
-)
+from peiligo.link_validation import external_url_domain, validate_external_url
 
 from .models import SectionPage, SiteSettings
 
@@ -58,13 +54,22 @@ def section_archive(request, section_slug):
 # 对目标做与字段层相同的 SB §10-7 校验后才 302（输出层二次校验防库内
 # 历史脏数据）；非法目标＝渲染拒绝提示，绝不跳转（SEC-22 白名单语义）。
 # 自定义视图不入页面树（ADR-0005 #5 先例）→ 不进 sitemap；整页恒 noindex。
+# 默认声明文案（Phase 8D 定稿，冻结）：学习与参考定位＋第三方免责，简洁
+# 非法律条文；SiteSettings.redirect_notice_text 非空即整体覆盖本默认值。
 DEFAULT_REDIRECT_NOTICE = (
-    "该链接指向校外第三方网站，第三方内容可能随时间发生变化，请以目标网站当前内容为准。"
+    "本站提供的资料仅供学习与参考使用。相关内容、文件及服务由第三方提供，"
+    "请遵守相关版权规定及第三方平台规则。Peiligo 不控制第三方网站内容，"
+    "也无法保证其持续可用。"
 )
 
 
 def _confirm_context(request):
-    """确认页共享上下文：目标输出层校验＋四要素解析。"""
+    """确认页共享上下文：目标输出层校验＋四要素解析。
+
+    Phase 8D 展示口径：目标只展示主机名（``external_url_domain``，既有
+    函数；不展示路径/查询）；「返回 Peiligo」＝确定性站内链接（有来源页
+    指来源页、否则首页），由模板经 ``source_page`` 判定，零新增上下文。
+    """
     raw = request.GET.get("url", "")
     try:
         target = validate_external_url(raw)
@@ -85,9 +90,7 @@ def _confirm_context(request):
         )
     notice_text = SiteSettings.for_request(request).redirect_notice_text.strip()
     return {
-        "target": raw,
         "target_ok": bool(target),
-        "target_display": display_external_url(target) if target else "",
         "target_domain": external_url_domain(target) if target else "",
         "problem": problem,
         "source_page": source_page,

@@ -1,22 +1,18 @@
-{% extends "base.html" %}
+{% extends "article_detail.html" %}
 {% load wagtailcore_tags %}
 
 {% block body_class %}template-guidepage{% endblock %}
 
-{% block content %}
-{% with section_url="/"|add:page.section_slug|add:"/" %}
-{% include "includes/breadcrumb.html" with crumb_parent_title=page.section_title crumb_parent_url=section_url crumb_title=page.title only %}
-{% endwith %}
+{% block article_meta %}
+<span>{{ page.category }}</span><span class="dot-sep">·</span>
+<span>{{ page.department }}</span><span class="dot-sep">·</span>
+<span>最后确认 {{ page.last_confirmed_on|date:"Y-m-d" }}</span>
+{% endblock %}
 
-<article class="content-article">
-    <div class="page-head">
-        <h1>{{ page.title }}</h1>
-        <p class="content-meta">
-            {{ page.category }} · {{ page.department }} · 最后确认 {{ page.last_confirmed_on|date:"Y-m-d" }}
-        </p>
-    </div>
-
-    {% comment %}九字段逐项（CONTENT_MODEL §10.1 一字不差；补充说明可选）。{% endcomment %}
+{% block article_body %}
+{# 无 StreamField 正文（CONTENT_MODEL §10.1）：九字段结构化数据在同一 #}
+{# 文章壳内渲染，零迁移零新字段。 #}
+<div class="article-body">
     <dl class="meta-list guide-fields">
         <div><dt>地点</dt><dd>{{ page.location }}</dd></div>
         <div><dt>开放时间</dt><dd>{{ page.opening_hours|linebreaksbr }}</dd></div>
@@ -26,5 +22,5 @@
         <div><dt>维护方式</dt><dd>{{ page.get_maintenance_mode_display }}</dd></div>
         <div><dt>最后确认日期或更新时间</dt><dd>{{ page.last_confirmed_on|date:"Y-m-d" }}</dd></div>
     </dl>
-</article>
-{% endblock content %}
+</div>
+{% endblock %}
