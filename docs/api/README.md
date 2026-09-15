@@ -3,6 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 状态 | **Proposed — 待 R3 评审**（评审通过前不视为已冻结；状态权威＝[ADR-0008](../adr/0008-headless-api-contract.md)） |
+| 修订 | 2026-09-15 R3 评审修订（控制器 FIX 裁定）：①F5 重写为 **E9 预览契约**（新增 [`/api/v1/preview`](openapi.json)＋同源 `/preview/` 请求流，见 §3.1）；②F3 收紧为 **Gate 5 部署验收条件**（生产 `SCHED_INTERVAL_SECONDS ≤ 30`，不满足即生产切换 blocker）。仍为 Proposed，双载体同一提交更新 |
 | 决策记录 | [docs/adr/0008-headless-api-contract.md](../adr/0008-headless-api-contract.md)（ADR-0008，Proposed） |
 | Ticket | [luehunnie/peiligo#13](https://github.com/luehunnie/peiligo/issues/13)（SPEC-001-B01） |
 | 父 Spec | [SPEC-001](https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2)（ Contracts 1/3/4、Architecture Constraints 1/2/3/6） |
@@ -14,11 +15,11 @@
 
 ## 0. 契约范围一句话
 
-为 Peiligo 公开内容新增**只读、无写端点、无认证**的 JSON API（`/api/v1/`），响应与现有 Django 模板渲染**行为等价**（同一可见性谓词、同一过滤层、同一排序、同一外链门控）；仅经 Peiligo Docker 内网供新前端（Astro SSR）消费，浏览器零直接调用；实现（B02）**零迁移**。
+为 Peiligo 新增**只读、零写端点**的 JSON API（`/api/v1/`），响应与现有 Django 模板渲染**行为等价**（同一可见性谓词、同一过滤层、同一排序、同一外链门控）；E1–E8 无认证且可见面＝现有匿名浏览器可见面，E9 为票据门控的预览取数出口（§3.1）；仅经 Peiligo Docker 内网供新前端（Astro SSR）消费，浏览器零直接 API 调用；实现（B02）**零迁移**。
 
 三层分离中本契约为 **schema 层**：view 层（页面组装）与 interaction 层（交互）归前端仓库（F04 起）；后端仅提供本文件定义的资源读取。
 
-## 1. 端点清单（8 个，覆盖全部公开页面类型）
+## 1. 端点清单（9 个：E1–E8 覆盖全部公开页面类型，E9 预览面）
 
 | # | 端点 | 等价现状消费位 | 可见性谓词 | 分页 |
 | --- | --- | --- | --- | --- |
@@ -30,6 +31,7 @@
 | E6 | `GET /api/v1/pages/{section}/{dept}/{slug}` | 五类内容页具名 URL 渲染（含 expired 放行语义） | live ∪ expired | 无 |
 | E7 | `GET /api/v1/link-confirm` | `home.views._confirm_context`（外链确认页四要素） | 每请求实时 | 无 |
 | E8 | `GET /api/v1/sitemap` | `wagtail.contrib.sitemaps` sitemap 视图输出 | live ∧ ¬noindex | 无 |
+| E9 | `GET /api/v1/preview` | Wagtail 后台预览（`wagtailadmin` 既有 `FormState` 修订暂存）的新前端等价出口（§3.1） | 预览票据（≤60s 签名 token，绑定管理会话＋页面 change 权限；位于可见性谓词体系之外——预览对象正是草稿） | 无 |
 
 **不进入 API、保持 Django 现状不变的端点**（URL 与行为均不变，由 Caddy 继续路由 Django）：
 
@@ -37,7 +39,7 @@
 - `/documents/<id>/<filename>/`——Wagtail 文档下载（附件 URL 直接引用该形态）；
 - `/admin/`、`/django-admin/`、`/healthz/`、`/readyz/`、`/robots.txt`、`/favicon.ico`、`/static/`、`/media/`。
 
-**公开页面类型覆盖核对**：首页（E2）、板块列表/筛选态（E3）、五类内容页详情（E6：通知/文章/学习资料/软件与工具/校园指南）、板块历史归档（E4）、全站搜索（E5）、外链确认页（E7）、页头/页脚/紧急提示（E1）、sitemap（E8）；robots.txt/favicon 为静态资产、容器 URL 恒 404、部门无主页——均无数据面，无需端点。无任何投机端点（不为未来 i18n 或新产品预留）。
+**公开页面类型覆盖核对**：首页（E2）、板块列表/筛选态（E3）、五类内容页详情（E6：通知/文章/学习资料/软件与工具/校园指南）、板块历史归档（E4）、全站搜索（E5）、外链确认页（E7）、页头/页脚/紧急提示（E1）、sitemap（E8）；robots.txt/favicon 为静态资产、容器 URL 恒 404、部门无主页——均无数据面，无需端点。E9 为冻结 PRD（SPEC-001）明列「生产切换前 Wagtail preview 可用」所要求的预览面（票据门控，非公开页面类型、非匿名可见面），非投机端点。除此之外无任何投机端点（不为未来 i18n 或新产品预留）。
 
 ## 2. 通用规则
 
@@ -57,7 +59,7 @@
 | 详情放行 | live 正常；expired 具名 URL 放行并带 `expired: true`（`LifecycleStateMixin.route` 载体①）；S0 草稿/S1 预约/S4 下线 → 404 | E6 |
 | 运营位有效性 | `FeaturedItem.is_on_display` / `CarouselItem.is_on_display` 每请求复核（enabled∧窗口∧所指内容 S2；失效静默跳过） | E2 |
 
-容器页（`DepartmentContainerPage`）永不出现在任何响应中（前台 404、不在列表/搜索/导航/sitemap，现状 IA §3.2 同构）；Snippet 词表（部门/标签/学科等）不设独立端点——仅作为条目字段值与筛选参数出现。
+容器页（`DepartmentContainerPage`）永不出现在任何响应中（前台 404、不在列表/搜索/导航/sitemap，现状 IA §3.2 同构）；Snippet 词表（部门/标签/学科等）不设独立端点——仅作为条目字段值与筛选参数出现。E9 位于上述谓词体系之外（其预览对象正是 S0/S1 草稿），访问面由 §3.1 票据条款单独约束；E1–E8 响应永不含草稿内容。
 
 ### 2.3 搜索与过滤语义（逐字继承 CONTENT_MODEL §21，零新增公开参数）
 
@@ -80,7 +82,7 @@
 
 | HTTP | `code` | 触发 | 前端义务（SPEC-001 契约 4） |
 | --- | --- | --- | --- |
-| 404 | `not_found` | E6 页面不存在或状态∉{live, expired}；E3/E4 板块 slug 非法或非 live | 样式化 404 态 |
+| 404 | `not_found` | E6 页面不存在或状态∉{live, expired}；E3/E4 板块 slug 非法或非 live；E9 票据缺失/无效/过期/权限复核不过（一律 `not_found`，不区分原因，防预言机） | 样式化 404 态 |
 | 405 | `method_not_allowed` | 非 GET | —（前端不触发） |
 | 500 | `server_error` | 未预期异常 | 样式化错误态＋重试引导 |
 | 503 | `unavailable` | 数据库/上游不可用（`readyz` 同判定源） | 样式化错误态＋重试引导 |
@@ -95,22 +97,42 @@
 | --- | --- |
 | F1 请求时计算 | 所有端点每请求从现役数据库计算响应；**API 层禁止任何应用级缓存、共享 HTTP 缓存、ETag/Last-Modified 陈旧回放**；全部 `/api/` 响应带 `Cache-Control: no-store`。 |
 | F2 立即发布 | 无 `go_live_at` 的发布＝落库即对下一请求可见（≤30s 目标以其上限满足）。 |
-| F3 预约发布 | 可见时点由现有 `publish_scheduler`（`SCHED_INTERVAL_SECONDS`，缺省 60s）决定，API 零附加延迟；≤5min 允许窗口在缺省配置下成立；如需 30s 内则调低该运维参数（零代码变更）。 |
+| F3 预约发布 | 可见时点＝**下一个调度周期**（`publish_scheduler` 容器，间隔 `SCHED_INTERVAL_SECONDS`，缺省 60s），API 零附加延迟。**≤30s 目标的 Gate 5 部署验收条件：生产 `SCHED_INTERVAL_SECONDS ≤ 30` 且 scheduler 容器运行中**；缺省 60s 仅满足 ≤5min 允许窗口、**不满足** ≤30s 目标——不满足即**生产切换 blocker**（切换 runbook 显式检查项，禁止静默带病切换）。调参零代码变更。 |
 | F4 永不陈旧面 | E1（含紧急提示）/E5/E7 严格请求时计算；F04 侧对应页面同样不得缓存其数据（Astro SSR 每请求取数）。紧急告警下一次请求即见。 |
-| F5 预览 | v1 API **不暴露任何草稿/预览内容**（无 preview 端点、响应永不含 S0/S1 内容）。Wagtail 后台预览（渲染内存修订版）保持现状，为切换前的 preview 权威载体；若未来需要面向新前端的预览面＝契约变更→按 §7 演进规则升级（R3）。 |
+| F5 预览 | 草稿/预览内容**仅**经 E9（§3.1）出口：≤60s 单跳签名票据（Django 唯一校验权威）→ Astro 以与正式页**同一模板**渲染于同源 `/preview/?token=`。除此之外任何公开面（E1–E8、sitemap、搜索、导航）**永不含 S0/S1 草稿内容**。后台既有 Django 模板预览保持现状不动，作为迁移期回退载体；E9 未接线期间该缺口为显式跟踪的迁移限制＋生产切换 blocker（§3.1），不得作为 v1 契约终态。 |
 | F6 过期内容 | expired 内容按 §2.2 详情放行/HISTORICAL 谓词呈现并显式带 `expired` 标记——这是现行归档业务状态，非陈旧缓存；F1–F4 排除一切真陈旧。 |
+
+### 3.1 预览契约（E9，冻结 PRD「生产切换前 Wagtail preview 可用」的落地）
+
+**请求流（五步，单跳票据）**：
+
+1. 编辑在 Wagtail 后台点「预览」——现有表单暂存机制照旧（`wagtailadmin` 既有 `FormState` 表按用户×页面暂存编辑态，后台既有行为零变更）；
+2. 后台预览出口（**应用级钩子**，B02 实现）铸造**签名票据**：Django `core.signing`（复用现有 `SECRET_KEY`，无新秘密、无新存储载体），载荷绑定（管理会话、用户、页面 pk），**有效期 ≤60s**；
+3. 编辑浏览器携票据访问**同源**预览页 `GET /preview/?token=…`（公开域路径，与后台同源——`WAGTAILADMIN_BASE_URL` 与 `DOMAIN` 同源现状不变；Caddy 将 `/preview/` 路由至 Astro）；
+4. Astro SSR 把票据**原样透传** Django 内网 `GET /api/v1/preview?token=…`（S1 同款边界：Caddy 不公开路由 `/api/`、无 CORS、浏览器零直接 API 调用）；
+5. Django 校验并出数：签名/时效 → 绑定会话仍存在且仍认证同一用户 → 用户对该页仍具 change 权限（与后台预览同一权限要求）→ 草稿暂存仍在；全部通过后**只读**重建草稿对象、经与 E6 同一序列化层输出 `preview: true` 响应（`Cache-Control: no-store`）；任一步失败一律 404 `not_found`（不区分原因，防预言机）。**兑换路径零写入**（不改 `FormState`、不写任何会话/存储）。
+
+**义务与边界**：
+
+- Django/Wagtail 是认证、授权、预览数据与票据校验的**唯一权威**；Astro 无数据库连接、无权限逻辑，仅票据透传与模板渲染（SPEC-001 Constraint 1 不破）。
+- Astro 预览页义务（F04，亦写入 `openapi.json` `/preview` 操作）：与正式详情页**同一模板**渲染（真等价预览）；`Cache-Control: no-store`＋`X-Robots-Tag: noindex`＋`Referrer-Policy: no-referrer`；不缓存、不重放缓存票；不把票据写访问日志（记哈希或省略 query）；票据校验失败渲染样式化 404；CSP 与全站同一纪律（不豁免、不放松）；不入 sitemap/搜索/导航。
+- 范围＝五类内容页（E6 判别联合）；首页/板块页预览维持后台 Django 模板预览现状。
+- `/preview/` 为预览保留路径（冻结 IA 下根级子页仅五板块 slug，无路径冲突）。
+- 残余风险如实记录：票据在 ≤60s 有效期内可重复兑换（换取零写入兑换路径与零新存储）；泄露影响被短时效、会话绑定与权限复核三重约束，票据换取的仅是单篇草稿的只读视图。
+- **迁移期跟踪**：B02（E9＋预览出口钩子）与 F04（`/preview/` 页）部署并在 staging 验证之前，「Astro 等价预览未接线」作为**显式跟踪的迁移限制＋生产切换 blocker**（G5/B03 切换检查项）；该缺口不得作为 v1 契约终态。
 
 ## 4. 安全与网络边界（SPEC-001 Architecture Constraints 1/2/5）
 
 | 条款 | 内容 |
 | --- | --- |
 | S1 同源/内网 | `/api/` 仅经 Peiligo Docker Compose 内网暴露给前端应用容器；**Caddy 不公开路由 `/api/`**；浏览器零直接 API 调用（消费位＝Astro SSR 服务端取数），同源体验不变。无需 CORS。 |
-| S2 只读/无新增认证 | 无写端点；不新增认证/权限对象/用户组（上传与权限仍全部在 Django 侧）；API 匿名可读，且其可见面＝现有匿名浏览器可见面（§2.2 同一谓词），不多不少。 |
+| S2 只读/无新增认证 | 无写端点；不新增认证/权限对象/用户组（上传与权限仍全部在 Django 侧）；E1–E8 匿名可读且可见面＝现有匿名浏览器可见面（§2.2 同一谓词），不多不少；E9 不匿名——仅经 S8 票据面放行。 |
 | S3 管理面不动 | `/admin/`、`/django-admin/`、axes、PasswordChangeGate、govaudit 均不因 API 改变。 |
 | S4 数据最小面 | 响应仅含现有公开页面已展示的字段（含部门名、发布时间等作者元数据，PRD §4.3 口径）；无草稿、无日志、无环境细节、无秘密。 |
 | S5 隔离 | API 与 Peilige/Peilike 严格 compose/network/volume/env 隔离；零交叉访问、零共享端点。 |
 | S6 外链门控不变 | 正文外链块、`external_url`、`event_registration_url`、轮播外链项的出口一律由 API 提供**预构造 `confirm_href`**（`/link-confirm/?url=<quote(url, safe='/')>&from=<page.pk>`，构造规则唯一出处与 `external_link_jump.html` 同口径）；`/link-confirm/go/` 302 前输出层二次校验保持 Django 侧不变。富文本段落内既有内联外链形态**原样继承**（现状即不包装，属现状不变量；任何改变＝超范围）。 |
 | S7 响应头 | `/api/` 路径不豁免现有 CSP 中间件（`peiligo.csp` 盖章行为不变）；HSTS/nosniff 由 Caddy/Django 现有配置覆盖。 |
+| S8 预览票据 | E9 面仅经签名票据放行：`core.signing`（现有 `SECRET_KEY`＋专用 salt），载荷绑定（管理会话，用户，页面），有效期 ≤60s；兑换时 Django 复核签名/时效/会话存活/用户认证/页面 change 权限，失败一律 404 不区分原因；兑换只读零写入；零新存储载体（草稿表单态沿用 `wagtailadmin` 既有 `FormState` 表——Wagtail 自管迁移，已应用）。后台 URL/权限对象/认证方式零变更，S3 各项不受影响。 |
 
 ## 5. 数据形态（要点；权威定义＝`openapi.json`）
 
@@ -140,24 +162,26 @@
 - **E7 link-confirm**：`{ok, target_domain(仅主机名), notice_text(SiteSettings 覆盖或默认文案), source{title,url}|null(from 须指向 CURRENT_DEFAULT 页，防草稿标题枚举), go_href, problem}`。
 - **E8 sitemap**：`{entries[{loc(路径), lastmod}]}`——与现状 sitemap.xml 同一模型与排除口径（容器排除、noindex 排除）；公开域绝对化由前端完成。
 - **分页元数据**：`{total, page, page_count, per_page:20, has_next, has_previous}`。
+- **E9 preview**：E6 判别联合（公共字段＋五型差异，§5.2 详情各条）＋顶层 `preview: true`；全部字段取自预览表单状态（草稿数据），可见性谓词与 expired 放行语义不适用（`expired`/`expire_at` 等按草稿数据如实填充）；浏览器侧预览页＝同源 `/preview/?token=`（Astro 同模板渲染，义务见 §3.1）。
 
 字段与现状模板渲染的逐条对应关系已在 `openapi.json` 各 schema 的 `description` 中给出引源（模型/模板/文档条款）。
 
 ## 6. 零迁移与实现边界（B02 义务）
 
-1. **零 Django 迁移**：不新增模型/字段/索引/设置载体；不发生任何 schema、内容或数据迁移。契约读取面仅为现有模型：五类内容页 Page、`SectionPage`/`HomePage`、`Department`、`DepartmentContainerPage`（仅作树定位）、`FeaturedItem`/`CarouselItem`/`SiteSettings`、词表 Snippet、`wagtailimages.Image`/`wagtaildocs.Document`。
+1. **零 Django 迁移**：不新增模型/字段/索引/设置载体；不发生任何 schema、内容或数据迁移。契约读取面仅为现有模型：五类内容页 Page、`SectionPage`/`HomePage`、`Department`、`DepartmentContainerPage`（仅作树定位）、`FeaturedItem`/`CarouselItem`/`SiteSettings`、词表 Snippet、`wagtailimages.Image`/`wagtaildocs.Document`；E9 预览面同样零新存储——票据为签名值（无载体），草稿表单态沿用 `wagtailadmin` 既有 `FormState` 表（Wagtail 自管迁移，已应用）。
 2. **零核心改动**：不改 Wagtail/Django 核心；搜索后端固定复用 `search/backends.py`（E1，ADR-0006）与 `search/services.py` 既有过滤层（或对其等价只读调用），不另立第二套搜索语义。
-3. **零行为变更**：现有模板渲染、URL、管理面、发布/预览、安全基线全部不动；旧前端（ADR-0002 服务端模板）在切换前保持应急回退与 preview 载体，本契约不推翻 ADR-0002/0007（其退役处置归 B05，Human-only）。
-4. **实现建议**（非冻结）：普通 Django 视图＋`JsonResponse`/`TemplateResponse` 之外的纯 JSON 出口即可满足本契约；不建议为 8 个只读端点引入 DRF router/wagtail.api.v2 等通用面（见 ADR-0008 替代方案 1）。实现分支＝`feature/headless-api`（SPEC-001 Git 政策）；每 PR 必含既有完整测试套件＋零计划外 migration 检查＋契约校验（SPEC-001 Test Matrix）。
+3. **零行为变更**：现有模板渲染、URL、管理面、发布/预览、安全基线全部不动（唯一新增交互面＝§3.1 预览出口：应用级钩子铸造票据并指向同源 `/preview/`，不改既有后台 URL/权限/认证对象，后台既有 Django 模板预览照旧）；旧前端（ADR-0002 服务端模板）在切换前保持应急回退与预览回退载体，本契约不推翻 ADR-0002/0007（其退役处置归 B05，Human-only）。
+4. **实现建议**（非冻结）：普通 Django 视图＋`JsonResponse`/`TemplateResponse` 之外的纯 JSON 出口即可满足本契约；不建议为 9 个只读端点引入 DRF router/wagtail.api.v2 等通用面（见 ADR-0008 替代方案 1）。实现分支＝`feature/headless-api`（SPEC-001 Git 政策）；每 PR 必含既有完整测试套件＋零计划外 migration 检查＋契约校验（SPEC-001 Test Matrix）。
 5. **红线**：任何 DB/schema/数据迁移需求 → **立即 STOP**＋Human 决策包（R4）；涉及写端点或权限变更 → 超范围 STOP。
 
 ## 7. 版本与演进
 
-- 基础路径带版本前缀 `/api/v1/`；**加字段/加端点**＝非破坏性，允许在 v1 内演进，但须同步更新本文件与 `openapi.json` 并在 PR 中声明。
+- 基础路径带版本前缀 `/api/v1/`；**加字段/加端点**＝非破坏性，允许在 v1 内演进，但须同步更新本文件与 `openapi.json` 并在 PR 中声明。E9 即按本条于 2026-09-15 R3 评审修订中纳入 v1 草案（ADR-0008 尚为 Proposed、契约未冻结，修订不属 breaking；双载体同一提交更新）。
 - **破坏性变更**（删字段、改语义、改可见性、改错误码）＝public API 变更 → 按 SPEC-001 风险表升级 R3+，走新 ADR 或本 ADR 修订，禁止静默变更。
 - 双载体纪律：本文件（人的契约）与 `openapi.json`（机器契约）**必须同一提交更新**；`openapi.json` 是 F04 类型生成/校验唯一来源，两载体冲突以评审裁决为准并即时修正。
 
 ## 8. 与 F04 的对齐接口
 
 - F04 从 `openapi.json` 生成 TS 类型（schema 层），view/interaction 层在前端仓库组织（SPEC-001 Constraint 6）；本契约 §2.3/§5.1 明确划给前端的表示层义务：90 字摘要截断、`EventStatus`/维护方式中文标签、板块短名/tone 映射（`SECTION_SHORT`/`SECTION_TONE` 冻结表）、高亮安全管线、空态文案、日期展示格式（列表 `Y-m-d`、快讯卡 `m-d`）、rendition 之外的图片处理。
-- 前端不得自建：可见性判定、过滤/排序/分页语义、外链 confirm 链构造、`link-confirm/go` 跳转（§4 S6）、任何业务规则复刻（SPEC-001 Constraint 1）。
+- 前端不得自建：可见性判定、过滤/排序/分页语义、外链 confirm 链构造、`link-confirm/go` 跳转（§4 S6）、票据校验或任何预览权限逻辑（E9 仅透传，§3.1）、任何业务规则复刻（SPEC-001 Constraint 1）。
+- F04 预览页义务清单（§3.1）：同模板渲染、`no-store`＋`X-Robots-Tag: noindex`＋`Referrer-Policy: no-referrer`、票据不落日志、失败样式化 404、CSP 同纪律、不入 sitemap/搜索/导航；机器契约侧对应 `openapi.json` `/preview` 操作的 description。

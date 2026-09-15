@@ -175,6 +175,32 @@
           "503": { "$ref": "#/components/responses/Unavailable" }
         }
       }
+    },
+    "/preview": {
+      "get": {
+        "operationId": "getPreview",
+        "tags": ["preview-internal"],
+        "summary": "预览取数（E9；签名票据门控，内网专用，冻结 PRD「生产切换前 preview 可用」载体）",
+        "description": "仅经 Compose 内网由 Astro SSR 调用（Caddy 不公开路由 /api/，无 CORS，浏览器零直接调用）。请求流＝docs/api/README.md §3.1：编辑在后台点「预览」（既有 FormState 表单暂存零变更）→ 应用级钩子铸造签名票据（core.signing，复用 SECRET_KEY＋专用 salt，载荷绑定管理会话/用户/页面 pk，有效期 ≤60s，无新存储载体）→ 编辑浏览器携票据访问同源 /preview/?token=（Astro 渲染）→ Astro 原样透传本端点。Django 校验：签名/时效 → 绑定会话仍存在且仍认证同一用户 → 用户对该页仍具 change 权限（与后台预览同一权限要求）→ 草稿表单态（FormState）仍在；全部通过后只读重建草稿对象、经与 E6 同一序列化层输出 preview:true 响应；任一步失败一律 404（不区分原因，防预言机）。兑换路径零写入（不改 FormState、不写会话/存储）；票据 ≤60s 内可重复兑换为已知残余风险（README §3.1）。响应 no-store；Astro 侧义务：同模板渲染、no-store+X-Robots-Tag: noindex+Referrer-Policy: no-referrer、票据不落访问日志、失败样式化 404、CSP 同全站纪律、不入 sitemap/搜索/导航。范围＝五类内容页（E6 判别联合）；首页/板块页预览维持后台 Django 模板预览现状。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "minLength": 32 },
+            "description": "后台预览出口铸造的签名票据（有效期 ≤60s；由 Astro 原样透传——Astro 不解析、不校验、不缓存、不落日志）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "草稿预览数据（E6 五类之一 + 顶层 preview:true；字段取自预览表单状态，可见性谓词不适用）",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreviewDetail" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
     }
   },
   "components": {
@@ -733,12 +759,31 @@
             }
           }
         }
+      },
+      "PreviewMarker": {
+        "type": "object",
+        "description": "预览标记：正式页（E6）响应无此字段，消费方据此区分预览视图",
+        "required": ["preview"],
+        "properties": {
+          "preview": { "type": "boolean", "const": true }
+        }
+      },
+      "PreviewDetail": {
+        "description": "E6 判别联合 + 顶层 preview:true；全部字段取自预览表单状态（wagtailadmin FormState 草稿数据，与后台预览同源），可见性谓词与 expired 放行语义不适用（expired/expire_at 等按草稿数据如实填充）。请求流与安全条款＝docs/api/README.md §3.1/S8。",
+        "oneOf": [
+          { "allOf": [ { "$ref": "#/components/schemas/PreviewMarker" }, { "$ref": "#/components/schemas/NoticeDetail" } ] },
+          { "allOf": [ { "$ref": "#/components/schemas/PreviewMarker" }, { "$ref": "#/components/schemas/ArticleDetail" } ] },
+          { "allOf": [ { "$ref": "#/components/schemas/PreviewMarker" }, { "$ref": "#/components/schemas/MaterialDetail" } ] },
+          { "allOf": [ { "$ref": "#/components/schemas/PreviewMarker" }, { "$ref": "#/components/schemas/SoftwareToolDetail" } ] },
+          { "allOf": [ { "$ref": "#/components/schemas/PreviewMarker" }, { "$ref": "#/components/schemas/GuideDetail" } ] }
+        ]
       }
     },
     "securitySchemes": {}
   },
   "security": [],
   "tags": [
-    { "name": "public-read", "description": "只读公开内容；无认证；可见性谓词＝现有匿名页面可见面（docs/api/README.md §2.2）" }
+    { "name": "public-read", "description": "只读公开内容；无认证；可见性谓词＝现有匿名页面可见面（docs/api/README.md §2.2）" },
+    { "name": "preview-internal", "description": "预览取数（E9）；签名票据门控、内网专用、非公开页面可见面（docs/api/README.md §3.1/S8）" }
   ]
 }
