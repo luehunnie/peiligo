@@ -41,6 +41,13 @@
 | `docs/reviews/M00.review.md` | M00 独立审查报告——00_MASTER_PLAN v1.4（G0 前最终稿）的独立审查记录。 |
 | `docs/reviews/M0.1.review.md` | M0.1 独立审查报告——D0_BASELINE_CONFIRMATION（G0 批准固化产物）的独立审查记录。 |
 
+## API 契约（SPEC-001 · B01）
+
+| 文档 | 用途 |
+| --- | --- |
+| `docs/api/README.md` | Headless API 契约（只读公开内容 API）——端点清单、schema 要点、可见性/错误/新鲜度/安全条款（Proposed，待 R3 评审冻结；决策记录 ADR-0008）。 |
+| `docs/api/openapi.json` | 同上契约的机器可读形态（OpenAPI 3.1）——前端（F04）类型生成/校验唯一来源，与 README.md 同一提交更新。 |
+
 ---
 
 索引覆盖：上表 12 个在库文档（11 个 M0.2 基线文件 + 本 manifest）+ 本索引自身；后续步骤（M0.3 起新增文档）应由对应步骤同步更新本索引。

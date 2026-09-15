@@ -13,6 +13,8 @@
 本目录（`docs/adr/`）**仅收录技术架构决策**——V1 范围即下表预列的 ADR-0001–0006，此外不收录任何其他内容。
 
 > 收录范围变更记录（2026-09-10）：首页升级经项目负责人 Phase 4 批令（§5 治理要求的批准载体）扩展收录 **ADR-0007**（首页升级 JS 架构决策，细化 ADR-0002 边界）；仅新增一行，其余收录范围口径不变。
+>
+> 收录范围变更记录（2026-09-15）：SPEC-001 公共前端重建（Human 冻结 PRD 转译，G1 已通过——https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2 ）在"G2 预期产出首批 ADR"中明列 **ADR-0008**（Headless API 契约冻结；执行 Ticket luehunnie/peiligo#13，风险 R3），本条即其收录与授权依据；仅新增一行，其余收录范围口径不变。该 ADR 以 Proposed 落盘，转 Accepted 须经 R3 GPT Controller 评审＋项目负责人签收（G2）。
 
 以下**治理 / 流程类决策记录一律归 `docs/decisions/`，不得写入本目录**（两类决策记录混放会造成口径漂移）：
 
@@ -35,6 +37,7 @@
 | 0005 | 公开内容 Page / 受控数据 Snippet·设置 | Accepted | 2026-08-18 | C4（=D6） | M1.6 · `0005-page-vs-snippet-allocation.md` | G1 |
 | 0006 | 中文搜索后端 | Accepted | 2026-08-31 | D7（保留决策门，待 M6.3 PoC 裁决） | M6.3 · [0006-chinese-search-backend.md](0006-chinese-search-backend.md) | 已通过（G2 · Human 2026-08-31 签收） |
 | 0007 | 前端架构细化：SSR-first ＋ 最小原生 JS 渐进增强（细化 ADR-0002，不推翻） | Accepted | 2026-09-10 | 首页升级 PRD §16＋Phase 2 冻结设计（项目负责人批令） | 首页升级 Phase 4 · [0007-minimal-vanilla-js-progressive-enhancement.md](0007-minimal-vanilla-js-progressive-enhancement.md) | 已通过（项目负责人 Phase 4 批令直批 · 2026-09-10） |
+| 0008 | Headless API 契约（只读公开内容 API 冻结；双载体 docs/api/README.md＋docs/api/openapi.json） | Proposed | 2026-09-15 | SPEC-001（G1 已通过；执行 Ticket peiligo#13，R3） | SPEC-001-B01 · [0008-headless-api-contract.md](0008-headless-api-contract.md) | 待 G2（R3 GPT Controller 评审＋项目负责人签收；评审未过不得冻结） |
 
 预列说明：
 
@@ -45,11 +48,11 @@
 
 ## 3. 状态看板
 
-统计时点：2026-09-10（首页升级 Phase 4 落盘 0007 后；0001–0005 于 2026-08-18 经 G1 门、0006 于 2026-08-31 经 G2 门、0007 于 2026-09-10 经项目负责人批令直批，均由项目负责人批准）。
+统计时点：2026-09-15（SPEC-001-B01 落盘 0008 后；0001–0005 于 2026-08-18 经 G1 门、0006 于 2026-08-31 经 G2 门、0007 于 2026-09-10 经项目负责人批令直批，均由项目负责人批准；0008 以 Proposed 落盘，待 R3 评审＋G2 签收）。
 
 | 状态 | 数量 | 编号 |
 | --- | --- | --- |
-| Proposed | 0 | — |
+| Proposed | 1 | 0008（SPEC-001-B01 落盘，待 R3 评审＋G2 项目负责人签收） |
 | Accepted | 7 | 0001、0002、0003、0004、0005（2026-08-18 G1 门批准）、0006（Accepted·G2 已签收 2026-08-31）、0007（Accepted·项目负责人批令直批 2026-09-10） |
 | Superseded | 0 | — |
 | Rejected | 0 | — |

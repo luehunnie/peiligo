@@ -1,0 +1,744 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Peiligo Headless API（只读公开内容）",
+    "version": "1.0.0-proposed",
+    "summary": "SPEC-001 B01 只读 Headless API 契约",
+    "description": "Peiligo 公开内容只读 JSON API 契约（Proposed，待 R3 评审冻结）。人的契约＝docs/api/README.md；本文件是类型生成/校验唯一来源（F04），两载体必须同一提交更新。行为等价基线：peiligo/main = 48fd5d6。实现归属 B02（feature/headless-api，零迁移）。Ticket: https://github.com/luehunnie/peiligo/issues/13；Spec: https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2；ADR: docs/adr/0008-headless-api-contract.md"
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Peiligo Docker Compose 内网相对路径；Caddy 不公开路由 /api/（浏览器零直接调用，Astro SSR 服务端取数）"
+    }
+  ],
+  "paths": {
+    "/chrome": {
+      "get": {
+        "operationId": "getChrome",
+        "summary": "页头/页脚全局 chrome（E1；等价 site_chrome + _active_alert）",
+        "description": "nav_sections = home.models.SECTIONS 冻结常量顺序（现状导航零查询同构，不查库）。feedback_email = SiteSettings.feedback_email 优先、settings.FEEDBACK_EMAIL 环境兜底（context_processors._feedback_email 同链）。alert = SiteSettings 紧急提示（空文案/窗口外为 null，_active_alert 同口径）。每请求实时，no-store（紧急告警下一次请求即见）。",
+        "responses": {
+          "200": {
+            "description": "Chrome",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Chrome" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/home": {
+      "get": {
+        "operationId": "getHome",
+        "summary": "首页数据（E2；等价 HomePage.get_context，Phase 8C 定稿层级）",
+        "description": "可见性 CURRENT_DEFAULT。carousel = _carousel_entries 同口径（is_on_display 每请求复核，失效静默跳过，≤5）；sections = live SectionPage 按 SECTIONS 冻结顺序（与 E1 的常量清单不同，此处查库过滤 live）；campus_news = _campus_news_entries 同一组稿规则：推荐位（创建序）→最新通知（8 条内）→近期活动（4 条内）补位、已结束活动跳过、pk 去重、≤3。summary 截断（60/50 字）在服务端完成，与现状渲染一致。",
+        "responses": {
+          "200": {
+            "description": "首页数据",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Home" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/sections/{slug}": {
+      "get": {
+        "operationId": "getSectionList",
+        "summary": "板块默认列表/筛选态（E3；等价 SectionPage.get_context）",
+        "description": "可见性 CURRENT_DEFAULT；过滤层与 /search/ 完全同层（search.services：filter-first + order_by_relevance=False 保序，-first_published_at 稳定合并）。非法参数值视同未提供（200 回退全量，CONTENT_MODEL §21.3）；?section= 不读（板块维度由路径唯一决定）。page 宽容语义：非整数→第 1 页，越界→最后一页。slug 非五冻结值或板块页非 live → 404。",
+        "parameters": [
+          { "$ref": "#/components/parameters/SectionSlug" },
+          { "$ref": "#/components/parameters/Q" },
+          { "$ref": "#/components/parameters/Dept" },
+          { "$ref": "#/components/parameters/Type" },
+          { "$ref": "#/components/parameters/Tag" },
+          { "$ref": "#/components/parameters/Page" }
+        ],
+        "responses": {
+          "200": {
+            "description": "板块列表",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectionList" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/sections/{slug}/archive": {
+      "get": {
+        "operationId": "getSectionArchive",
+        "summary": "板块历史归档（E4；等价 home.views.section_archive）",
+        "description": "可见性 HISTORICAL（S2∪S3，ARCHIVE-SEARCH 同谓词）。无查询参数（非 §21 载体，零新增公开参数）；全量返回不分页（现状模板全量渲染同构）；-first_published_at 倒序。slug 非法或板块页非 live → 404。",
+        "parameters": [
+          { "$ref": "#/components/parameters/SectionSlug" }
+        ],
+        "responses": {
+          "200": {
+            "description": "归档条目全量",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectionArchive" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/search": {
+      "get": {
+        "operationId": "getSearch",
+        "summary": "全站搜索（E5；等价 search.views.search）",
+        "description": "可见性 HISTORICAL（搜索入口 ARCHIVE-SEARCH：expired 默认命中并带 expired 标记）。五参数 q/section/dept/type/tag + page；非法值视同未提供（200 回退）。q 原样回显（strip 后）＝前端高亮关键词来源；API 不做高亮——前端必须沿用现有安全管线语义（切片→逐片段转义→仅自产 <mark>，见 peiligo_extras.highlight）。无参数（解析后无有效维度）不查全量：entries 恒空（表单态）。chips = section_chips 同构。",
+        "parameters": [
+          { "$ref": "#/components/parameters/Q" },
+          { "$ref": "#/components/parameters/SectionParam" },
+          { "$ref": "#/components/parameters/Dept" },
+          { "$ref": "#/components/parameters/Type" },
+          { "$ref": "#/components/parameters/Tag" },
+          { "$ref": "#/components/parameters/Page" }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索结果",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SearchResults" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/pages/{section}/{dept}/{slug}": {
+      "get": {
+        "operationId": "getPageDetail",
+        "summary": "内容页详情（E6；等价五类内容页具名 URL 渲染）",
+        "description": "路径三段与公开 URL 形态 /<板块>/<部门>/<slug>/ 一一对应（树位置即路径，IA §4.1）。状态语义：live 正常 200；expired 具名 URL 放行且 expired=true（LifecycleStateMixin.route 载体①，页首「已过期」横幅数据即此标记）；S0 草稿/S1 预约发布/S4 已下线 → 404。响应为按 type 判别的联合（oneOf 五 schema）。",
+        "parameters": [
+          { "$ref": "#/components/parameters/SectionSlug" },
+          { "name": "dept", "in": "path", "required": true, "schema": { "type": "string", "description": "部门容器 slug（URL 部门段；容器本身永不渲染，仅路径分组）" } },
+          { "name": "slug", "in": "path", "required": true, "schema": { "type": "string", "description": "内容页 slug" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "详情（五类之一）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/NoticeDetail" },
+                    { "$ref": "#/components/schemas/ArticleDetail" },
+                    { "$ref": "#/components/schemas/MaterialDetail" },
+                    { "$ref": "#/components/schemas/SoftwareToolDetail" },
+                    { "$ref": "#/components/schemas/GuideDetail" }
+                  ]
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/link-confirm": {
+      "get": {
+        "operationId": "getLinkConfirm",
+        "summary": "外链确认页四要素（E7；等价 home.views._confirm_context）",
+        "description": "每请求实时（永不陈旧面）。校验失败不报 4xx：ok=false + problem 文案（现状确认页渲染拒绝态同构，绝不构造 go_href）。target_domain 仅主机名（external_url_domain 同口径）。source 仅在 from 为数字且所指页 CURRENT_DEFAULT 时返回（防匿名者借 from 枚举草稿标题）。go_href = /link-confirm/go/?url=<quote(target, safe='')>；go 端点本身不属本 API，保持 Django 现状（输出层二次校验 + 302）。",
+        "parameters": [
+          { "name": "url", "in": "query", "required": false, "schema": { "type": "string", "description": "外部目标 URL（原始输入；服务端按 SB §10-7 全规则校验）" } },
+          { "name": "from", "in": "query", "required": false, "schema": { "type": "string", "description": "来源内容页 pk（数字串）" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "确认页要素（含拒绝态 ok=false）",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkConfirm" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    },
+    "/sitemap": {
+      "get": {
+        "operationId": "getSitemap",
+        "summary": "sitemap 条目（E8；等价 wagtail sitemap 视图输出）",
+        "description": "与现状 /sitemap.xml 同一模型与排除口径：仅 live；DepartmentContainerPage 整类排除（get_sitemap_urls 返回空）；五类内容页 noindex=true 排除（SeoControlMixin.get_sitemap_urls）。loc 返回路径形态，公开域绝对化由前端完成。",
+        "responses": {
+          "200": {
+            "description": "sitemap 条目",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Sitemap" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "503": { "$ref": "#/components/responses/Unavailable" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "SectionSlug": {
+        "name": "slug", "in": "path", "required": true,
+        "schema": { "$ref": "#/components/schemas/SectionSlugEnum" },
+        "description": "五冻结板块 slug（IA §2）"
+      },
+      "Q": {
+        "name": "q", "in": "query", "required": false,
+        "schema": { "type": "string" },
+        "description": "搜索词；服务端首尾 strip；空串不进搜索后端（纯 ORM 过滤）"
+      },
+      "SectionParam": {
+        "name": "section", "in": "query", "required": false,
+        "schema": { "$ref": "#/components/schemas/SectionSlugEnum" },
+        "description": "板块维度（仅 /search/ 接受）；非法值视同未提供"
+      },
+      "Dept": {
+        "name": "dept", "in": "query", "required": false,
+        "schema": { "type": "string" },
+        "description": "部门 slug（is_active 词表内）；停用/未知视同未提供"
+      },
+      "Type": {
+        "name": "type", "in": "query", "required": false,
+        "schema": { "$ref": "#/components/schemas/PageTypeEnum" },
+        "description": "内容类型；非法值视同未提供"
+      },
+      "Tag": {
+        "name": "tag", "in": "query", "required": false,
+        "schema": { "type": "string" },
+        "description": "Tag slug∪name 或 Discipline/MaterialType/Platform/GuideCategory name；词表外视同未提供"
+      },
+      "Page": {
+        "name": "page", "in": "query", "required": false,
+        "schema": { "type": "string" },
+        "description": "页码；非整数→第 1 页，越界→最后一页（Paginator.get_page 宽容语义）"
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "资源不存在（含状态∉{live, expired} 的页面）",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "ServerError": {
+        "description": "未预期异常",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Unavailable": {
+        "description": "数据库/上游不可用",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "enum": ["not_found", "method_not_allowed", "server_error", "unavailable"] },
+              "message": { "type": "string", "description": "zh-Hans 面向访客文案；不泄露路径/栈/环境细节" }
+            }
+          }
+        }
+      },
+      "SectionSlugEnum": { "type": "string", "enum": ["chronicle", "events", "materials", "software", "guide"] },
+      "PageTypeEnum": { "type": "string", "enum": ["notice", "article", "material", "software", "guide"] },
+      "EventStatusEnum": { "type": "string", "enum": ["upcoming", "ongoing", "ended"], "description": "现有 event_status 三态计算的机器化；中文标签映射 upcoming=即将开始 / ongoing=进行中 / ended=已结束，归前端表示层" },
+      "SectionRef": {
+        "type": "object",
+        "required": ["slug", "title"],
+        "properties": {
+          "slug": { "$ref": "#/components/schemas/SectionSlugEnum" },
+          "title": { "type": "string", "description": "板块页 title（冻结中文名：校园纪事/校园活动/学习资料/软件与工具/校园指南）" }
+        }
+      },
+      "DepartmentRef": {
+        "type": "object",
+        "required": ["name", "slug"],
+        "properties": {
+          "name": { "type": "string", "description": "部门名（作者元数据展示，PRD §4.3）" },
+          "slug": { "type": "string", "description": "部门 slug（URL 部门段与筛选维度）" }
+        }
+      },
+      "ImageRef": {
+        "type": "object",
+        "required": ["src", "width", "height", "alt"],
+        "properties": {
+          "src": { "type": "string", "description": "rendition 路径（/media/...）；全契约仅四处现有规格：width-1600（轮播/hero）、fill-800x520（快讯卡）、width-1120（正文插图）、width-1400（详情封面），零新规格" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "alt": { "type": "string", "description": "装饰用途处调用方传空串（现状模板 alt=\"\" 同构）" }
+        }
+      },
+      "AttachmentRef": {
+        "type": "object",
+        "required": ["title", "url"],
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string", "description": "/documents/<id>/<filename>/ 路径（Django 继续直供，不入 API）" },
+          "file_size": { "type": ["integer", "null"], "description": "字节；模板 filesizeformat 展示归前端" }
+        }
+      },
+      "ExternalLinkRef": {
+        "type": "object",
+        "required": ["url", "confirm_href"],
+        "properties": {
+          "url": { "type": "string", "description": "外部目标原始 URL（SB §10-7 字段层已校验）" },
+          "confirm_href": { "type": "string", "description": "确认链 /link-confirm/?url=<quote(url, safe='/')>&from=<page.pk>；构造规则唯一出处与 external_link_jump.html 同口径。前端必须以 confirm_href 为出口，不得自建外链跳转" }
+        }
+      },
+      "Alert": {
+        "type": "object",
+        "required": ["text"],
+        "properties": { "text": { "type": "string", "description": "紧急提示文案（strip 后非空）" } }
+      },
+      "Pagination": {
+        "type": "object",
+        "required": ["total", "page", "page_count", "per_page", "has_next", "has_previous"],
+        "properties": {
+          "total": { "type": "integer", "minimum": 0 },
+          "page": { "type": "integer", "minimum": 1 },
+          "page_count": { "type": "integer", "minimum": 0 },
+          "per_page": { "type": "integer", "const": 20, "description": "LIST_PAGE_SIZE 冻结值（现状 search.services）" },
+          "has_next": { "type": "boolean" },
+          "has_previous": { "type": "boolean" }
+        }
+      },
+      "FilterConditionsItem": {
+        "type": "object",
+        "required": ["label", "value"],
+        "properties": {
+          "label": { "type": "string", "enum": ["关键词", "板块", "部门", "内容类型", "标签"], "description": "active_conditions 冻结标签（IA §11 筛选无匹配空态回显）" },
+          "value": { "type": "string" }
+        }
+      },
+      "ListEntry": {
+        "type": "object",
+        "description": "列表/搜索/归档共享行数据（等价 includes/list_row.html 消费面）。list_summary = summary → license_note → location 回落链解析结果（_content_summary 同序，不截断）；90 字列表截断归前端表示层。",
+        "required": ["type", "id", "title", "url", "expired", "section_slug", "section_title", "department_name", "published_at", "event_status", "list_summary"],
+        "properties": {
+          "type": { "$ref": "#/components/schemas/PageTypeEnum" },
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "url": { "type": "string", "description": "具名 URL 路径 /<板块>/<部门>/<slug>/" },
+          "expired": { "type": "boolean", "description": "true 时前端渲染「已过期」徽标（现状 badge-expired 同构）" },
+          "section_slug": { "type": ["string", "null"], "description": "树上下文板块 slug（板块短名/tone 映射归前端 SECTION_SHORT/SECTION_TONE 冻结表）" },
+          "section_title": { "type": ["string", "null"], "description": "板块标题（跨板块搜索行标注用）" },
+          "department_name": { "type": ["string", "null"] },
+          "published_at": { "type": ["string", "null"], "format": "date-time", "description": "first_published_at；展示格式 Y-m-d 归前端" },
+          "event_status": { "oneOf": [{ "$ref": "#/components/schemas/EventStatusEnum" }, { "type": "null" }] },
+          "list_summary": { "type": "string" }
+        }
+      },
+      "SearchChip": {
+        "type": "object",
+        "description": "section_chips 同构：真实链接、保留其余参数剔除 page/section、「全部」置首",
+        "required": ["slug", "label", "url", "active"],
+        "properties": {
+          "slug": { "type": "string", "description": "空串＝全部" },
+          "label": { "type": "string", "description": "全部 / 板块冻结中文名" },
+          "url": { "type": "string" },
+          "active": { "type": "boolean", "description": "当前项（aria-current 数据）" }
+        }
+      },
+      "Block": {
+        "description": "正文块判别联合（notices/blocks.py 白名单六块；SoftwareToolPage 天然无 attachment）。全部为现有 StreamField 存储的只读投影，零新块。",
+        "oneOf": [
+          { "$ref": "#/components/schemas/HeadingBlock" },
+          { "$ref": "#/components/schemas/ParagraphBlock" },
+          { "$ref": "#/components/schemas/ImageBlock" },
+          { "$ref": "#/components/schemas/AttachmentBlock" },
+          { "$ref": "#/components/schemas/TableBlock" },
+          { "$ref": "#/components/schemas/ExternalLinkBlock" }
+        ],
+        "discriminator": { "propertyName": "type" }
+      },
+      "HeadingBlock": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "const": "heading" },
+          "value": {
+            "type": "object",
+            "required": ["text", "level"],
+            "properties": {
+              "text": { "type": "string" },
+              "level": { "type": "string", "enum": ["h2", "h3"], "description": "页面标题为唯一 h1，块级仅 h2/h3" }
+            }
+          }
+        }
+      },
+      "ParagraphBlock": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "const": "paragraph" },
+          "value": {
+            "type": "object",
+            "required": ["html"],
+            "properties": {
+              "html": { "type": "string", "description": "服务端渲染的安全 HTML 片段（RichTextBlock，features 白名单 bold/italic/link/ol/ul 现状不变）。前端整片插入、不二次加工、不 replicate 渲染规则；其中可能含现状已有的内联外链形态（继承现状，S6）" }
+            }
+          }
+        }
+      },
+      "ImageBlock": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "const": "image" },
+          "value": { "$ref": "#/components/schemas/ImageRef" }
+        }
+      },
+      "AttachmentBlock": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "const": "attachment" },
+          "value": { "$ref": "#/components/schemas/AttachmentRef" }
+        }
+      },
+      "TableBlock": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "const": "table" },
+          "value": {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "first_row_is_table_header": { "type": "boolean" },
+              "data": { "type": "array", "items": { "type": "array", "items": { "type": "string" } }, "description": "单元格文本矩阵；<table> 渲染归前端" }
+            }
+          }
+        }
+      },
+      "ExternalLinkBlock": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "type": "string", "const": "external_link" },
+          "value": {
+            "type": "object",
+            "required": ["text", "url", "confirm_href"],
+            "properties": {
+              "text": { "type": "string", "description": "链接文字" },
+              "url": { "type": "string", "description": "完整 URL 明文（现状资源行明文展示语义）" },
+              "confirm_href": { "type": "string", "description": "确认链（构造规则唯一出处，同 ExternalLinkRef）" }
+            }
+          }
+        }
+      },
+      "Chrome": {
+        "type": "object",
+        "required": ["site_name", "nav_sections", "feedback_email", "alert"],
+        "properties": {
+          "site_name": { "type": "string", "description": "settings.WAGTAIL_SITE_NAME（现值 Peiligo）" },
+          "nav_sections": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "required": ["slug", "title", "url"],
+              "properties": {
+                "slug": { "$ref": "#/components/schemas/SectionSlugEnum" },
+                "title": { "type": "string" },
+                "url": { "type": "string", "description": "/<slug>/" }
+              }
+            },
+            "description": "SECTIONS 冻结常量顺序，永不查库（现状导航零查询同构；容器无进入通道）"
+          },
+          "feedback_email": { "type": "string" },
+          "alert": { "oneOf": [{ "$ref": "#/components/schemas/Alert" }, { "type": "null" }] }
+        }
+      },
+      "CarouselEntry": {
+        "type": "object",
+        "required": ["kind", "title", "href", "cover", "summary", "section_slug"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["internal", "external"] },
+          "title": { "type": "string", "description": "站内项取目标页 title；外链项 external_title" },
+          "href": { "type": "string", "description": "站内项＝目标页具名 URL；外链项＝确认链（confirm_href 同构，无裸外链）" },
+          "cover": { "oneOf": [{ "$ref": "#/components/schemas/ImageRef" }, { "type": "null" }], "description": "width-1600；null 时前端用冻结几何海报回落" },
+          "summary": { "type": "string", "description": "页型化一职摘要截断 60 字；外链项恒空串" },
+          "section_slug": { "type": ["string", "null"], "description": "null 时前端回落中性「推荐」chip，不猜板块" }
+        }
+      },
+      "CampusNewsEntry": {
+        "type": "object",
+        "required": ["type", "id", "title", "href", "cover", "summary", "section_slug", "department", "published_at", "event_status"],
+        "properties": {
+          "type": { "$ref": "#/components/schemas/PageTypeEnum" },
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "href": { "type": "string" },
+          "cover": { "oneOf": [{ "$ref": "#/components/schemas/ImageRef" }, { "type": "null" }], "description": "fill-800x520；null 时板块静态几何插画回落（归前端冻结资产）" },
+          "summary": { "type": "string", "description": "一职摘要截断 50 字" },
+          "section_slug": { "type": ["string", "null"] },
+          "department": { "type": "string", "description": "部门名；无则空串" },
+          "published_at": { "type": ["string", "null"], "format": "date-time", "description": "first_published_at；快讯卡展示 m-d 归前端" },
+          "event_status": { "oneOf": [{ "$ref": "#/components/schemas/EventStatusEnum" }, { "type": "null" }] }
+        }
+      },
+      "Home": {
+        "type": "object",
+        "required": ["title", "alert", "carousel", "sections", "campus_news"],
+        "properties": {
+          "title": { "type": "string", "description": "HomePage.title（现值「首页」，全页唯一 h1 数据）" },
+          "alert": { "oneOf": [{ "$ref": "#/components/schemas/Alert" }, { "type": "null" }] },
+          "carousel": { "type": "array", "maxItems": 5, "items": { "$ref": "#/components/schemas/CarouselEntry" } },
+          "sections": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "required": ["slug", "title", "url"],
+              "properties": {
+                "slug": { "$ref": "#/components/schemas/SectionSlugEnum" },
+                "title": { "type": "string" },
+                "url": { "type": "string" }
+              }
+            },
+            "description": "本页下已发布 SectionPage 按 SECTIONS 冻结顺序（get_children().live()，与 E1 常量清单的差异即现状差异）"
+          },
+          "campus_news": { "type": "array", "maxItems": 3, "items": { "$ref": "#/components/schemas/CampusNewsEntry" } }
+        }
+      },
+      "FiltersEcho": {
+        "type": "object",
+        "description": "解析后筛选态回显（非法值回退后的有效维度；conditions 供筛选无匹配空态）",
+        "required": ["q", "section", "dept", "type", "tag", "active", "conditions"],
+        "properties": {
+          "q": { "type": "string" },
+          "section": { "oneOf": [{ "$ref": "#/components/schemas/SectionSlugEnum" }, { "type": "null" }], "description": "仅 /search/ 返回解析命中的板块；板块列表端点（/sections/{slug}）恒 null（板块维度由路径锚定，不入回显与 filter_active）" },
+          "dept": { "type": ["string", "null"], "description": "解析命中词表的部门 slug" },
+          "type": { "oneOf": [{ "$ref": "#/components/schemas/PageTypeEnum" }, { "type": "null" }] },
+          "tag": { "type": ["string", "null"], "description": "解析命中词表的原字面值" },
+          "active": { "type": "boolean", "description": "filter_active（用户施加条件；路径锚定板块维度不计入）" },
+          "conditions": { "type": "array", "items": { "$ref": "#/components/schemas/FilterConditionsItem" } }
+        }
+      },
+      "SectionList": {
+        "type": "object",
+        "required": ["section", "entries", "pagination", "filters"],
+        "properties": {
+          "section": {
+            "type": "object",
+            "required": ["slug", "title", "url", "archive_url"],
+            "properties": {
+              "slug": { "$ref": "#/components/schemas/SectionSlugEnum" },
+              "title": { "type": "string" },
+              "url": { "type": "string" },
+              "archive_url": { "type": "string", "description": "/<slug>/archive/（板块页头历史归档入口）" }
+            }
+          },
+          "entries": { "type": "array", "maxItems": 20, "items": { "$ref": "#/components/schemas/ListEntry" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" },
+          "filters": { "$ref": "#/components/schemas/FiltersEcho" }
+        }
+      },
+      "SectionArchive": {
+        "type": "object",
+        "required": ["section", "entries", "total"],
+        "properties": {
+          "section": {
+            "type": "object",
+            "required": ["slug", "title", "url"],
+            "properties": {
+              "slug": { "$ref": "#/components/schemas/SectionSlugEnum" },
+              "title": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          },
+          "entries": { "type": "array", "items": { "$ref": "#/components/schemas/ListEntry" }, "description": "HISTORICAL 全量，-first_published_at 倒序，不分页（现状同构）" },
+          "total": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "SearchResults": {
+        "type": "object",
+        "required": ["q", "entries", "pagination", "filters", "chips"],
+        "properties": {
+          "q": { "type": "string", "description": "strip 后回显（＝现状 highlight_q）；高亮归前端安全管线" },
+          "entries": { "type": "array", "maxItems": 20, "items": { "$ref": "#/components/schemas/ListEntry" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" },
+          "filters": { "$ref": "#/components/schemas/FiltersEcho" },
+          "chips": { "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/components/schemas/SearchChip" } }
+        }
+      },
+      "BreadcrumbItem": {
+        "type": "object",
+        "required": ["title", "url"],
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": ["string", "null"], "description": "可点段为板块 URL；当前页为纯文本 url=null。容器段永不出现（IA §10 面包屑纪律）" }
+        }
+      },
+      "PageDetailBase": {
+        "type": "object",
+        "description": "详情公共字段（各类型 schema allOf 引用）",
+        "required": ["type", "id", "title", "slug", "url", "section", "department", "first_published_at", "last_published_at", "expire_at", "noindex", "expired", "cover", "breadcrumb"],
+        "properties": {
+          "type": { "$ref": "#/components/schemas/PageTypeEnum" },
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "slug": { "type": "string" },
+          "url": { "type": "string" },
+          "section": { "oneOf": [{ "$ref": "#/components/schemas/SectionRef" }, { "type": "null" }] },
+          "department": { "oneOf": [{ "$ref": "#/components/schemas/DepartmentRef" }, { "type": "null" }] },
+          "first_published_at": { "type": ["string", "null"], "format": "date-time" },
+          "last_published_at": { "type": ["string", "null"], "format": "date-time" },
+          "expire_at": { "type": ["string", "null"], "format": "date-time", "description": "notice 必有（CM-01）；article 可空；其余三型恒 null（EXPIRE_FORBIDDEN）" },
+          "noindex": { "type": "boolean", "description": "SeoControlMixin 字段（SEO parity 元数据）" },
+          "expired": { "type": "boolean", "description": "true＝已到期放行（页首「已过期」横幅数据）" },
+          "cover": { "oneOf": [{ "$ref": "#/components/schemas/ImageRef" }, { "type": "null" }], "description": "width-1400（article_detail 壳现状规格）" },
+          "breadcrumb": { "type": "array", "items": { "$ref": "#/components/schemas/BreadcrumbItem" } }
+        }
+      },
+      "EventInfo": {
+        "type": "object",
+        "description": "活动结构化字段（EventFieldsMixin）；event_start_at 为空即整体 null",
+        "required": ["status", "start_at", "end_at", "is_online", "location", "registration"],
+        "properties": {
+          "status": { "$ref": "#/components/schemas/EventStatusEnum" },
+          "start_at": { "type": "string", "format": "date-time" },
+          "end_at": { "type": "string", "format": "date-time" },
+          "is_online": { "type": "boolean", "description": "true 时地点展示「线上活动」归前端" },
+          "location": { "type": "string" },
+          "registration": { "oneOf": [{ "$ref": "#/components/schemas/ExternalLinkRef" }, { "type": "null" }], "description": "报名链接（空串即 null）；出口恒 confirm_href" }
+        }
+      },
+      "NoticeDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PageDetailBase" },
+          {
+            "type": "object",
+            "required": ["summary", "event", "body", "attachments", "external", "tags"],
+            "properties": {
+              "summary": { "type": "string" },
+              "event": { "oneOf": [{ "$ref": "#/components/schemas/EventInfo" }, { "type": "null" }] },
+              "body": { "type": "array", "minItems": 1, "items": { "$ref": "#/components/schemas/Block" } },
+              "attachments": { "type": "array", "items": { "$ref": "#/components/schemas/AttachmentRef" } },
+              "external": { "oneOf": [{ "$ref": "#/components/schemas/ExternalLinkRef" }, { "type": "null" }] },
+              "tags": { "type": "array", "items": { "type": "string" }, "description": "受控标签 name 列表（展示面）" }
+            }
+          }
+        ]
+      },
+      "ArticleDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PageDetailBase" },
+          {
+            "type": "object",
+            "required": ["summary", "event", "body", "attachments", "external", "tags"],
+            "properties": {
+              "summary": { "type": "string" },
+              "event": { "oneOf": [{ "$ref": "#/components/schemas/EventInfo" }, { "type": "null" }] },
+              "body": { "type": "array", "minItems": 1, "items": { "$ref": "#/components/schemas/Block" } },
+              "attachments": { "type": "array", "items": { "$ref": "#/components/schemas/AttachmentRef" } },
+              "external": { "oneOf": [{ "$ref": "#/components/schemas/ExternalLinkRef" }, { "type": "null" }] },
+              "tags": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        ]
+      },
+      "MaterialDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PageDetailBase" },
+          {
+            "type": "object",
+            "required": ["summary", "discipline", "material_type", "body", "attachments", "external", "tags"],
+            "properties": {
+              "summary": { "type": "string" },
+              "discipline": { "type": "string", "description": "学科·专业方向词表名" },
+              "material_type": { "type": "string", "description": "资料类型词表名" },
+              "body": { "type": "array", "minItems": 1, "items": { "$ref": "#/components/schemas/Block" } },
+              "attachments": { "type": "array", "items": { "$ref": "#/components/schemas/AttachmentRef" } },
+              "external": { "oneOf": [{ "$ref": "#/components/schemas/ExternalLinkRef" }, { "type": "null" }] },
+              "tags": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        ]
+      },
+      "SoftwareToolDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PageDetailBase" },
+          {
+            "type": "object",
+            "required": ["platforms", "source", "license_note", "body"],
+            "properties": {
+              "platforms": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "适用平台词表名（≥1）" },
+              "source": { "$ref": "#/components/schemas/ExternalLinkRef", "description": "来源链接或第三方网盘链接（必填；出口恒 confirm_href）" },
+              "license_note": { "type": "string", "description": "授权或费用说明" },
+              "body": { "type": "array", "minItems": 1, "items": { "$ref": "#/components/schemas/Block" }, "description": "白名单减附件块（SOFTWARE_TOOL_BLOCKS）" }
+            }
+          }
+        ]
+      },
+      "GuideDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PageDetailBase" },
+          {
+            "type": "object",
+            "description": "九字段一字不差（PRD §7.6）；无 StreamField 正文",
+            "required": ["category", "location", "opening_hours", "contact", "extra_notes", "responsible_party", "maintenance_mode", "maintenance_mode_label", "last_confirmed_on"],
+            "properties": {
+              "category": { "type": "string", "description": "指南类别词表名" },
+              "location": { "type": "string" },
+              "opening_hours": { "type": "string", "description": "换行展示（linebreaksbr 现状）归前端" },
+              "contact": { "type": "string" },
+              "extra_notes": { "type": "string", "description": "九字段中唯一可选项；空串不渲染" },
+              "responsible_party": { "type": "string" },
+              "maintenance_mode": { "type": "string", "enum": ["self", "curated"] },
+              "maintenance_mode_label": { "type": "string", "description": "self=责任部门后台自维护 / curated=统一邮箱投稿·总管理员代维护（get_maintenance_mode_display 现值）" },
+              "last_confirmed_on": { "type": "string", "format": "date", "description": "最后确认日期或更新时间（业务字段，CM-06）" }
+            }
+          }
+        ]
+      },
+      "LinkConfirm": {
+        "type": "object",
+        "required": ["ok", "target_domain", "notice_text", "source", "go_href", "problem"],
+        "properties": {
+          "ok": { "type": "boolean" },
+          "target_domain": { "type": "string", "description": "仅主机名（host 小写、剥离端口）；拒绝态空串" },
+          "notice_text": { "type": "string", "description": "SiteSettings.redirect_notice_text 非空即整体覆盖，否则默认声明文案（Phase 8D 冻结）" },
+          "source": {
+            "oneOf": [
+              { "type": "object", "required": ["title", "url"], "properties": { "title": { "type": "string" }, "url": { "type": "string" } } },
+              { "type": "null" }
+            ],
+            "description": "来源页（from 须为数字且所指页 CURRENT_DEFAULT，防草稿标题枚举）；null 时前端省略来源/时间要素"
+          },
+          "go_href": { "type": ["string", "null"], "description": "/link-confirm/go/?url=<quote(target, safe='')>；拒绝态 null。go 端点不属本 API（Django 现状不变）" },
+          "problem": { "type": "string", "description": "校验失败文案（；连接的逐条消息）；通过时空串" }
+        }
+      },
+      "Sitemap": {
+        "type": "object",
+        "required": ["entries"],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["loc", "lastmod"],
+              "properties": {
+                "loc": { "type": "string", "description": "路径形态；公开域绝对化归前端" },
+                "lastmod": { "type": ["string", "null"], "format": "date-time", "description": "现状 sitemap lastmod 同源语义" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {}
+  },
+  "security": [],
+  "tags": [
+    { "name": "public-read", "description": "只读公开内容；无认证；可见性谓词＝现有匿名页面可见面（docs/api/README.md §2.2）" }
+  ]
+}
