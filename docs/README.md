@@ -45,7 +45,7 @@
 
 | 文档 | 用途 |
 | --- | --- |
-| `docs/api/README.md` | Headless API 契约（只读公开内容 API）——端点清单、schema 要点、可见性/错误/新鲜度/安全条款（Proposed，待 R3 评审冻结；决策记录 ADR-0008）。 |
+| `docs/api/README.md` | Headless API 契约（只读公开内容 API）——端点清单、schema 要点、可见性/错误/新鲜度/安全条款（Accepted，2026-09-15 G2 冻结；决策记录 ADR-0008）。 |
 | `docs/api/openapi.json` | 同上契约的机器可读形态（OpenAPI 3.1）——前端（F04）类型生成/校验唯一来源，与 README.md 同一提交更新。 |
 
 ---

@@ -2,9 +2,9 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 状态 | **Proposed — 待 R3 评审**（评审通过前不视为已冻结；状态权威＝[ADR-0008](../adr/0008-headless-api-contract.md)） |
-| 修订 | 2026-09-15 R3 评审修订（控制器 FIX 裁定）：①F5 重写为 **E9 预览契约**（新增 [`/api/v1/preview`](openapi.json)＋同源 `/preview/` 请求流，见 §3.1）；②F3 收紧为 **Gate 5 部署验收条件**（生产 `SCHED_INTERVAL_SECONDS ≤ 30`，不满足即生产切换 blocker）。仍为 Proposed，双载体同一提交更新 |
-| 决策记录 | [docs/adr/0008-headless-api-contract.md](../adr/0008-headless-api-contract.md)（ADR-0008，Proposed） |
+| 状态 | **Accepted — 已冻结（2026-09-15 G2：Human 同意 R3 控制器结论，含 type-const 判别架构接受）**；状态权威＝[ADR-0008](../adr/0008-headless-api-contract.md) 状态字段头 |
+| 修订 | 2026-09-15 **转 Accepted**（G2 门通过：Human 明确同意 R3 GPT Controller 评审结论——含对既有 `type` 字段 const 判别架构的接受，即 F04 校验修复，无新字段、载荷零变化；批准载体与留痕见 ADR-0008 状态字段头）。同日 R3 评审修订（控制器 FIX 裁定）留痕：①F5 重写为 **E9 预览契约**（新增 [`/api/v1/preview`](openapi.json)＋同源 `/preview/` 请求流，见 §3.1）；②F3 收紧为 **Gate 5 部署验收条件**（生产 `SCHED_INTERVAL_SECONDS ≤ 30`，不满足即生产切换 blocker）。双载体同一提交更新 |
+| 决策记录 | [docs/adr/0008-headless-api-contract.md](../adr/0008-headless-api-contract.md)（ADR-0008，Accepted） |
 | Ticket | [luehunnie/peiligo#13](https://github.com/luehunnie/peiligo/issues/13)（SPEC-001-B01） |
 | 父 Spec | [SPEC-001](https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2)（ Contracts 1/3/4、Architecture Constraints 1/2/3/6） |
 | 机器可读形态 | [`docs/api/openapi.json`](openapi.json)（OpenAPI 3.1；F04 类型生成/校验唯一来源，与本文件同步更新） |
@@ -121,6 +121,13 @@
 - 残余风险如实记录：票据在 ≤60s 有效期内可重复兑换（换取零写入兑换路径与零新存储）；泄露影响被短时效、会话绑定与权限复核三重约束，票据换取的仅是单篇草稿的只读视图。
 - **迁移期跟踪**：B02（E9＋预览出口钩子）与 F04（`/preview/` 页）部署并在 staging 验证之前，「Astro 等价预览未接线」作为**显式跟踪的迁移限制＋生产切换 blocker**（G5/B03 切换检查项）；该缺口不得作为 v1 契约终态。
 
+**维护注记（Wagtail 升级必查——E9 镜像 `PreviewOnEdit` 表单路径）**：E9 兑换路径**有意**镜像 wagtailadmin `PreviewOnEdit` 的既有表单路径（`FormState` 暂存 → 实例绑定 edit handler 重建 → `save(commit=False)` 零写入）——Wagtail 升级若改变该内部路径，E9 的行为等价性随之失效。故**每次 Wagtail 版本升级**必须重跑以下清单（逐项留痕于升级 PR）：
+
+- [ ] `tests/test_api_preview.py` 全绿（铸造门禁 / 兑换端到端 / 零写入证明）；
+- [ ] `tests/test_api_security.py` 中 E9 反预言机失败路径全绿（票据面安全）；
+- [ ] 表单路径兼容性核对：升级后 wagtailadmin `PreviewOnEdit`/`FormState` 的实现与本端点镜像路径仍一致（含 parent_page 解析、`defer_required` 等内部 API 形态）；
+- [ ] 任何不一致 → 按 §7 演进规则处置（public API 语义变更，升级 R3+），禁止静默修补。
+
 ## 4. 安全与网络边界（SPEC-001 Architecture Constraints 1/2/5）
 
 | 条款 | 内容 |
@@ -176,7 +183,7 @@
 
 ## 7. 版本与演进
 
-- 基础路径带版本前缀 `/api/v1/`；**加字段/加端点**＝非破坏性，允许在 v1 内演进，但须同步更新本文件与 `openapi.json` 并在 PR 中声明。E9 即按本条于 2026-09-15 R3 评审修订中纳入 v1 草案（ADR-0008 尚为 Proposed、契约未冻结，修订不属 breaking；双载体同一提交更新）。
+- 基础路径带版本前缀 `/api/v1/`；**加字段/加端点**＝非破坏性，允许在 v1 内演进，但须同步更新本文件与 `openapi.json` 并在 PR 中声明。E9 即按本条于 2026-09-15 R3 评审修订中纳入 v1 草案（留痕：彼时 ADR-0008 尚为 Proposed、契约未冻结，故修订不属 breaking；**ADR-0008 已于 2026-09-15 转 Accepted——此后对 E9 或任何端点的语义变更即 breaking，按本条处置**；双载体同一提交更新）。
 - **破坏性变更**（删字段、改语义、改可见性、改错误码）＝public API 变更 → 按 SPEC-001 风险表升级 R3+，走新 ADR 或本 ADR 修订，禁止静默变更。
 - 双载体纪律：本文件（人的契约）与 `openapi.json`（机器契约）**必须同一提交更新**；`openapi.json` 是 F04 类型生成/校验唯一来源，两载体冲突以评审裁决为准并即时修正。
 
@@ -185,3 +192,4 @@
 - F04 从 `openapi.json` 生成 TS 类型（schema 层），view/interaction 层在前端仓库组织（SPEC-001 Constraint 6）；本契约 §2.3/§5.1 明确划给前端的表示层义务：90 字摘要截断、`EventStatus`/维护方式中文标签、板块短名/tone 映射（`SECTION_SHORT`/`SECTION_TONE` 冻结表）、高亮安全管线、空态文案、日期展示格式（列表 `Y-m-d`、快讯卡 `m-d`）、rendition 之外的图片处理。
 - 前端不得自建：可见性判定、过滤/排序/分页语义、外链 confirm 链构造、`link-confirm/go` 跳转（§4 S6）、票据校验或任何预览权限逻辑（E9 仅透传，§3.1）、任何业务规则复刻（SPEC-001 Constraint 1）。
 - F04 预览页义务清单（§3.1）：同模板渲染、`no-store`＋`X-Robots-Tag: noindex`＋`Referrer-Policy: no-referrer`、票据不落日志、失败样式化 404、CSP 同纪律、不入 sitemap/搜索/导航；机器契约侧对应 `openapi.json` `/preview` 操作的 description。
+- **F04 类型生成来源（精确出处，判别联合修复版）**：含 `type`-const 判别的 `openapi.json` 修复版唯一出处＝分支 `luehunnie/spec-001-b02-headless-api`（PR luehunnie/peiligo#19）commit `2f7fa021afd6777c611c86e3b78622b776a3b732`（2026-09-15，"docs(api): carry ADR-0008 headless API contract carriers (B01 copy + F04 union repair)"）；B01 分支 `luehunnie/spec-001-b01-api-contract`（PR #18，b320910 及之前）**不含**该修复。两 PR 合并先后不影响结论：类型生成/校验一律以含本修复的载体为准——schema 判别结构自该提交起未再变更（本治理提交仅追加 `/preview` description 维护注记句与状态文字）；Human 已于 2026-09-15 接受该 type-const 判别架构（ADR-0008 状态字段头留痕）。

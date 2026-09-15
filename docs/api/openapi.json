@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Peiligo Headless API（只读公开内容）",
-    "version": "1.0.0-proposed",
+    "version": "1.0.0",
     "summary": "SPEC-001 B01 只读 Headless API 契约",
-    "description": "Peiligo 公开内容只读 JSON API 契约（Proposed，待 R3 评审冻结）。人的契约＝docs/api/README.md；本文件是类型生成/校验唯一来源（F04），两载体必须同一提交更新。行为等价基线：peiligo/main = 48fd5d6。实现归属 B02（feature/headless-api，零迁移）。Ticket: https://github.com/luehunnie/peiligo/issues/13；Spec: https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2；ADR: docs/adr/0008-headless-api-contract.md"
+    "description": "Peiligo 公开内容只读 JSON API 契约（Accepted，2026-09-15 G2 冻结）。人的契约＝docs/api/README.md；本文件是类型生成/校验唯一来源（F04），两载体必须同一提交更新。行为等价基线：peiligo/main = 48fd5d6。实现归属 B02（feature/headless-api，零迁移）。Ticket: https://github.com/luehunnie/peiligo/issues/13；Spec: https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2；ADR: docs/adr/0008-headless-api-contract.md"
   },
   "servers": [
     {
@@ -181,7 +181,7 @@
         "operationId": "getPreview",
         "tags": ["preview-internal"],
         "summary": "预览取数（E9；签名票据门控，内网专用，冻结 PRD「生产切换前 preview 可用」载体）",
-        "description": "仅经 Compose 内网由 Astro SSR 调用（Caddy 不公开路由 /api/，无 CORS，浏览器零直接调用）。请求流＝docs/api/README.md §3.1：编辑在后台点「预览」（既有 FormState 表单暂存零变更）→ 应用级钩子铸造签名票据（core.signing，复用 SECRET_KEY＋专用 salt，载荷绑定管理会话/用户/页面 pk，有效期 ≤60s，无新存储载体）→ 编辑浏览器携票据访问同源 /preview/?token=（Astro 渲染）→ Astro 原样透传本端点。Django 校验：签名/时效 → 绑定会话仍存在且仍认证同一用户 → 用户对该页仍具 change 权限（与后台预览同一权限要求）→ 草稿表单态（FormState）仍在；全部通过后只读重建草稿对象、经与 E6 同一序列化层输出 preview:true 响应；任一步失败一律 404（不区分原因，防预言机）。兑换路径零写入（不改 FormState、不写会话/存储）；票据 ≤60s 内可重复兑换为已知残余风险（README §3.1）。响应 no-store；Astro 侧义务：同模板渲染、no-store+X-Robots-Tag: noindex+Referrer-Policy: no-referrer、票据不落访问日志、失败样式化 404、CSP 同全站纪律、不入 sitemap/搜索/导航。范围＝五类内容页（E6 判别联合）；首页/板块页预览维持后台 Django 模板预览现状。",
+        "description": "仅经 Compose 内网由 Astro SSR 调用（Caddy 不公开路由 /api/，无 CORS，浏览器零直接调用）。请求流＝docs/api/README.md §3.1：编辑在后台点「预览」（既有 FormState 表单暂存零变更）→ 应用级钩子铸造签名票据（core.signing，复用 SECRET_KEY＋专用 salt，载荷绑定管理会话/用户/页面 pk，有效期 ≤60s，无新存储载体）→ 编辑浏览器携票据访问同源 /preview/?token=（Astro 渲染）→ Astro 原样透传本端点。Django 校验：签名/时效 → 绑定会话仍存在且仍认证同一用户 → 用户对该页仍具 change 权限（与后台预览同一权限要求）→ 草稿表单态（FormState）仍在；全部通过后只读重建草稿对象、经与 E6 同一序列化层输出 preview:true 响应；任一步失败一律 404（不区分原因，防预言机）。兑换路径零写入（不改 FormState、不写会话/存储）；票据 ≤60s 内可重复兑换为已知残余风险（README §3.1）。响应 no-store；Astro 侧义务：同模板渲染、no-store+X-Robots-Tag: noindex+Referrer-Policy: no-referrer、票据不落访问日志、失败样式化 404、CSP 同全站纪律、不入 sitemap/搜索/导航。范围＝五类内容页（E6 判别联合）；首页/板块页预览维持后台 Django 模板预览现状。维护义务（Wagtail 升级必查）：本端点兑换路径有意镜像 wagtailadmin PreviewOnEdit 既有表单路径，每次 Wagtail 版本升级必须重跑预览兑换/表单路径安全与兼容性测试（tests/test_api_preview.py、tests/test_api_security.py E9 部分；清单＝docs/api/README.md §3.1 维护注记），不一致即按契约 §7 演进规则处置，禁止静默修补。",
         "parameters": [
           {
             "name": "token",

@@ -6,7 +6,7 @@
 | --- | --- |
 | 编号 | 0008 |
 | 日期 | 2026-09-15（首落盘） |
-| 状态 | Proposed（2026-09-15 由 SPEC-001-B01 代理以 Proposed 落盘；README §4：ADR 状态变更决策人＝项目负责人或其书面授权，代理不得代决。**2026-09-15 R3 评审修订（控制器 FIX 裁定，代理按修订执行、仍不代决状态）**：①F5 重写为 E9 预览契约（新增 `/api/v1/preview`＋同源 `/preview/` 请求流，契约 §3.1）；②F3 收紧为 Gate 5 部署验收条件（生产 `SCHED_INTERVAL_SECONDS ≤ 30` 且 scheduler 运行中，不满足即生产切换 blocker）。**2026-09-15 F04 校验修订（控制器裁定，B02 代理按修订执行）**：E6/E9 判别联合的 notice/article 两分支形状同构致 oneOf 严格校验恒败——五个 `*Detail` schema 以既有 `type` 字段钉死判别常量（无新字段、载荷零变化），README §5.2 与 openapi.json 同步。本 ADR 待 SPEC-001 G2 的 R3 GPT Controller 评审与项目负责人签收后方可转 Accepted——**R3 评审未过不得声称契约已冻结**） |
+| 状态 | Accepted（2026-09-15 由 SPEC-001-B01 代理以 Proposed 落盘；README §4：ADR 状态变更决策人＝项目负责人或其书面授权，代理不得代决。**2026-09-15 R3 评审修订（控制器 FIX 裁定，代理按修订执行、仍不代决状态）**：①F5 重写为 E9 预览契约（新增 `/api/v1/preview`＋同源 `/preview/` 请求流，契约 §3.1）；②F3 收紧为 Gate 5 部署验收条件（生产 `SCHED_INTERVAL_SECONDS ≤ 30` 且 scheduler 运行中，不满足即生产切换 blocker）。**2026-09-15 F04 校验修订（控制器裁定，B02 代理按修订执行）**：E6/E9 判别联合的 notice/article 两分支形状同构致 oneOf 严格校验恒败——五个 `*Detail` schema 以既有 `type` 字段钉死判别常量（无新字段、载荷零变化），README §5.2 与 openapi.json 同步。**2026-09-15 转 Accepted（G2 门通过）**：项目负责人（Human）对 R3 GPT Controller 评审结论明确同意——含对既有 `type` 字段 const 判别架构（即上记 F04 校验修订，无新字段、载荷零变化）的接受；G2 条件（R3 GPT Controller 评审＋项目负责人签收）就此满足，本契约自此视为冻结。批准载体＝Human 经任务控制链传达的明确同意（传达形态即如此，无独立签批文件或外部链接——如实记录、不虚构批准元数据）；本状态行与 `docs/adr/README.md` §2 索引行/§3 看板同步留痕，代理仅按 README §4/§5 门批准结果同步状态，不代决） |
 | 关联决策 | SPEC-001（Human 冻结 PRD 的忠实转译，G1 已通过 2026-09-15）——决策依据＝SPEC-001 Contracts 1（Headless API 契约冻结为 ADR）/3（安全 parity）/4（内容新鲜度）与 Architecture Constraints 1（事实源唯一）/2（API 只读·内网）/3（数据零迁移）/6（schema/view/interaction 分离）；授权载体＝SPEC-001 Spec Issue（https://github.com/luehunnie/peiligo-frontend-rebuild/issues/2 ，G1 Human 已授权发布）与执行 Ticket SPEC-001-B01（https://github.com/luehunnie/peiligo/issues/13 ，风险 R3）。契约正文双载体：[docs/api/README.md](../api/README.md)（人的契约）＋ [docs/api/openapi.json](../api/openapi.json)（机器契约，F04 类型生成唯一来源） |
 
 ## 背景
@@ -55,7 +55,7 @@
 
 **受影响的后续步骤与产物**：B02（feature/headless-api 实现，每 PR 须含既有测试套件＋零计划外 migration 检查＋契约校验；含 E9 端点与后台预览出口钩子）；F04（openapi.json 类型生成＋服务端取数义务清单＋同源 `/preview/` 预览页，契约 §8/§3.1）；F11/B03（拓扑 ADR ②：Caddy 对 `/api/` 不公开路由、旧 Django 路径继续路由的接线即本契约 S1 条款）；G5/B03 切换前置检查新增两项——预览经新前端走通、生产 `SCHED_INTERVAL_SECONDS` ≤ 30（均为生产切换 blocker）；G2 门以本 ADR 转 Accepted 为契约冻结标志。
 
-**复核时点**：R3 GPT Controller 评审（冻结前必过）；G4/G5 验收中发现契约与现状行为偏差时以本 ADR 修订流程处理；未来 i18n、写端点需求（以及 E9 预览面的任何语义变更）一律视为契约变更走 §7 演进规则，禁止在 v1 内静默扩展。
+**复核时点**：R3 GPT Controller 评审（已于 2026-09-15 通过——Human 同意控制器结论，见状态字段头）；G4/G5 验收中发现契约与现状行为偏差时以本 ADR 修订流程处理；未来 i18n、写端点需求（以及 E9 预览面的任何语义变更）一律视为契约变更走 §7 演进规则，禁止在 v1 内静默扩展。**Wagtail 版本升级为固定复核触发器**：E9 有意镜像 wagtailadmin `PreviewOnEdit` 既有表单路径，升级改变该内部路径即破坏 E9 等价性——每次升级必须重跑预览兑换/表单路径安全与兼容性测试（清单＝[docs/api/README.md](../api/README.md) §3.1 维护注记）。
 
 ## 替代方案
 
@@ -80,6 +80,6 @@
 - **ADR 机制（docs/adr/README.md §4/§5）**：以 Proposed 落盘、不代决状态；README 索引仅新增本 ADR 行并同步 §3 看板；收录范围扩展依据＝SPEC-001（G1 Human 批准）明列"G2 预期产出首批 ADR：① Headless API 契约"，已在索引收录范围注记中留痕。不违反。
 - **秘密纪律（00 §4.5）**：契约与 ADR 全文无秘密、无凭据、无内网拓扑细节（仅部署形态约束条款）。不违反。
 - **旧仓只读（OR-2）／Peilige·Peilike 隔离**：全文无旧仓读写安排，无跨项目访问安排。不违反。
-- **Ticket 红线（peiligo#13 Do Not）**：未实现任何 Django 代码、未改 schema/模型/数据、未为未来功能预留投机端点（E9 由冻结 PRD 直接要求，非投机）；本批改动仅文档（docs/api/*、docs/adr/0008 本修订、部署指南 SCHED 行注记；docs/adr/README.md 索引行与看板不受本修订影响——状态仍 Proposed）。不违反。
+- **Ticket 红线（peiligo#13 Do Not）**：未实现任何 Django 代码、未改 schema/模型/数据、未为未来功能预留投机端点（E9 由冻结 PRD 直接要求，非投机）；本批改动仅文档（docs/api/*、docs/adr/0008 本修订、部署指南 SCHED 行注记；docs/adr/README.md 索引行与看板随后续状态行一致——2026-09-15 G2 转 Accepted 时已同步）。不违反。
 
 **结论：不违反任何一条，无豁免申请。**

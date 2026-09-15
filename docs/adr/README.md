@@ -37,7 +37,7 @@
 | 0005 | 公开内容 Page / 受控数据 Snippet·设置 | Accepted | 2026-08-18 | C4（=D6） | M1.6 · `0005-page-vs-snippet-allocation.md` | G1 |
 | 0006 | 中文搜索后端 | Accepted | 2026-08-31 | D7（保留决策门，待 M6.3 PoC 裁决） | M6.3 · [0006-chinese-search-backend.md](0006-chinese-search-backend.md) | 已通过（G2 · Human 2026-08-31 签收） |
 | 0007 | 前端架构细化：SSR-first ＋ 最小原生 JS 渐进增强（细化 ADR-0002，不推翻） | Accepted | 2026-09-10 | 首页升级 PRD §16＋Phase 2 冻结设计（项目负责人批令） | 首页升级 Phase 4 · [0007-minimal-vanilla-js-progressive-enhancement.md](0007-minimal-vanilla-js-progressive-enhancement.md) | 已通过（项目负责人 Phase 4 批令直批 · 2026-09-10） |
-| 0008 | Headless API 契约（只读公开内容 API 冻结；双载体 docs/api/README.md＋docs/api/openapi.json） | Proposed | 2026-09-15 | SPEC-001（G1 已通过；执行 Ticket peiligo#13，R3） | SPEC-001-B01 · [0008-headless-api-contract.md](0008-headless-api-contract.md) | 待 G2（R3 GPT Controller 评审＋项目负责人签收；评审未过不得冻结） |
+| 0008 | Headless API 契约（只读公开内容 API 冻结；双载体 docs/api/README.md＋docs/api/openapi.json） | Accepted | 2026-09-15 | SPEC-001（G1 已通过；执行 Ticket peiligo#13，R3） | SPEC-001-B01 · [0008-headless-api-contract.md](0008-headless-api-contract.md) | 已通过（G2 · Human 2026-09-15 同意 R3 控制器结论含 type-const 判别架构签收） |
 
 预列说明：
 
@@ -48,12 +48,12 @@
 
 ## 3. 状态看板
 
-统计时点：2026-09-15（SPEC-001-B01 落盘 0008 后；0001–0005 于 2026-08-18 经 G1 门、0006 于 2026-08-31 经 G2 门、0007 于 2026-09-10 经项目负责人批令直批，均由项目负责人批准；0008 以 Proposed 落盘，待 R3 评审＋G2 签收）。
+统计时点：2026-09-15（ADR-0008 经 G2 转 Accepted 后：Human 同意 R3 控制器结论＋接受 type-const 判别架构，0008 代理按门批准结果同步；0001–0005 于 2026-08-18 经 G1 门、0006 于 2026-08-31 经 G2 门、0007 于 2026-09-10 经项目负责人批令直批、0008 于 2026-09-15 经 G2 签收，均由项目负责人批准）。
 
 | 状态 | 数量 | 编号 |
 | --- | --- | --- |
-| Proposed | 1 | 0008（SPEC-001-B01 落盘，待 R3 评审＋G2 项目负责人签收） |
-| Accepted | 7 | 0001、0002、0003、0004、0005（2026-08-18 G1 门批准）、0006（Accepted·G2 已签收 2026-08-31）、0007（Accepted·项目负责人批令直批 2026-09-10） |
+| Proposed | 0 | —（原 0008 已于 2026-09-15 经 G2 转 Accepted） |
+| Accepted | 8 | 0001、0002、0003、0004、0005（2026-08-18 G1 门批准）、0006（Accepted·G2 已签收 2026-08-31）、0007（Accepted·项目负责人批令直批 2026-09-10）、0008（Accepted·G2 Human 2026-09-15 同意 R3 控制器结论签收） |
 | Superseded | 0 | — |
 | Rejected | 0 | — |
 
