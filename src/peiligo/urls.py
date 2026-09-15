@@ -28,6 +28,9 @@ urlpatterns = [
     # 视图不入页面树（ADR-0005 #5 先例）→ 不进 sitemap；整页恒 noindex。
     path("link-confirm/", home_views.link_confirm, name="link-confirm"),
     path("link-confirm/go/", home_views.link_confirm_go, name="link-confirm-go"),
+    # SPEC-001 B02（ADR-0008）：只读 Headless API（E1–E9，Compose 内网专用，
+    # 无 CORS/无写入/无新公开认证面）；须在 wagtail 兜底路由之前。
+    path("api/v1/", include("api.urls")),
     # F-06（IA §10）：robots.txt——管理面与外链确认页禁抓；/search/ 不在
     # Disallow（noindex 是收录语义，robots Disallow 反致 meta 读不到）。
     # Sitemap 取请求 Host 拼绝对地址；自定义视图不入页面树（ADR-0005 #5）。

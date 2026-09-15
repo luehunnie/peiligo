@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     "resources",
     "guides",
     "frontend",
+    # SPEC-001 B02（ADR-0008）：只读 Headless API（E1–E9，零模型零迁移）。
+    "api",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     # A3.1（CONTENT_MODEL §13.4）：站点设置载体＝BaseSiteSetting 单例
