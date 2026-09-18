@@ -168,3 +168,56 @@ git pull（或换 tag）→ docker compose ... up -d --build   # entrypoint 自�
 
 禁止事项沿用批次冻结口径：不做 force push / reset --hard / 真实生产库
 直接 restore；一切恢复走 §6 的显式目标参数。
+
+## 12. 前端切换 / 回滚（SPEC-001；唯一开关）
+
+> 形状沿用 ADR-0009 路由表 + B03 演练定稿（原 `compose.staging.yaml` /
+> `STAGING_DEFAULT_UPSTREAM` 的生产对应物）。**唯一开关＝默认上游**
+> `PEILIGO_DEFAULT_UPSTREAM`（deploy/.env；缺省 `web:8000`＝v1 整站回根）。
+> 以下命令以 `cd deploy && docker compose --env-file .env -f docker-compose.yml`
+> 为前提，简写为 `compose`。
+
+| 态 | `PEILIGO_DEFAULT_UPSTREAM` | `/` 由谁服务 | 说明 |
+| --- | --- | --- | --- |
+| v1（缺省） | `web:8000` | Wagtail（v1 整站） | 部署后公开面零变化 |
+| v2（cutover） | `frontend:4321` | 新 Astro 前端 | `/admin/`、`/documents/`、`/link-confirm/go/`、`/static/`、`/media/`、`/healthz*` 恒指 web，不随开关翻转 |
+
+路由表恒定：`/api/v1/*` 在两个态下都 404（ADR-0008 §S1，API 仅内网）。
+
+**cutover（v1 → v2；中断上限 <60s，B03 实测 ~3s）**
+
+```sh
+# 0) 前置核验：全体 healthy，且当前 v1 在根
+compose ps
+curl -fsS http://127.0.0.1/ -H 'Host: <域名>' | grep -q '/static/'
+# 1) 切换＝翻转开关（deploy/.env 置 PEILIGO_DEFAULT_UPSTREAM=frontend:4321），仅重建 caddy
+compose up -d --force-recreate caddy
+# 2) 就绪判定（中断窗口终点）：新前端 200 且 Astro 资产上根
+for i in $(seq 1 60); do curl -fsS http://127.0.0.1/ -H 'Host: <域名>' 2>/dev/null \
+  | grep -q '/_astro/' && break; sleep 1; done
+# 3) 切换后核验：SSR 真实渲染 + API 仍不公开 + 管理面可达
+curl -fsS http://127.0.0.1/ -H 'Host: <域名>' | grep -q Peiligo
+test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/v1/chrome -H 'Host: <域名>')" = 404
+test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/django-admin/login/ -H 'Host: <域名>')" = 200
+```
+
+**回滚 A：全量回退 v1（上限 <5 分钟；B03 实测 ~3s）**——v2 出现阻断性问题
+时的兜底。deploy/.env 把开关改回 `web:8000`，同一条
+`compose up -d --force-recreate caddy`；就绪判定＝`/` 重新含 `/static/`。
+只动 caddy 容器——DB、Wagtail、frontend 全不接触，可无限次重演。
+Wagtail 发布两个态下都照常（定时发布不经过前端容器）。
+
+**回滚 B：v2 内换前端镜像（秒级）**——仅前端自身回归时用：
+`docker compose ... up -d --build frontend`（或指回上一镜像 tag），caddy/web 不动。
+
+**发布时效契约**：Wagtail 发布内容 ≤30s 内对新前端可见（scheduler 60s 一轮
+＋ Astro 每请求直连取数），**不触发** Astro 重建/部署。
+
+## 13. 与 Peilige / Peilike 的边界
+
+Peiligo、Peilige、Peilike 是三个相互独立的同级项目（见仓库根 README）：
+独立仓库、独立 Compose 项目、独立数据卷与网络。运维本项目时只使用
+`deploy/docker-compose.yml`（项目名缺省取目录名），**禁止** `docker system
+prune -a --volumes` 等全机清理——会殃及同机其他项目的镜像与卷（详见
+[guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md](guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md)
+Troubleshooting 节）。

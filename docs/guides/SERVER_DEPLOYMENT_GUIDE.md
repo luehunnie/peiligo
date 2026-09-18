@@ -28,8 +28,10 @@ CPU / 内存 / 磁盘容量 / IP / 虚拟机编号**不在本文冻结**——�
 ```mermaid
 flowchart TB
     NET["Internet"] --> DNS["DNS A/AAAA 记录 → 服务器"]
-    DNS --> CADDY["caddy 容器 :443<br/>自动申请/续期 Let's Encrypt 证书<br/>static/media 直供 · 其余反代 web"]
+    DNS --> CADDY["caddy 容器 :443<br/>自动申请/续期 Let's Encrypt 证书<br/>static/media 直供 · 动态按路由表反代"]
     CADDY --> WEB["web 容器<br/>entrypoint: 等库→migrate→static→gunicorn"]
+    CADDY -->|"默认上游开关<br/>PEILIGO_DEFAULT_UPSTREAM"| FE["frontend 容器<br/>Astro SSR(webapp/,无状态)"]
+    FE -->|内网取数 /api/v1| WEB
     WEB --> DB[("db 容器<br/>PostgreSQL 18 · pgdata 卷")]
     SCH["scheduler 容器<br/>publish_scheduler(60s)"] --> DB
     SCH -.->|等 web healthy| WEB
@@ -320,6 +322,7 @@ docker compose ... logs -f web    # 或等待下一轮 ops_report
 
 | 类型 | 做法 | 风险 |
 |---|---|---|
+| **前端切换回退**(SPEC-001) | deploy/.env 把 `PEILIGO_DEFAULT_UPSTREAM` 改回 `web:8000` → `compose up -d --force-recreate caddy`;只动 caddy 容器,秒级;详见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §12 | 低;web/db/frontend 零接触 |
 | **代码回滚** | 用上一发布提交重新构建并 `up -d --build`(该提交当时也应走同流程) | 低;entrypoint 幂等 |
 | **数据库 migration 回滚** | **没有自动回滚**。代码回滚不会(也不应)自动降 schema;若新迁移必须撤销,按 Django `migrate <app> <旧号>` 个案处理并先在隔离库验证 | 中;须逐案评估 |
 | **数据回滚(restore)** | 走 §10 隔离恢复流程,**不是**代码回滚的替代品;当前库被新代码写过之后直接覆盖恢复会丢数据 | **高**;永远先隔离演练,优先 staging 验证 |

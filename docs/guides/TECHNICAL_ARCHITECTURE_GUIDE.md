@@ -43,6 +43,7 @@ flowchart TB
     subgraph "单台 Linux 服务器 · Docker Compose"
         CADDY["caddy :80/:443<br/>TLS 终结 · 自动证书<br/>static/media 直供"]
         WEB["web<br/>Gunicorn :8000<br/>Django + Wagtail<br/>entrypoint: 等库→migrate→static"]
+        FE["frontend<br/>Astro SSR :4321<br/>(webapp/,无状态零卷)"]
         SCH["scheduler<br/>publish_scheduler 循环<br/>(缺省 60s 一轮)"]
         DB[("db<br/>PostgreSQL 18<br/>pgdata 卷")]
         VM[("media 卷")]
@@ -51,6 +52,8 @@ flowchart TB
         V2[("独立副本<br/>SECONDARY_BACKUP_DIR<br/>(宿主/NFS,由部署配置)")]
     end
     CADDY -->|动态请求反代| WEB
+    CADDY -->|默认上游开关| FE
+    FE -->|内网取数 /api/v1| WEB
     CADDY -.->|读| VS
     CADDY -.->|读| VM
     WEB --> DB
@@ -65,12 +68,14 @@ flowchart TB
 
 **这是生产目标架构:已在本地同构实跑验证,但尚未部署到真实服务器。** 冻结口径:Linux/PVE 虚拟机(或同等 Linux 服务器)+ Docker Compose + PostgreSQL 容器 + Caddy;明确**不含** Redis、Celery、Elasticsearch、SPA、K8s([../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) 头注)。
 
-### 请求路径(Caddy 路由,`deploy/Caddyfile`)
+### 请求路径(Caddy 路由,`deploy/Caddyfile`;SPEC-001 起沿用 ADR-0009 路由表形状)
 
 - `{$DOMAIN}` 站点主机块;`encode gzip`;响应带 `Strict-Transport-Security: max-age=31536000`(与 Django 侧 HSTS 各出各的,不叠加);
-- `/healthz*` → 反代 web(容器探针走 HTTP,经 SSL 重定向豁免);
+- `/healthz*` → 反代 web(基础设施探针,不随前端开关翻转);
 - `/static/*`、`/media/*` → Caddy 直接读卷供文件(web 只出动态);
-- 其余全部 → `reverse_proxy web:8000`;
+- `/api/v1/*` → 恒 404(API 仅经 Compose 内网供 Astro SSR 取数,不公开路由,ADR-0008 §S1);
+- `/django-admin/`、`/admin/`、`/documents/`、`/link-confirm/go/` → 反代 web(管理面/文档/外链出口,恒指 web);
+- **其余全部 → 默认上游 `PEILIGO_DEFAULT_UPSTREAM`(唯一开关)**:缺省 `web:8000`＝v1 整站回根(部署后公开面零变化);置 `frontend:4321`＝新 Astro 前端回根。翻转仅重建 caddy 容器(秒级),切换/回滚 runbook 见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §11;
 - Caddy 管理接口仅绑定 `localhost:2019`;访问日志走 stdout。
 
 ## 3. Django 与 Wagtail 的分工
@@ -96,7 +101,10 @@ flowchart TB
 ├── guides/                    # 校园指南页、指南类别
 ├── search/                    # 全站搜索视图、过滤服务、E1 搜索后端
 ├── frontend/                  # 预留空壳 app(当前无模型无代码)
+├── api/                       # 只读 Headless API(E1–E9,零模型零迁移,ADR-0008)
 ├── templates/                 # 全站模板(含 404/500、robots.txt、后台覆盖)
+├── webapp/                    # 新前端(Astro SSR;SPEC-001 验收集成,见 webapp/docs/)
+│                              # npm 脚本:dev/build/check/test/e2e/lint
 ├── static/                    # 纯 CSS/JS 源(collectstatic 直收,无构建链)
 ├── locale/zh_Hans/            # 后台中文补译覆盖(LOCALE_PATHS)
 ├── src/peiligo/               # 项目配置包 + 可复用微模块
@@ -281,14 +289,16 @@ web 容器启动时串行完成:①循环等数据库**真实可达**(Django 连
 
 ## 12. CI(GitHub Actions,`.github/workflows/ci.yml`)
 
-单 job `quality-gate`(push main / 全部 PR):Python 3.13 + PostgreSQL 18 服务容器(另装 PG18 客户端供 backupkit 测试)→ `pip install -r requirements-dev.txt` + `pip install -e .` → 依次:
+后端 job `quality-gate`(push main / 全部 PR):Python 3.13 + PostgreSQL 18 服务容器(另装 PG18 客户端供 backupkit 测试)→ `pip install -r requirements-dev.txt` + `pip install -e .` → 依次:
 
 ```
 python manage.py check                      # 系统检查
 python manage.py makemigrations --check --dry-run   # 迁移一致性(无漂移)
 ruff check .                                # Lint
 ruff format --check .                       # 格式
-pytest -q                                   # 全量测试(2026-09-02 本地实测 604 passed + 269 subtests;其后首页升级/Phase 9 批次继续扩充,现为 54 个测试文件,当前结果以 CI 为准)
+pytest -q                                   # 全量测试(SPEC-001 集成后含 API 契约/端点/安全/预览四套件)
 ```
+
+前端 job `frontend-quality-gate`(SPEC-001 起,`webapp/` 工作目录):npm ci → eslint → prettier → `astro check`(strict) → vitest → `astro build` + CSP 门 → Playwright 核心路径(chromium) → 许可证/漏洞检查。
 
 CI 只做质量门,不做部署;凭据全部哑值。

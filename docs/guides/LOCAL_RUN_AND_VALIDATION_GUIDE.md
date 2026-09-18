@@ -261,6 +261,47 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml down -v
 
 ---
 
+## 方式 C:新前端(webapp/,Astro)开发
+
+新前端是 `webapp/` 下的 Astro SSR 应用,经 Headless API(`api/` app,`/api/v1/` 只读端点)从 Wagtail 取数。**内容编辑永远在 Wagtail 后台**;webapp 只负责把 API 数据渲染成页面(对应关系见下表)。
+
+```bash
+# 前置:Node 22+;只需做一次
+cd webapp && npm ci
+
+# 开发运行(两个终端):
+#   终端 1 = 方式 A 的 Django runserver(数据源)
+#   终端 2 = Astro dev server
+PEILIGO_API_ALLOW_LOCAL_DEFAULT=1 npm run dev   # http://localhost:4321;该环境变量仅放行「非生产」的本地缺省基址 http://127.0.0.1:8000/api/v1
+```
+
+改完代码跑质量门(与 CI `frontend-quality-gate` 同一套):
+
+```bash
+npm run lint && npm run format:check   # 风格
+npm run check                          # astro check(strict 类型)
+npm test                               # vitest 单测(含契约/溯源守卫)
+npm run build && npm run check:csp     # 产物构建 + CSP 门(无内联/跨源)
+npm run e2e                            # Playwright 核心路径(自带 mock API,不需 Django)
+npm run licenses:check && npm audit --audit-level=moderate
+```
+
+Wagtail 内容 → 新前端页面对应:
+
+| Wagtail 侧 | API 端点(`api/` app) | 新前端页面(`webapp/src/pages/`) |
+|---|---|---|
+| 首页(home.HomePage) | `GET /api/v1/home` | `index.astro` |
+| 五板块页/容器 | `GET /api/v1/sections/<slug>`(archive 加 `/archive`) | `[section]/index.astro`、`[section]/archive.astro` |
+| 五类内容页(通知/文章/资料/工具/指南) | `GET /api/v1/pages/<section>/<dept>/<slug>` | `[section]/[dept]/[slug].astro` |
+| 站点设置/导航页脚 | `GET /api/v1/chrome` | 布局组件(`SiteHeader`/`SiteFooter`) |
+| 全站搜索 | `GET /api/v1/search` | `search.astro` |
+| 外链确认页 | `GET /api/v1/link-confirm` | `link-confirm.astro` |
+| 后台「新前端预览」按钮 | `GET /api/v1/preview`(60s 单跳票据) | 预览消费页暂缺(接受版状态;服务层已就绪) |
+
+生产接线(两个应用容器 + 同源路由 + 切换/回滚开关)见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §12;架构与 API 契约见 [../adr/0008-headless-api-contract.md](../adr/0008-headless-api-contract.md)、[../adr/0009-staging-topology.md](../adr/0009-staging-topology.md)、[../api/README.md](../api/README.md)。
+
+---
+
 ## Troubleshooting
 
 | 症状 | 原因与处置 |
