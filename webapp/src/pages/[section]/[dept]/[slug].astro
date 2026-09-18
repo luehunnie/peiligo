@@ -4,7 +4,8 @@
 // （notices/notice_page.html、notices/article_page.html、
 // resources/material_page.html、resources/software_tool_page.html、
 // guides/guide_page.html）。模板继承关系改写为单文件按 detail.type 的
-// 分型渲染（v1 壳的 block 结构：article_meta / article_lede / article_body）。
+// 分型渲染；E9 预览消费页（pages/preview.astro）起，正文壳上提为
+// components/content/ContentArticle.astro（同模板渲染单一出处）。
 //
 // 路由边界：/{section}/{dept}/{slug}/，section 封闭五冻结值；容器段
 // （dept）与内容 slug 均由契约 getPageDetail 的 404 承载（容器 URL 在
@@ -20,24 +21,15 @@
 //
 // SEO（v1 base.html）：query 参数态或逐页 noindex 开关（契约 noindex 字段）
 // → robots noindex；query 态 canonical 指向去参基础 URL。
-import "../../../styles/content-shared.css";
-import "../../../styles/content-detail.css";
-import ArticleBody from "../../../components/content/ArticleBody.astro";
-import Breadcrumb from "../../../components/content/Breadcrumb.astro";
-import DetailAside from "../../../components/content/DetailAside.astro";
-import EventInfo from "../../../components/content/EventInfo.astro";
-import ExternalLinkJump from "../../../components/content/ExternalLinkJump.astro";
-import Linebreaks from "../../../components/content/Linebreaks.astro";
+import ContentArticle from "../../../components/content/ContentArticle.astro";
 import FailureState from "../../../components/system/FailureState.astro";
 import NotFoundPage from "../../../components/system/NotFoundPage.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { publishedDateParts } from "../../../lib/dates";
+import { bodyClassForType } from "../../../lib/body-class";
 import { unavailableResponse } from "../../../lib/responses";
-import { sectionTone } from "../../../lib/sections";
 import type {
   Chrome,
   PageDetail,
-  PageType,
   SectionSlug,
 } from "../../../schemas/api-schema";
 import { api } from "../../../services/api";
@@ -49,15 +41,6 @@ const SECTION_SLUGS: readonly SectionSlug[] = [
   "software",
   "guide",
 ];
-
-/** v1 {% block body_class %}：template-<模型蛇形名>（五型各自冻结值）。 */
-const BODY_CLASSES: Record<PageType, string> = {
-  notice: "template-noticepage",
-  article: "template-articlepage",
-  material: "template-materialpage",
-  software: "template-softwaretoolpage",
-  guide: "template-guidepage",
-};
 
 const { section, dept, slug } = Astro.params;
 const invalidRoute =
@@ -102,20 +85,6 @@ const retryHref = Astro.url.pathname + Astro.url.search;
 
 const hasQuery = Astro.url.searchParams.toString() !== "";
 const canonical = hasQuery ? Astro.url.origin + Astro.url.pathname : undefined;
-
-// v1 壳：面包屑＝首页 / [所属板块] / 当前页（板块由树上下文派生，契约
-// breadcrumb 同构；无所属板块时父段整行不输出）
-const crumbs = detail?.breadcrumb ?? [];
-const parent = crumbs.length > 1 ? crumbs[0] : undefined;
-const currentTitle = crumbs[crumbs.length - 1]?.title ?? detail?.title;
-
-// 题头元信息（v1 各类型 article_meta block，段序冻结）：段间「·」由
-// .art-meta gap 呈现（v1 flex gap:8px，dot-sep 仅作分隔符着色文本）。
-const published = detail
-  ? publishedDateParts(detail.first_published_at).datetime
-  : "";
-const expireAt = detail ? publishedDateParts(detail.expire_at).datetime : "";
-const backHref = detail?.section ? `/${detail.section.slug}/` : undefined;
 ---
 
 {invalidRoute || detailNotFound ? (
@@ -130,194 +99,12 @@ const backHref = detail?.section ? `/${detail.section.slug}/` : undefined;
     chrome={chrome as Chrome}
     noindex={hasQuery || detail?.noindex}
     canonical={canonical}
-    bodyClass={detail ? BODY_CLASSES[detail.type] : undefined}
+    bodyClass={detail ? bodyClassForType(detail.type) : undefined}
   >
     {detail ? (
-      <Fragment>
-        {detail.expired && (
-          <div class="expired-banner" role="status">
-            此内容已过期，归档保留供查阅；最新信息请以发布部门口径为准。
-          </div>
-        )}
-
-        <Breadcrumb
-          parentTitle={parent?.title}
-          parentUrl={parent?.url ?? undefined}
-          title={currentTitle ?? detail.title}
-        />
-
-        <article class="content-article">
-          <header class="art-head">
-            {detail.section && (
-              <span
-                class:list={["tag", `tone-${sectionTone(detail.section.slug)}`]}
-              >
-                {detail.section.title}
-              </span>
-            )}
-            <h1>{detail.title}</h1>
-            <p class="art-meta">
-              {/* v1 article_meta：段序随类型冻结（下方逐型转写） */}
-              {detail.type === "material" && (
-                <Fragment>
-                  <span>{detail.department?.name}</span>
-                  <span class="dot-sep">·</span>
-                  <span>{detail.discipline}</span>
-                  <span class="dot-sep">·</span>
-                  <span>{detail.material_type}</span>
-                  <span class="dot-sep">·</span>
-                  <time datetime={published}>{published} 发布</time>
-                </Fragment>
-              )}
-              {detail.type === "guide" && (
-                <Fragment>
-                  <span>{detail.category}</span>
-                  <span class="dot-sep">·</span>
-                  <span>{detail.department?.name}</span>
-                  <span class="dot-sep">·</span>
-                  <span>最后确认 {detail.last_confirmed_on.slice(0, 10)}</span>
-                </Fragment>
-              )}
-              {(detail.type === "notice" ||
-                detail.type === "article" ||
-                detail.type === "software") && (
-                <Fragment>
-                  <span>{detail.department?.name}</span>
-                  <span class="dot-sep">·</span>
-                  <time datetime={published}>{published} 发布</time>
-                  {(detail.type === "notice" || detail.type === "article") &&
-                    detail.expire_at && (
-                      <Fragment>
-                        <span class="dot-sep">·</span>
-                        <span>有效期至 {expireAt}</span>
-                      </Fragment>
-                    )}
-                </Fragment>
-              )}
-            </p>
-            {(detail.type === "notice" ||
-              detail.type === "article" ||
-              detail.type === "material") &&
-              detail.summary && <p class="article-lede">{detail.summary}</p>}
-          </header>
-
-          {detail.cover && (
-            <figure class="art-cover">
-              <img
-                src={detail.cover.src}
-                width={detail.cover.width}
-                height={detail.cover.height}
-                alt={detail.cover.alt}
-              />
-            </figure>
-          )}
-
-          {/* 逐类型正文片段（v1 article_body block） */}
-          {(detail.type === "notice" || detail.type === "article") && (
-            <Fragment>
-              <EventInfo event={detail.event} />
-              <div class="article-body">
-                <ArticleBody blocks={detail.body} />
-              </div>
-              <DetailAside
-                attachments={detail.attachments}
-                external={detail.external}
-                tags={detail.tags}
-              />
-            </Fragment>
-          )}
-          {detail.type === "material" && (
-            <Fragment>
-              <div class="article-body">
-                <ArticleBody blocks={detail.body} />
-              </div>
-              <DetailAside
-                attachments={detail.attachments}
-                external={detail.external}
-                tags={detail.tags}
-              />
-            </Fragment>
-          )}
-          {detail.type === "software" && (
-            <Fragment>
-              <section class="event-info" aria-label="软件信息">
-                <h2>基本信息</h2>
-                <dl class="meta-list">
-                  <div>
-                    <dt>适用平台</dt>
-                    <dd>{detail.platforms.join("、")}</dd>
-                  </div>
-                  <div>
-                    <dt>来源链接</dt>
-                    <dd class="url-text">
-                      <ExternalLinkJump
-                        url={detail.source.url}
-                        confirmHref={detail.source.confirm_href}
-                      />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>授权或费用说明</dt>
-                    <dd>{detail.license_note}</dd>
-                  </div>
-                </dl>
-              </section>
-              <section class="article-body" aria-label="用途说明">
-                <h2>用途说明</h2>
-                <ArticleBody blocks={detail.body} />
-              </section>
-            </Fragment>
-          )}
-          {detail.type === "guide" && (
-            <div class="article-body">
-              <dl class="meta-list guide-fields">
-                <div>
-                  <dt>地点</dt>
-                  <dd>{detail.location}</dd>
-                </div>
-                <div>
-                  <dt>开放时间</dt>
-                  <dd>
-                    <Linebreaks text={detail.opening_hours} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>联系方式</dt>
-                  <dd>
-                    <Linebreaks text={detail.contact} />
-                  </dd>
-                </div>
-                {detail.extra_notes && (
-                  <div>
-                    <dt>补充说明</dt>
-                    <dd>
-                      <Linebreaks text={detail.extra_notes} />
-                    </dd>
-                  </div>
-                )}
-                <div>
-                  <dt>责任来源或责任单位</dt>
-                  <dd>{detail.responsible_party}</dd>
-                </div>
-                <div>
-                  <dt>维护方式</dt>
-                  <dd>{detail.maintenance_mode_label}</dd>
-                </div>
-                <div>
-                  <dt>最后确认日期或更新时间</dt>
-                  <dd>{detail.last_confirmed_on.slice(0, 10)}</dd>
-                </div>
-              </dl>
-            </div>
-          )}
-
-          {backHref && detail.section && (
-            <p class="art-back">
-              <a href={backHref}>← 返回{detail.section.title}</a>
-            </p>
-          )}
-        </article>
-      </Fragment>
+      // 正文壳（含 expired 横幅/面包屑/五型分型渲染）＝ContentArticle
+      // 单一出处（与 E9 预览消费页同模板）
+      <ContentArticle detail={detail} />
     ) : (
       // 详情失败且无陈旧版本可回退（F08 统一失败态；HTTP 500 已在前置区设定）
       <FailureState
@@ -328,21 +115,3 @@ const backHref = detail?.section ? `/${detail.section.slug}/` : undefined;
     )}
   </BaseLayout>
 )}
-
-<style>
-  /* 过期横幅：v1 templates/base.html 逐字转写（expired 页原 slug URL
-     放行渲染，页首横幅；role=status）。 */
-  .expired-banner {
-    max-width: var(--wrap);
-    margin: 14px auto 0;
-    padding: 12px 20px;
-    background: var(--amber-soft);
-    border-left: 4px solid var(--amber);
-    border-radius: 0 12px 12px 0;
-    font-size: 14px;
-    color: var(--amber-deep);
-  }
-
-  /* 指南九字段表：v1 guide_page.html .guide-fields（无独立规则，沿用
-     meta-list 栅格；类名保留 v1 锚点）。 */
-</style>

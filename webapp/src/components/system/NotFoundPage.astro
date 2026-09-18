@@ -14,15 +14,21 @@
 import "../../styles/content-listing.css";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { NOT_FOUND_HTML } from "../../lib/responses";
+import SiteFooter from "../SiteFooter.astro";
 import type { Chrome } from "../../schemas/api-schema";
 import { api } from "../../services/api";
 
 interface Props {
   /** 已取得的 chrome（页面在 404 判定前已并行取数时传入；缺省自取） */
   chrome?: Chrome;
+  /** 反馈 mailto body 地址覆盖（隐私面先例＝外链确认页）：URL 查询串
+   * 含敏感值的页面（如 /preview/ 的单跳票据）传入站内路径，避免缺省
+   * 「当前页绝对地址」自动进入反馈邮件与页面外发内容 */
+  footerPageUrl?: string;
 }
 
 let chrome = Astro.props.chrome;
+const footerPageUrl = Astro.props.footerPageUrl;
 if (!chrome) {
   const chromeResult = await api.getChrome();
   if (chromeResult.ok) chrome = chromeResult.data;
@@ -47,6 +53,17 @@ if (!chrome) {
         <a href="/">返回首页</a>
       </li>
     </ul>
+    {/* 显式页脚（等价 BaseLayout 缺省插槽：同 props 渲染；显式写出是为了
+        footerPageUrl 隐私覆盖——条件式 slot 覆盖会让 Astro 视插槽为已提供
+        而吞掉回退页脚。缺省行为＝pageTitle「页面不存在」＋当前绝对地址，
+        与 BaseLayout 缺省逐参一致）。 */}
+    <SiteFooter
+      slot="footer"
+      siteName={chrome.site_name}
+      feedbackEmail={chrome.feedback_email}
+      pageTitle="页面不存在"
+      pageUrl={footerPageUrl ?? Astro.url.toString()}
+    />
   </BaseLayout>
 ) : (
   // chrome 不可用：无壳最小 404（responses.ts 同一出处，零模板注入面）

@@ -4,10 +4,10 @@
 // fetch——page.route 拦不到服务端请求，只能以真实 HTTP 服务替代 B02。
 // 职责最小面：
 //   - GET /api/v1/chrome|home|sections/{slug}|sections/{slug}/archive|
-//     search|pages/{section}/{dept}/{slug}|link-confirm|sitemap：从内存态
-//     返回（初始 = src/tests/fixtures/api/ 下的契约夹具），no-store；每端点
-//     维护请求计数（供测试断言「每请求直连」）。详情按 slug 路由到对应
-//     夹具（library-hours/zotero/spring-sports/calculus-review/
+//     search|pages/{section}/{dept}/{slug}|link-confirm|sitemap|preview：
+//     从内存态返回（初始 = src/tests/fixtures/api/ 下的契约夹具），no-store；
+//     每端点维护请求计数（供测试断言「每请求直连」）。详情按 slug 路由到
+//     对应夹具（library-hours/zotero/spring-sports/calculus-review/
 //     library-guide），未知 slug 与未知 section → 契约 404 封装；
 //   - POST /__control：测试控制面 { endpoint: <名称|"all">,
 //     mode: "ok"|"fail"|"invalid"|"notfound", payload? } —— ok+payload 覆写
@@ -84,6 +84,11 @@ const fixtures = {
   search: searchFixture,
   "link-confirm": await loadFixture("link-confirm.json"),
   sitemap: await loadFixture("sitemap.json"),
+  // E9 预览兑换：任意非空 token 皆回草稿夹具（被测对象是前端消费页的
+  // 渲染与失败闭合，不是票据校验本身——那是真实 B02 的 Django 侧职责）；
+  // 负面态经 /__control（notfound＝无效/过期/复用票据的真实 404 应答，
+  // fail＝上游 500）驱动，与其它端点同一控制面。
+  preview: await loadFixture("preview.json"),
 };
 const detailFixtures = Object.fromEntries(
   await Promise.all(
@@ -220,7 +225,11 @@ const server = createServer((req, res) => {
     let name = null;
     if (rest === "chrome" || rest === "home" || rest === "search") {
       name = rest;
-    } else if (rest === "link-confirm" || rest === "sitemap") {
+    } else if (
+      rest === "link-confirm" ||
+      rest === "sitemap" ||
+      rest === "preview"
+    ) {
       name = rest;
     } else if (rest.startsWith("sections/")) {
       const [, section, maybeArchive] = rest.split("/");

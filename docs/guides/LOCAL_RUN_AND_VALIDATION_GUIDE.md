@@ -296,7 +296,7 @@ Wagtail 内容 → 新前端页面对应:
 | 站点设置/导航页脚 | `GET /api/v1/chrome` | 布局组件(`SiteHeader`/`SiteFooter`) |
 | 全站搜索 | `GET /api/v1/search` | `search.astro` |
 | 外链确认页 | `GET /api/v1/link-confirm` | `link-confirm.astro` |
-| 后台「新前端预览」按钮 | `GET /api/v1/preview`(60s 单跳票据) | 预览消费页暂缺(接受版状态;服务层已就绪) |
+| 后台「新前端预览」按钮 | `GET /api/v1/preview`(60s 单跳票据) | `preview.astro`(同模板渲染草稿;无票/坏票一律样式化 404) |
 
 生产接线(两个应用容器 + 同源路由 + 切换/回滚开关)见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §12;架构与 API 契约见 [../adr/0008-headless-api-contract.md](../adr/0008-headless-api-contract.md)、[../adr/0009-staging-topology.md](../adr/0009-staging-topology.md)、[../api/README.md](../api/README.md)。
 
