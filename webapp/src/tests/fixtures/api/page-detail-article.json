@@ -25,6 +25,10 @@
   },
   "breadcrumb": [
     {
+      "title": "首页",
+      "url": "/"
+    },
+    {
       "title": "活动日历",
       "url": "/events/"
     },

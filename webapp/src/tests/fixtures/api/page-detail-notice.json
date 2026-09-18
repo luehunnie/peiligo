@@ -18,6 +18,7 @@
     "alt": "图书馆"
   },
   "breadcrumb": [
+    { "title": "首页", "url": "/" },
     { "title": "昆社纪事", "url": "/chronicle/" },
     { "title": "关于图书馆调整开放时间的通知", "url": null }
   ],

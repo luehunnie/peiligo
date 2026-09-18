@@ -20,6 +20,10 @@
   "cover": null,
   "breadcrumb": [
     {
+      "title": "首页",
+      "url": "/"
+    },
+    {
       "title": "生活指南",
       "url": "/guide/"
     },

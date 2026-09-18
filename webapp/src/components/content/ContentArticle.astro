@@ -26,10 +26,13 @@ interface Props {
 
 const { detail } = Astro.props;
 
-// v1 壳：面包屑＝首页 / [所属板块] / 当前页（板块由树上下文派生，契约
-// breadcrumb 同构；无所属板块时父段整行不输出）
+// v1 壳：面包屑＝首页 / [所属板块] / 当前页。契约 breadcrumb 本就含首页
+// 段（api/serializers.breadcrumb：首页 → 板块 → 当前页，容器段永不出现；
+// Breadcrumb 组件再输出硬编码首页链接），故父段取当前页前一段（倒数第二
+// 段）＝板块——对契约三段形与板块页自身两段形都正确；取 crumbs[0] 会把
+// 契约首段「首页」当板块渲染成 首页/首页 并丢掉板块链接（集成栈实测抓到）。
 const crumbs = detail.breadcrumb;
-const parent = crumbs.length > 1 ? crumbs[0] : undefined;
+const parent = crumbs.length > 1 ? crumbs[crumbs.length - 2] : undefined;
 const currentTitle = crumbs[crumbs.length - 1]?.title ?? detail.title;
 
 // 题头元信息（v1 各类型 article_meta block，段序冻结）：段间「·」由

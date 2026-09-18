@@ -13,6 +13,7 @@
   "expired": true,
   "cover": null,
   "breadcrumb": [
+    { "title": "首页", "url": "/" },
     { "title": "软件与工具", "url": "/software/" },
     { "title": "Zotero 文献管理", "url": null }
   ],
