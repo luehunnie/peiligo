@@ -1,0 +1,83 @@
+---
+// 基础 HTML 壳（SPEC-001-F02；F05 起接入 SSR 全站 chrome）。等价转写自
+// v1 templates/base.html（48fd5d6）：lang zh-Hans、title 站点后缀、SEO 基础
+// 位（description / robots noindex / canonical，均为条件渲染，与 v1 一致）、
+// 同源假设（仅同源相对路径）、skip link 为首个可聚焦元素、
+// main#main-content.wrap 弹性主区。
+// 页头/页脚属 F03（SiteHeader/SiteFooter，v1 base.html 同款全站共享）：
+// 经 header/footer 具名插槽接入，插槽缺省内容＝标准页头/页脚（等价 v1
+// base.html 全站注入），页面可按需覆盖（如外链确认页的 mailto 隐私覆盖）。
+// chrome（E1）自 F05 起为必传 prop：SSR 页面每请求经 F04 客户端 getChrome()
+// 直连接口后传入（契约 4：chrome 每请求直连，构建期快照会冻结页头/页脚
+// 数据——站名、反馈邮箱须随后台修改下一次请求即见），缺省插槽以
+// chrome.site_name / chrome.feedback_email 渲染（v1 site_brand 与
+// feedback_email 取值链同源）。
+// 每页 extra head 位见 head 插槽（对应 v1 extra_css 块）。
+// v1 body 末尾 extra_js 块不设对应插槽：Astro 处理的 <script> 一律 hoist
+// 为 head 内 type=module；但小组件脚本会被 Astro 自动内联（无配置可关），
+// 与严格 CSP（无 unsafe-inline）冲突——F05 轮播脚本因此改走 v1 原生形态：
+// public/ 静态外链 + defer，页面模板内 <script is:inline src=... defer>。
+import "../styles/tokens.css";
+import "../styles/base.css";
+import { site } from "../lib/site";
+import type { Chrome } from "../schemas/api-schema";
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+
+interface Props {
+  /** 页面标题主体（渲染为 "{title} - {site.title}"，对应 v1 title+title_suffix） */
+  title: string;
+  /** 每请求直连的全站 chrome（E1；SSR 页面取数后传入） */
+  chrome: Chrome;
+  /** 对应 v1 page.search_description；未提供时不渲染（与 v1 条件一致） */
+  description?: string;
+  /** 对应 v1 page.noindex / 查询参数态 noindex（查询态判定属后续交互票） */
+  noindex?: boolean;
+  /** 对应 v1 查询参数态 canonical（基础 URL，去除全部参数） */
+  canonical?: string;
+  /** 对应 v1 {% block body_class %}（如 template-homepage） */
+  bodyClass?: string;
+}
+
+const {
+  title,
+  chrome,
+  description,
+  noindex = false,
+  canonical,
+  bodyClass,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} - {site.title}</title>
+    {description && <meta name="description" content={description} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <slot name="head" />
+  </head>
+  <body class={bodyClass}>
+    <a class="skip-link" href="#main-content">
+      跳到主要内容
+    </a>
+    <slot name="header">
+      <SiteHeader siteName={chrome.site_name} />
+    </slot>
+    <main id="main-content" class="wrap">
+      <slot />
+    </main>
+    <slot name="footer">
+      <SiteFooter
+        pageTitle={title}
+        siteName={chrome.site_name}
+        feedbackEmail={chrome.feedback_email}
+      />
+    </slot>
+  </body>
+</html>

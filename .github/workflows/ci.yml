@@ -89,3 +89,55 @@ jobs:
 
       - name: Tests
         run: pytest -q
+
+  # SPEC-001：新前端（webapp/，Astro）质量门——与接受版前端仓库 CI 同一套
+  # 门禁（lint/format · astro check strict · vitest · build+CSP · Playwright
+  # 核心路径 · 许可证/漏洞），仅在集成时收敛为单 job＋working-directory。
+  frontend-quality-gate:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: webapp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Format (prettier --check)
+        run: npm run format:check
+
+      - name: Typecheck (astro check, strict)
+        run: npm run check
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Build + CSP gate
+        run: |
+          npm run build
+          npm run check:csp
+
+      - name: Playwright core paths
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+
+      - name: Licenses & vulnerabilities
+        run: |
+          npm run licenses:check
+          npm audit --audit-level=moderate

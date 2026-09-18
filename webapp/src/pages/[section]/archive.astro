@@ -1,0 +1,162 @@
+---
+// 板块历史归档页（SPEC-001-F06）。等价转写自 v1
+// home/templates/home/section_archive.html（M5.2 自定义视图，§6.1）。
+// 消费 HISTORICAL 集（live ∪ expired）：live 与 expired 同序混排、发布
+// 时间倒序、无降权；expired 条目带「已过期」徽标（与列表行同语义）。
+// 自定义列表视图＝IA §10 #7–#8 家族：一律 noindex ＋ canonical 指向
+// 去参基础 URL（归档成员随发布小时级变动，不构成独立收录单元）。
+// 查询参数不生效（归档视图非 §21 载体）；slug 封闭五冻结值，未知 → 404
+// （F08 起渲染样式化 404 页，chrome 不可用时降级无壳最小 404）。
+// F14（#37）：合法 slug 但上游报告板块缺失（契约 404 封装）→ 同 v1 归档
+// 视图显式 Http404 语义 → 样式化 404（与 [dept]/[slug].astro 口径一致）。
+// 数据面失败分档（F08 统一错误边界）：chrome 失败＝全站取数边界 → v1
+// 500 页等价最小错误响应；归档上游 not-found → 样式化 404；chrome 可用
+// 而归档失败且无陈旧版本可回退 → 站内样式化失败态（FailureState，状态
+// 500，刷新重试＝同 URL 重放）。
+import "../../styles/content-shared.css";
+import "../../styles/content-listing.css";
+import Breadcrumb from "../../components/content/Breadcrumb.astro";
+import ResultRow from "../../components/content/ResultRow.astro";
+import FailureState from "../../components/system/FailureState.astro";
+import NotFoundPage from "../../components/system/NotFoundPage.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { unavailableResponse } from "../../lib/responses";
+import type {
+  Chrome,
+  SectionArchive,
+  SectionSlug,
+} from "../../schemas/api-schema";
+import { api } from "../../services/api";
+
+const SECTION_SLUGS: readonly SectionSlug[] = [
+  "chronicle",
+  "events",
+  "materials",
+  "software",
+  "guide",
+];
+
+const { section } = Astro.params;
+const invalidSlug = !SECTION_SLUGS.includes(section as SectionSlug);
+if (invalidSlug) {
+  Astro.response.status = 404;
+}
+const slug = section as SectionSlug;
+
+let chrome: Chrome | undefined;
+let archive: SectionArchive | undefined;
+let archiveNotFound = false;
+if (!invalidSlug) {
+  try {
+    const [chromeResult, archiveResult] = await Promise.all([
+      api.getChrome(),
+      api.getSectionArchive(slug),
+    ]);
+    if (chromeResult.ok) chrome = chromeResult.data;
+    if (!archiveResult.ok && archiveResult.reason === "not-found") {
+      // v1：归档视图对缺失 SectionPage 显式 Http404 → 404 页承载
+      // （同 [dept]/[slug].astro 容器 URL 口径）
+      archiveNotFound = true;
+    } else if (chromeResult.ok && archiveResult.ok) {
+      archive = archiveResult.data;
+    }
+  } catch {
+    // 客户端抛错（含基址 fail-closed 配置错误）＝部署边界事故，同一错误边界
+  }
+}
+if (invalidSlug || archiveNotFound) {
+  // 样式化 404（v1 templates/404.html 等价）；chrome 已取得则传入免重复取数
+  Astro.response.status = 404;
+}
+if (!chrome && !invalidSlug && !archiveNotFound) {
+  // chrome 不可用＝全站取数边界（页头/页脚无从渲染）：保持 v1 最小 500 页
+  // （404 边界优先：非法 slug / 上游 not-found 不经此分支）
+  return unavailableResponse();
+}
+// 至此 chrome 必可用（或走 404 分支）；归档缺失（非 not-found）＝内容失败
+// 且无陈旧版本可回退 → 站内失败态（模板 chrome as Chrome 仅为收窄分支
+// 类型，同口径见 [dept]/[slug].astro）
+const contentFailed = !invalidSlug && !archiveNotFound && !archive;
+if (contentFailed) {
+  Astro.response.status = 500;
+}
+// 刷新重试＝原样重放本请求（恢复后下一请求即 live 内容，契约 4/5）
+const retryHref = Astro.url.pathname + Astro.url.search;
+
+const sectionUrl = `/${slug}/`;
+const sectionTitle = archive?.section.title;
+const pageTitle = sectionTitle
+  ? `${sectionTitle}·历史归档`
+  : "内容暂时无法加载";
+---
+
+{invalidSlug || archiveNotFound ? (
+  // 404 边界（非法 slug / 上游板块缺失）：样式化 404（状态码已在前置区
+  // 钉死；chrome 已取得则传入免重复取数）
+  <NotFoundPage chrome={chrome} />
+) : (
+  <BaseLayout
+    title={pageTitle}
+    chrome={chrome as Chrome}
+    noindex
+    canonical={Astro.url.origin + Astro.url.pathname}
+    bodyClass="template-sectionarchive"
+  >
+    {archive ? (
+      <Fragment>
+        <Breadcrumb
+          parentTitle={archive.section.title}
+          parentUrl={sectionUrl}
+          title="历史归档"
+        />
+
+        <div class="page-head">
+          <h1>{pageTitle}</h1>
+          <p class="section-lede">
+            本板块内容按发布时间倒序留存，含已过有效期的条目。
+            <a href={sectionUrl}>返回{archive.section.title}</a>
+          </p>
+        </div>
+
+        {archive.entries.length > 0 ? (
+          <section
+            class="results"
+            aria-label={`${archive.section.title}历史归档`}
+          >
+            {archive.entries.map((entry) => (
+              <ResultRow entry={entry} />
+            ))}
+          </section>
+        ) : (
+          <div class="empty-state">
+            <p class="empty-title">本板块暂无历史内容</p>
+            <p class="empty-hint">各部门发布内容后，历史记录将在此留存。</p>
+            <a href={sectionUrl}>返回{archive.section.title}</a>
+          </div>
+        )}
+      </Fragment>
+    ) : (
+      // 归档失败且无陈旧版本可回退（F08 统一失败态；HTTP 500 已在前置区设定）
+      <FailureState
+        title="内容暂时无法加载"
+        note="内容服务出现临时故障，请稍后重试。"
+        retryHref={retryHref}
+      />
+    )}
+  </BaseLayout>
+)}
+
+<style>
+  /* 归档页头：v1 peiligo.css「既有页面组件·板块历史归档等非详情页的
+     既有页头」逐字转写。 */
+  .page-head {
+    margin-top: 6px;
+  }
+
+  .section-lede {
+    margin: 6px 0 0;
+    max-width: 640px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+</style>

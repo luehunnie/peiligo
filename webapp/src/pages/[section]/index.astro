@@ -1,0 +1,292 @@
+---
+// 板块列表页（SPEC-001-F06）。等价转写自 v1
+// home/templates/home/section_page.html（SectionPage.get_context 口径）。
+// 本文件承担页面编排与页面级区块（列表页头/大搜索框/空态），行渲染、
+// 分页与面包屑在 src/components/content/。
+//
+// 路由边界：slug 封闭五冻结值（v1 urls.py 正则同口径），其余路径一律 404
+// （Wagtail 树外路径同语义；F08 起渲染样式化 404 页——v1 404 页同口径，
+// chrome 不可用时降级无壳最小 404，见 components/system/NotFoundPage）。
+// F14（#37）：合法 slug 但上游报告板块缺失（契约 404 封装，如空 DB 下
+// SectionPage 未建）同 v1 Wagtail 树路由语义 → 样式化 404（与
+// [dept]/[slug].astro 容器 URL 的 not-found 口径一致）。
+//
+// 数据面（契约 4）：chrome（页头/页脚）与 getSectionList 每请求并行直连；
+// 列表失败时 ≤5min 陈旧回退由 F04 客户端负责。失败分档（F08 统一错误
+// 边界）：chrome 失败＝全站取数边界 → v1 500 页等价最小错误响应；列表
+// 上游 not-found → 样式化 404（v1 同语义）；chrome 可用而列表失败且无
+// 陈旧版本可回退 → 站内样式化失败态（FailureState，状态 500，刷新重试
+// ＝同 URL 重放）。
+//
+// SEO（v1 base.html request.GET 口径）：任一查询参数 → noindex ＋ canonical
+// 指向去参基础 URL；dept 筛选态 H1/<title> 换 §8.2 模式文案（部门筛选结果
+// ≠部门主页）；部门名取契约 filters.conditions 回显（label=部门 的 value
+// ＝ v1 search_filters.department.name，零新增字段）。
+import "../../styles/content-shared.css";
+import "../../styles/content-listing.css";
+import Breadcrumb from "../../components/content/Breadcrumb.astro";
+import Pager from "../../components/content/Pager.astro";
+import ResultRow from "../../components/content/ResultRow.astro";
+import SectionIcon from "../../components/content/SectionIcon.astro";
+import FailureState from "../../components/system/FailureState.astro";
+import NotFoundPage from "../../components/system/NotFoundPage.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { unavailableResponse } from "../../lib/responses";
+import { sectionPositioning } from "../../lib/sections";
+import type {
+  Chrome,
+  SectionList,
+  SectionSlug,
+} from "../../schemas/api-schema";
+import { api } from "../../services/api";
+
+const SECTION_SLUGS: readonly SectionSlug[] = [
+  "chronicle",
+  "events",
+  "materials",
+  "software",
+  "guide",
+];
+
+const { section } = Astro.params;
+const invalidSlug = !SECTION_SLUGS.includes(section as SectionSlug);
+if (invalidSlug) {
+  // 样式化 404（v1 templates/404.html 等价）；无壳回退在组件内部
+  Astro.response.status = 404;
+}
+const slug = section as SectionSlug;
+
+let chrome: Chrome | undefined;
+let list: SectionList | undefined;
+let listNotFound = false;
+if (!invalidSlug) {
+  try {
+    const [chromeResult, listResult] = await Promise.all([
+      api.getChrome(),
+      api.getSectionList(slug, {
+        q: Astro.url.searchParams.get("q") ?? undefined,
+        dept: Astro.url.searchParams.get("dept") ?? undefined,
+        type: Astro.url.searchParams.get("type") ?? undefined,
+        tag: Astro.url.searchParams.get("tag") ?? undefined,
+        page: Astro.url.searchParams.get("page") ?? undefined,
+      }),
+    ]);
+    if (chromeResult.ok) chrome = chromeResult.data;
+    if (!listResult.ok && listResult.reason === "not-found") {
+      // v1：合法 slug 但 Wagtail 树无此板块页 → 404 页承载（IA §11；
+      // 同 [dept]/[slug].astro 容器 URL 口径）
+      listNotFound = true;
+    } else if (chromeResult.ok && listResult.ok) {
+      list = listResult.data;
+    }
+  } catch {
+    // 客户端抛错（含基址 fail-closed 配置错误）＝部署边界事故，同一错误边界
+  }
+}
+if (invalidSlug || listNotFound) {
+  // 样式化 404（v1 templates/404.html 等价）；chrome 已取得则传入免重复取数
+  Astro.response.status = 404;
+}
+if (!chrome && !invalidSlug && !listNotFound) {
+  // chrome 不可用＝全站取数边界（页头/页脚无从渲染）：保持 v1 最小 500 页
+  // （404 边界优先：非法 slug / 上游 not-found 不经此分支）
+  return unavailableResponse();
+}
+// 至此 chrome 必可用（或走 404 分支）：pageChrome 仅为收窄模板分支类型
+// （chrome={chrome} 与空态 nav_sections 同口径，见 [dept]/[slug].astro）
+const pageChrome = chrome as Chrome;
+// 列表缺失（非 not-found）＝内容失败且无陈旧版本可回退 → 站内失败态
+const contentFailed = !invalidSlug && !listNotFound && !list;
+if (contentFailed) {
+  Astro.response.status = 500;
+}
+// 刷新重试＝原样重放本请求（恢复后下一请求即 live 内容，契约 4/5）
+const retryHref = Astro.url.pathname + Astro.url.search;
+
+const hasQuery = Astro.url.searchParams.toString() !== "";
+const canonical = hasQuery ? Astro.url.origin + Astro.url.pathname : undefined;
+
+// §8.2：dept 筛选态标题模式（H1 与 <title> 同文案，含「（筛选结果）」后缀）
+const deptName = list?.filters.conditions.find(
+  (c) => c.label === "部门",
+)?.value;
+const pageTitle = list
+  ? deptName
+    ? `${list.section.title}·${deptName}发布的内容（筛选结果）`
+    : list.section.title
+  : "内容暂时无法加载";
+
+// v1 get_context：翻页链接查询串＝原始 request.GET 剔除 page（非法/空
+// 参数原样保留——校验语义在 Django 侧，前端不重写访客输入）
+const stripped = new URLSearchParams(Astro.url.searchParams);
+stripped.delete("page");
+const querystring = stripped.toString();
+
+const sectionUrl = `/${slug}/`;
+---
+
+{invalidSlug || listNotFound ? (
+  // 404 边界（非法 slug / 上游板块缺失）：样式化 404（v1 templates/404.html
+  // 同口径；状态码已在前置区钉死；chrome 已取得则传入免重复取数）
+  <NotFoundPage chrome={chrome} />
+) : (
+  <BaseLayout
+    title={pageTitle}
+    chrome={pageChrome}
+    noindex={hasQuery}
+    canonical={canonical}
+    bodyClass="template-section"
+  >
+    {list ? (
+      <Fragment>
+        <Breadcrumb title={list.section.title} />
+
+        <section class="ls-head cat-mode" aria-labelledby="cat-title">
+          <SectionIcon slug={slug} />
+          <h1 id="cat-title">{pageTitle}</h1>
+          <p class="ls-intro">{sectionPositioning(slug)}</p>
+          <p class="archive-entry">
+            <a href={list.section.archive_url}>{list.section.title}·历史归档</a>
+            （含已过有效期内容）
+          </p>
+          <p class="ls-count">
+            共 <strong>{list.pagination.total}</strong> 条
+          </p>
+          <form
+            class="big-search"
+            role="search"
+            action={sectionUrl}
+            method="get"
+            aria-label="在本板块内搜索"
+          >
+            <svg
+              class="search-ico"
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              type="search"
+              name="q"
+              value={list.filters.q}
+              aria-label="搜索词"
+              placeholder="在本板块内搜索…"
+            />
+            <button type="submit">搜索</button>
+          </form>
+        </section>
+
+        {list.entries.length > 0 ? (
+          <Fragment>
+            <section class="results" aria-label={`${list.section.title}列表`}>
+              {list.entries.map((entry) => (
+                <ResultRow entry={entry} />
+              ))}
+            </section>
+            <Pager pagination={list.pagination} querystring={querystring} />
+          </Fragment>
+        ) : list.filters.active ? (
+          <div class="empty-state">
+            <p class="empty-title">没有符合当前条件的内容</p>
+            <p class="empty-hint">
+              已选条件：
+              {list.filters.conditions
+                .map((c) => `${c.label}「${c.value}」`)
+                .join("；")}
+            </p>
+            <a href={sectionUrl}>清除筛选</a>
+          </div>
+        ) : (
+          <div class="empty-state">
+            <p class="empty-title">本板块暂无内容</p>
+            <p class="empty-hint">
+              各部门发布内容后将在此展示。你可以先看看其他板块，或返回首页：
+            </p>
+            <ul class="section-links">
+              {pageChrome.nav_sections
+                .filter((s) => s.slug !== slug)
+                .map((s) => (
+                  <li>
+                    <a href={s.url}>{s.title}</a>
+                  </li>
+                ))}
+              <li>
+                <a href="/">返回首页</a>
+              </li>
+            </ul>
+          </div>
+        )}
+      </Fragment>
+    ) : (
+      // 列表失败且无陈旧版本可回退（F08 统一失败态；HTTP 500 已在前置区设定）
+      <FailureState
+        title="内容暂时无法加载"
+        note="内容服务出现临时故障，请稍后重试。"
+        retryHref={retryHref}
+      />
+    )}
+  </BaseLayout>
+)}
+
+<style>
+  /* 列表页头：v1 peiligo.css「列表与搜索共享语言」逐字转写；
+     断点反向为移动优先（基础值 = v1 max-width:600px 档）。
+     大搜索框 .big-search 自 F07 起为列表/搜索两页共享，
+     迁入全局 content-listing.css。 */
+
+  .ls-head {
+    max-width: 860px;
+    margin-inline: auto;
+    padding-top: 14px;
+    text-align: center;
+  }
+
+  @media (min-width: 601px) {
+    .ls-head {
+      padding-top: 26px;
+    }
+  }
+
+  /* sec-ico 在子组件内（SectionIcon），作用域逃逸到该层级 */
+  .cat-mode :global(.sec-ico) {
+    margin: 0 auto 12px;
+  }
+
+  .cat-mode h1 {
+    font-size: clamp(24px, 2.6vw, 32px);
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .ls-intro {
+    margin: 0 auto;
+    max-width: 640px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+
+  .archive-entry {
+    margin: 10px 0 0;
+    font-size: 13.5px;
+  }
+
+  .archive-entry a {
+    font-weight: 600;
+  }
+
+  .ls-count {
+    margin: 14px 0 0;
+    font-size: 13.5px;
+    color: var(--ink-2);
+  }
+
+  .ls-count strong {
+    color: var(--ink);
+  }
+</style>

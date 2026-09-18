@@ -1,0 +1,378 @@
+---
+// 首页 Hero 轮播（SPEC-001-F05）。等价转写自 v1
+// home/templates/home/home_page.html「Hero 轮播」区块与 peiligo.css
+// 「首页（Phase 8C 定稿）」hero 样式。深青大板 × 封面/几何海报：SSR 输出
+// 全部条目（无 JS 时按文档流自然可达），条目可见性与控件由
+// public/carousel.js 渐进增强（脚本在 index.astro 页面级引入）。语义上
+// 本区块标题为 h2——全页恒一个 h1（index.astro 的 visually-hidden 标题）。
+import { sectionShort } from "../../lib/sections";
+import type { Home } from "../../schemas/api-schema";
+
+interface Props {
+  /** 轮播条目（home.carousel；调用方仅在非空时渲染本组件） */
+  items: Home["carousel"];
+}
+
+const { items } = Astro.props;
+
+/** hero chip：v1 `section_slug|section_short|default:"推荐"`（未识别 slug
+    回落原 slug，仅空值回落中性「推荐」）。 */
+function heroChip(sectionSlug: string | null): string {
+  return sectionShort(sectionSlug ?? "") || "推荐";
+}
+---
+
+<section class="hero" data-carousel aria-label="主打推荐">
+  {items.map((item, index) => (
+    <div class="hero-slide" data-carousel-item>
+      <a class="hero-card" href={item.href}>
+        <div class="hero-panel">
+          <span class="hero-chip">{heroChip(item.section_slug)}</span>
+          <h2 class="hero-title">{item.title}</h2>
+          {item.summary && <p class="hero-sub">{item.summary}</p>}
+          <span class="hero-cta">查看全文</span>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          {item.cover ? (
+            <img
+              class="hero-img"
+              src={item.cover.src}
+              width={item.cover.width}
+              height={item.cover.height}
+              alt={item.cover.alt}
+              loading={index === 0 ? undefined : "lazy"}
+            />
+          ) : (
+            <svg
+              viewBox="0 0 720 620"
+              preserveAspectRatio="xMidYMid slice"
+              focusable="false"
+            >
+              <rect width="720" height="620" fill="#e8f1ee" />
+              <circle cx="565" cy="150" r="86" fill="#ffc940" />
+              <circle
+                cx="565"
+                cy="150"
+                r="118"
+                fill="none"
+                stroke="#e8590c"
+                stroke-width="7"
+                opacity=".55"
+              />
+              <path
+                d="M60 620V330c0-150 105-235 195-235s195 85 195 235v290z"
+                fill="#1d5a50"
+              />
+              <path
+                d="M225 620V470c0-45 13-72 30-72s30 27 30 72v150z"
+                fill="#e8f1ee"
+              />
+              <path
+                d="M0 560c60-26 120-26 180 0s120 26 180 0 120-26 180 0 120 26 180 0v60H0z"
+                fill="#e8590c"
+                opacity=".85"
+              />
+              <g fill="#1d5a50" opacity=".28">
+                <circle cx="64" cy="84" r="5" />
+                <circle cx="104" cy="84" r="5" />
+                <circle cx="144" cy="84" r="5" />
+                <circle cx="64" cy="124" r="5" />
+                <circle cx="104" cy="124" r="5" />
+                <circle cx="144" cy="124" r="5" />
+              </g>
+              <circle cx="120" cy="300" r="14" fill="#2f7a6e" />
+              <circle cx="620" cy="420" r="10" fill="#7a5fc9" opacity=".7" />
+            </svg>
+          )}
+        </div>
+      </a>
+    </div>
+  ))}
+</section>
+
+<style>
+  /* v1 peiligo.css「首页（Phase 8C 定稿）」hero 段逐字转写；断点反向
+     为移动优先（tokens.css 断点表）：基础值 = v1 @media (max-width: 760px)
+     档，761px 起恢复桌面双栏 Hero。轮播控件（prev/next/dots）由
+     carousel.js 动态创建、无 cid 作用域标记，样式在下方 is:global 块。 */
+
+  /* --- Hero 轮播（深青大板 × 封面/几何海报；移动档：图先声夺人） --- */
+
+  .hero {
+    position: relative;
+    padding-top: 0;
+  }
+
+  .hero-slide {
+    min-width: 0;
+  }
+
+  .hero-card {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    border-radius: 24px;
+    overflow: hidden;
+    color: #fff;
+    box-shadow:
+      0 8px 22px rgb(29 90 80 / 0.14),
+      0 26px 54px rgb(29 90 80 / 0.16);
+  }
+
+  .hero-card:hover {
+    text-decoration: none;
+  }
+
+  .hero-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 26px 20px 30px;
+    background: var(--teal-deep);
+  }
+
+  /* 增强态（carousel.js 提交后）移动档为控件行预留净空（v1 88px 同款；
+     桌面档在下方媒体查询内以 clamp 版本覆盖）；静态单项不产生 */
+  .hero:where([data-carousel-enhanced]) .hero-panel {
+    padding-bottom: 88px;
+  }
+
+  .hero-panel::before {
+    content: "";
+    position: absolute;
+    right: -110px;
+    top: -110px;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.07);
+  }
+
+  .hero-panel::after {
+    content: "";
+    position: absolute;
+    right: 44px;
+    bottom: 30px;
+    width: 148px;
+    height: 66px;
+    background-image: radial-gradient(
+      rgb(255 255 255 / 0.22) 2.2px,
+      transparent 2.6px
+    );
+    background-size: 18px 18px;
+    display: none;
+  }
+
+  .hero-chip {
+    display: inline-block;
+    padding: 5px 15px;
+    border-radius: 999px;
+    background: var(--yellow);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  .hero-title {
+    margin: 18px 0 0;
+    font-size: 27px;
+    font-weight: 800;
+    line-height: 1.28;
+    letter-spacing: 0.005em;
+    /* 显式白字：base.css 的 h2 { color: var(--ink) } 元素规则会压过
+       .hero-card 的继承白字（墨色 #191f1c 对 teal-deep 实测 2.10:1）。
+       此处恢复 v1 深底白字语义，实测 7.98:1（G3，WCAG 大字 ≥3:1）。 */
+    color: #fff;
+  }
+
+  .hero-sub {
+    max-width: 34em;
+    margin: 14px 0 0;
+    font-size: 14px;
+    color: rgb(255 255 255 / 0.78);
+  }
+
+  .hero-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    margin-top: 26px;
+    padding: 0 30px;
+    border-radius: 999px;
+    background: var(--yellow);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 800;
+    width: 100%;
+    transition:
+      transform 0.18s ease,
+      filter 0.18s ease;
+  }
+
+  .hero-card:hover .hero-cta {
+    transform: translateY(-2px);
+    filter: brightness(1.04);
+  }
+
+  .hero-art {
+    position: relative;
+    order: -1;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+    background: var(--teal-soft);
+  }
+
+  .hero-art svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero-img {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ===== 平板/桌面档（v1 max-width 断点反向：761） ===== */
+
+  @media (min-width: 761px) {
+    /* Hero：深青大板 × 封面/几何海报 split 版式（图回面板之后） */
+    .hero {
+      padding-top: 2px;
+    }
+
+    .hero-card {
+      grid-template-columns:
+        minmax(0, 6.4fr)
+        minmax(0, 5.6fr);
+      grid-template-rows: none;
+    }
+
+    .hero-panel {
+      padding: clamp(30px, 4.5vw, 54px);
+    }
+
+    /* 增强态（carousel.js 提交后）面板底部为控件行预留净空；静态单项不产生 */
+    .hero:where([data-carousel-enhanced]) .hero-panel {
+      padding-bottom: calc(clamp(30px, 4.5vw, 54px) + 36px);
+    }
+
+    .hero-panel::after {
+      display: block;
+    }
+
+    .hero-title {
+      font-size: clamp(30px, 3.6vw, 43px);
+    }
+
+    .hero-sub {
+      font-size: 15.5px;
+    }
+
+    .hero-cta {
+      width: auto;
+      justify-content: flex-start;
+    }
+
+    .hero-art {
+      order: 0;
+      min-height: 420px;
+      aspect-ratio: auto;
+    }
+  }
+</style>
+
+<style is:global>
+  /* 轮播控件（carousel.js 动态创建，仅 ≥2 项出现；SSR 恒不输出——无 JS
+     绝无死按钮）。运行时元素无 Astro 作用域标记，故按 v1 peiligo.css
+     原样以全局选择器逐字转写（类名首页专用，无外泄面）。 */
+
+  .carousel-controls {
+    position: absolute;
+    left: clamp(30px, 4.5vw, 54px);
+    bottom: 26px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* 深底上的焦点环换 yellow（design-system 交互动效规则） */
+  .carousel-controls :focus-visible {
+    outline-color: var(--yellow);
+  }
+
+  .carousel-prev,
+  .carousel-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.14);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+  }
+
+  .carousel-prev:hover,
+  .carousel-next:hover {
+    background: rgb(255 255 255 / 0.28);
+  }
+
+  .carousel-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .carousel-dot {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    /* G3 偏差（AA 非文本 ≥3:1）：v1 0.34 白对 teal-deep 合成底 2.32:1，
+       升至 0.48 → 3.15:1；无字符的圆点以其填充为唯一控件指示，必须达标 */
+    background: rgb(255 255 255 / 0.48);
+    cursor: pointer;
+    transition:
+      width 0.18s ease,
+      background-color 0.18s ease;
+  }
+
+  /* F09（WCAG 2.2 AA 2.5.8 Target Size Minimum）：圆点视觉 10×10，指针
+     命中区经零渲染伪元素四周外扩 7px → 24×24（激活 pill 30×10 → 44×24），
+     伪元素不产生任何像素，G3 定稿视觉逐像素不变；中心距 18px 下相邻命中
+     区边缘少量重叠属该尺寸下的固有形态，瞄准点（圆心）恒落本目标。 */
+  .carousel-dot::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: 999px;
+  }
+
+  .carousel-dot[aria-current] {
+    width: 30px;
+    /* G3 偏差（AA 非文本 ≥3:1）：v1 coral #e8590c 对深面板 2.23:1，
+       换 yellow（既有的「深底强调」语义色：焦点环/hero chip 同源）→ 5.20:1 */
+    background: var(--yellow);
+  }
+</style>

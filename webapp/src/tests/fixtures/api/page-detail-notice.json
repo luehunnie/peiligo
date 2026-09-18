@@ -1,0 +1,44 @@
+{
+  "type": "notice",
+  "id": 42,
+  "title": "关于图书馆调整开放时间的通知",
+  "slug": "library-hours",
+  "url": "/chronicle/jwc/library-hours/",
+  "section": { "slug": "chronicle", "title": "昆社纪事" },
+  "department": { "name": "图书馆", "slug": "library" },
+  "first_published_at": "2026-09-10T09:00:00+08:00",
+  "last_published_at": "2026-09-10T09:00:00+08:00",
+  "expire_at": "2027-09-10T00:00:00+08:00",
+  "noindex": false,
+  "expired": false,
+  "cover": {
+    "src": "/media/images/library.width-1400.jpg",
+    "width": 1400,
+    "height": 788,
+    "alt": "图书馆"
+  },
+  "breadcrumb": [
+    { "title": "昆社纪事", "url": "/chronicle/" },
+    { "title": "关于图书馆调整开放时间的通知", "url": null }
+  ],
+  "summary": "即日起至本学期末调整开放时间。",
+  "event": null,
+  "body": [
+    { "type": "heading", "value": { "text": "开放时间安排", "level": "h2" } },
+    {
+      "type": "paragraph",
+      "value": {
+        "html": "自 2026-09-12 起，主馆开放时间调整为 <strong>8:00–22:00</strong>。"
+      }
+    }
+  ],
+  "attachments": [
+    {
+      "title": "开放时间表.pdf",
+      "url": "/documents/42/opening-hours.pdf",
+      "file_size": 102400
+    }
+  ],
+  "external": null,
+  "tags": ["图书馆"]
+}

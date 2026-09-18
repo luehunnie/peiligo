@@ -1,0 +1,28 @@
+{
+  "type": "software",
+  "id": 7,
+  "title": "Zotero 文献管理",
+  "slug": "zotero",
+  "url": "/software/its/zotero/",
+  "section": { "slug": "software", "title": "软件与工具" },
+  "department": { "name": "信息化办公室", "slug": "its" },
+  "first_published_at": "2026-08-01T10:00:00+08:00",
+  "last_published_at": "2026-08-01T10:00:00+08:00",
+  "expire_at": null,
+  "noindex": false,
+  "expired": true,
+  "cover": null,
+  "breadcrumb": [
+    { "title": "软件与工具", "url": "/software/" },
+    { "title": "Zotero 文献管理", "url": null }
+  ],
+  "platforms": ["Windows", "macOS"],
+  "source": {
+    "url": "https://www.zotero.org/",
+    "confirm_href": "/link-confirm/?url=https%3A%2F%2Fwww.zotero.org%2F&from=7"
+  },
+  "license_note": "供校内师生免费使用。",
+  "body": [
+    { "type": "paragraph", "value": { "html": "推荐通过校园镜像下载。" } }
+  ]
+}

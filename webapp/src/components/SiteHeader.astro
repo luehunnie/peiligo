@@ -1,0 +1,178 @@
+---
+// 全站页头（SPEC-001-F03）。逐字转写自 v1 templates/base.html + static/css/
+// peiligo.css「共享外壳·页头」（peiligo/main = 48fd5d6，final-reference 定稿）：
+// 校徽（纯装饰 alt=""）+ 字标（coral 句点）+ 全局搜索入口。v1 人类冻结决策 ①
+// 移除七项文字导航——板块可达性由首页板块卡、面包屑、列表筛选与页脚承担
+// （属 F05+），故本页头无导航链接列表，移动端适配＝栅格堆叠，无抽屉/汉堡
+// （契约 6：禁止原生 App 模式）。
+//
+// 搜索为真实 GET 表单：action=/search/（v1 {% url 'search' %}，公开 URL 契约
+// 不变；搜索页本体属后续票）、q 参数回显当前词（SSR 下 Astro.url 即请求
+// URL；静态构建期恒为构建 URL 无查询串，等价 v1 非查询态）。
+// 字标站名自 F05 起经 chrome.site_name 每请求传入（v1 site_brand＝
+// settings.WAGTAIL_SITE_NAME，与 /chrome 端点同源；构建期常量废止）。
+import type { Chrome } from "../schemas/api-schema";
+
+interface Props {
+  /** 页头字标站名（chrome.site_name，每请求直连） */
+  siteName: Chrome["site_name"];
+}
+
+const { siteName } = Astro.props;
+const q = Astro.url.searchParams.get("q") ?? "";
+---
+
+<header class="site-header">
+  <div class="wrap header-grid">
+    <a class="brand" href="/" aria-label={`${siteName} 首页`}>
+      <img
+        class="brand-logo"
+        src="/img/peiligo-school-logo.png"
+        width="28"
+        height="28"
+        alt=""
+      />
+      {/* v1 字标＝{{ site_brand }}<span class="wm-dot">.</span>；wordmark 非
+          flex 容器，句点须紧贴字标（prettier-ignore 防折行在字标与句点间
+          引入渲染空格） */}
+      {/* prettier-ignore */}
+      <span class="wordmark">{siteName}<span class="wm-dot">.</span></span>
+    </a>
+    <form
+      class="search"
+      role="search"
+      action="/search/"
+      method="get"
+      aria-label="站内搜索"
+    >
+      <svg
+        class="search-ico"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="m20 20-3.5-3.5"></path>
+      </svg>
+      <input
+        type="search"
+        name="q"
+        value={q}
+        placeholder="搜资料、活动、软件…"
+        aria-label="搜索站内内容"
+      />
+    </form>
+  </div>
+</header>
+
+<style>
+  /* v1 peiligo.css 逐字转写；断点反向为移动优先（tokens.css 断点表）：
+     基础值 = v1 @media (max-width: 760px) 档，761px 起恢复双栏。 */
+
+  .site-header {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .header-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    gap: 10px;
+    min-height: 68px;
+    padding-block: 12px;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: start;
+  }
+
+  .brand:hover {
+    text-decoration: none;
+  }
+
+  .brand img {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+  }
+
+  .wordmark {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+
+  .wm-dot {
+    color: var(--coral);
+  }
+
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: stretch;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 16px;
+    background: var(--teal-soft);
+    border: 2px solid transparent;
+    border-radius: var(--radius-pill);
+    transition:
+      background var(--motion-fast) ease,
+      border-color var(--motion-fast) ease;
+  }
+
+  .search:focus-within {
+    background: var(--bg);
+    border-color: var(--teal);
+  }
+
+  .search svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: var(--ink-2);
+  }
+
+  .search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 14.5px;
+    color: var(--ink);
+  }
+
+  .search input:focus {
+    outline: none;
+  }
+
+  .search input::placeholder {
+    /* G3 偏差（AA 文本 ≥4.5:1）：v1 --ink-2 对 teal-soft 底 4.41:1（临界不足），
+       改用同族深字 token --teal-deep → 6.94:1（弱化层级保留，无新增色值） */
+    color: var(--teal-deep);
+  }
+
+  @media (min-width: 761px) {
+    .header-grid {
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      padding-block: 0;
+    }
+
+    .search {
+      justify-self: end;
+      max-width: 380px;
+    }
+  }
+</style>

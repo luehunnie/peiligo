@@ -1,0 +1,115 @@
+{
+  "type": "article",
+  "id": 51,
+  "title": "2026 年春季运动会圆满举行",
+  "slug": "spring-sports",
+  "url": "/events/xshd/spring-sports/",
+  "section": {
+    "slug": "events",
+    "title": "活动日历"
+  },
+  "department": {
+    "name": "学生会",
+    "slug": "xshd"
+  },
+  "first_published_at": "2026-04-20T18:30:00+08:00",
+  "last_published_at": "2026-04-21T09:00:00+08:00",
+  "expire_at": "2027-04-20T00:00:00+08:00",
+  "noindex": false,
+  "expired": false,
+  "cover": {
+    "src": "/media/images/sports.width-1400.jpg",
+    "width": 1400,
+    "height": 788,
+    "alt": "运动会现场"
+  },
+  "breadcrumb": [
+    {
+      "title": "活动日历",
+      "url": "/events/"
+    },
+    {
+      "title": "2026 年春季运动会圆满举行",
+      "url": null
+    }
+  ],
+  "summary": "全校十二支代表队参与角逐，打破三项校记录。",
+  "event": {
+    "status": "ended",
+    "start_at": "2026-04-18T08:30:00+08:00",
+    "end_at": "2026-04-18T17:00:00+08:00",
+    "is_online": false,
+    "location": "东区田径场",
+    "registration": null
+  },
+  "body": [
+    {
+      "type": "heading",
+      "value": {
+        "text": "赛事概览",
+        "level": "h2"
+      }
+    },
+    {
+      "type": "paragraph",
+      "value": {
+        "html": "本次运动会共设 18 个项目，<strong>十二支</strong>代表队参赛。"
+      }
+    },
+    {
+      "type": "image",
+      "value": {
+        "src": "/media/images/relay.width-1200.jpg",
+        "width": 1200,
+        "height": 675,
+        "alt": "接力赛冲线瞬间"
+      }
+    },
+    {
+      "type": "table",
+      "value": {
+        "first_row_is_table_header": true,
+        "data": [
+          ["项目", "冠军", "成绩"],
+          ["男子 4×100 米", "文学院", "42.31 秒"],
+          ["女子跳远", "理学院", "5.88 米"]
+        ]
+      }
+    },
+    {
+      "type": "heading",
+      "value": {
+        "text": "成绩册与照片",
+        "level": "h3"
+      }
+    },
+    {
+      "type": "attachment",
+      "value": {
+        "title": "成绩册.pdf",
+        "url": "/documents/51/results.pdf",
+        "file_size": 5242880
+      }
+    },
+    {
+      "type": "external_link",
+      "value": {
+        "text": "赛事照片相册",
+        "url": "https://photos.example.edu/sports2026",
+        "confirm_href": "/link-confirm/?url=https%3A%2F%2Fphotos.example.edu%2Fsports2026&from=51"
+      }
+    }
+  ],
+  "attachments": [
+    {
+      "title": "秩序册.pdf",
+      "url": "/documents/51/order-book.pdf",
+      "file_size": 3145728
+    }
+  ],
+  "external": {
+    "url": "https://photos.example.edu/sports2026",
+    "confirm_href": "/link-confirm/?url=https%3A%2F%2Fphotos.example.edu%2Fsports2026&from=51"
+  },
+  "tags": ["运动会", "学生会"]
+}

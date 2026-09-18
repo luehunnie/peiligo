@@ -1,0 +1,52 @@
+---
+// 共享分页（SPEC-001-F06）。等价转写自 v1 templates/includes/pager.html：
+// 页码窗口表由 lib/format.pageLinks 构建（v1 search/services._page_links
+// 同窗口语义，单页结果窗口表恒为 [1]，v1 {% if page_links %} 恒真——
+// 单页同样渲染当前页占位，保持一致）；当前页 span[aria-current]；翻页
+// 链接保留全部分页参数（querystring 已剔除 page，v1
+// SectionPage.get_context 同口径）；下一页仅在 has_next 时输出。
+// 归档页不分页（v1 同口径），不消费本组件。样式在全局 content-listing.css。
+import { PAGE_GAP, pageLinks } from "../../lib/format";
+import type { Pagination } from "../../schemas/api-schema";
+
+interface Props {
+  /** 当前页分页态（SectionList.pagination） */
+  pagination: Pagination;
+  /** 已剔除 page 的查询串（空串＝默认列表态） */
+  querystring: string;
+}
+
+const { pagination, querystring } = Astro.props;
+const links = pageLinks(pagination.page, pagination.page_count);
+
+function pageHref(page: number): string {
+  const params = new URLSearchParams(querystring);
+  params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `?${qs}` : "?page=1";
+}
+---
+
+{/* v1 {% if page_links %}：窗口表恒非空（1 恒在），单页也渲染当前页占位 */}
+<nav class="pager" aria-label="分页">
+  {links.map((link) =>
+    link === PAGE_GAP ? (
+      <span class="pg-gap" aria-hidden="true">
+        {PAGE_GAP}
+      </span>
+    ) : link === pagination.page ? (
+      <span class="pg on" aria-current="page">
+        {link}
+      </span>
+    ) : (
+      <a class="pg" href={pageHref(link)}>
+        {link}
+      </a>
+    ),
+  )}
+  {pagination.has_next && (
+    <a class="pg next-pg" href={pageHref(pagination.page + 1)}>
+      下一页 →
+    </a>
+  )}
+</nav>

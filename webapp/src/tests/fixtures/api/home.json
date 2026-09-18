@@ -1,0 +1,90 @@
+{
+  "title": "首页",
+  "alert": null,
+  "carousel": [
+    {
+      "kind": "internal",
+      "title": "开学季专题",
+      "href": "/chronicle/jwc/2026-opening/",
+      "cover": {
+        "src": "/media/images/opening.width-1600.jpg",
+        "width": 1600,
+        "height": 900,
+        "alt": "开学季"
+      },
+      "summary": "新学期各项安排汇总。",
+      "section_slug": "chronicle"
+    },
+    {
+      "kind": "internal",
+      "title": "第 38 届校园运动会报名开启",
+      "href": "/events/tiyuzu/38-sports-meet/",
+      "cover": null,
+      "summary": "10 月中旬举行，设径赛、田赛与趣味项目，即日起至月底接受报名。",
+      "section_slug": "events"
+    },
+    {
+      "kind": "internal",
+      "title": "实验室数据绘图工具更新",
+      "href": "/software/rjzx/plotkit-3/",
+      "cover": {
+        "src": "/media/images/plotkit.fill-1600x1000.jpg",
+        "width": 1600,
+        "height": 1000,
+        "alt": "绘图工具"
+      },
+      "summary": "新版本支持课程实验常用图表模板，附安装指引。",
+      "section_slug": "software"
+    }
+  ],
+  "sections": [
+    { "slug": "chronicle", "title": "昆社纪事", "url": "/chronicle/" },
+    { "slug": "events", "title": "活动预告", "url": "/events/" },
+    { "slug": "materials", "title": "学习资料", "url": "/materials/" },
+    { "slug": "software", "title": "软件与工具", "url": "/software/" },
+    { "slug": "guide", "title": "校园指南", "url": "/guide/" }
+  ],
+  "campus_news": [
+    {
+      "type": "notice",
+      "id": 42,
+      "title": "关于图书馆调整开放时间的通知",
+      "href": "/chronicle/jwc/library-hours/",
+      "cover": {
+        "src": "/media/images/library.fill-800x520.jpg",
+        "width": 800,
+        "height": 520,
+        "alt": "图书馆"
+      },
+      "summary": "即日起至本学期末。",
+      "section_slug": "chronicle",
+      "department": "图书馆",
+      "published_at": "2026-09-10T09:00:00+08:00",
+      "event_status": null
+    },
+    {
+      "type": "article",
+      "id": 87,
+      "title": "第 38 届校园运动会赛程公布",
+      "href": "/events/tiyuzu/38-sports-meet-schedule/",
+      "cover": null,
+      "summary": "开幕式 10 月 14 日上午举行，各项目分时段进行。",
+      "section_slug": "events",
+      "department": "体育组",
+      "published_at": "2026-09-12T18:30:00+08:00",
+      "event_status": "upcoming"
+    },
+    {
+      "type": "guide",
+      "id": 15,
+      "title": "校医院秋季就诊与体检指南",
+      "href": "/guide/xiaoyiyuan/autumn-visit/",
+      "cover": null,
+      "summary": "门诊时间、体检预约方式与常见问题。",
+      "section_slug": "guide",
+      "department": "校医院",
+      "published_at": "2026-09-08T10:15:00+08:00",
+      "event_status": null
+    }
+  ]
+}

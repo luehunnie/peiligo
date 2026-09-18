@@ -1,0 +1,275 @@
+---
+// 全站搜索页（SPEC-001-F07）。等价转写自 v1
+// search/templates/search/search.html + search/views.py（peiligo/main =
+// 48fd5d6）：本文件承担页面编排与搜索页头区块（隐藏 H1/大搜索框/汇总/
+// 栏目 chips/空态），行渲染与分页在 src/components/content/。
+//
+// 路由与参数（契约 2，公开 URL 不变）：/search/ + GET 五参数
+// q/section/dept/type/tag + page；非法值由 B02 词表校验视同未提供
+// （§21.3），前端原样透传、不重写访客输入；无有效维度＝表单态（API
+// entries 恒空，不渲染汇总/chips/空态）。
+//
+// 数据面（契约 4）：chrome 与 getSearch 每请求并行直连；搜索属 F04 客户
+// 端 NEVER_STALE 面——绝不缓存、失败不出陈旧结果。失败态分两档（F07-P1
+// 样式语言，F08 起共享化为 components/system/FailureState.astro）：仅搜
+// 索失败 → 站内壳样式化搜索失败页（HTTP 500 语义不变，零结果行，大搜索
+// 框保留供重试）；chrome 亦不可用＝全站取数边界，v1 最小 500 页。
+//
+// 高亮（契约 3 / openapi /search 冻结语义）：API 不做高亮；高亮词＝
+// 契约 q（strip 后回显），经 lib/highlight 切片、ResultRow 以 Astro 转
+// 义插值渲染，仅自产 <mark>，注入面为零。
+//
+// SEO（v1 同口径）：/search/ 无参数态一律 noindex；canonical 指向去参
+// 基础 URL；dept 筛选态 H1/<title> 换 §8.2 模式文案（部门名取契约
+// filters.conditions 回显，零新增字段）。
+import "../styles/content-shared.css";
+import "../styles/content-listing.css";
+import Pager from "../components/content/Pager.astro";
+import ResultRow from "../components/content/ResultRow.astro";
+import FailureState from "../components/system/FailureState.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { unavailableResponse } from "../lib/responses";
+import { sectionShort } from "../lib/sections";
+import type { Chrome, SearchResults, SectionSlug } from "../schemas/api-schema";
+import { api } from "../services/api";
+
+let chrome: Chrome | undefined;
+let results: SearchResults | undefined;
+try {
+  const [chromeResult, searchResult] = await Promise.all([
+    api.getChrome(),
+    api.getSearch({
+      q: Astro.url.searchParams.get("q") ?? undefined,
+      // section/type 词表校验在 B02 侧（非法值视同未提供），此处仅透传
+      section: (Astro.url.searchParams.get("section") ?? undefined) as
+        SectionSlug | undefined,
+      dept: Astro.url.searchParams.get("dept") ?? undefined,
+      type: Astro.url.searchParams.get("type") ?? undefined,
+      tag: Astro.url.searchParams.get("tag") ?? undefined,
+      page: Astro.url.searchParams.get("page") ?? undefined,
+    }),
+  ]);
+  if (chromeResult.ok) {
+    chrome = chromeResult.data;
+    if (searchResult.ok) {
+      results = searchResult.data;
+    }
+  }
+} catch {
+  // 客户端抛错（含基址 fail-closed 配置错误）＝部署边界事故，同一错误边界
+}
+if (!chrome) {
+  // chrome 亦不可用＝全站取数边界（页头/页脚无从渲染）：保持 v1 最小 500 页
+  return unavailableResponse();
+}
+
+// 搜索失败态（F07-P1）：chrome 可用而搜索取数失败/契约违约 → HTTP 500
+// 语义不变，但以站内壳渲染搜索专属失败页（NEVER_STALE：零结果行、零
+// 陈旧数据；noindex/canonical 与正常态同口径）
+const failed = !results;
+if (failed) {
+  Astro.response.status = 500;
+}
+
+// §8.2：dept 筛选态标题模式（隐藏 H1 与 <title> 同文案，含「（筛选结果）」后缀）
+const deptName = results?.filters.conditions.find(
+  (c) => c.label === "部门",
+)?.value;
+const pageTitle = failed
+  ? "搜索暂时不可用"
+  : deptName
+    ? `站内搜索·${deptName}发布的内容（筛选结果）`
+    : "站内搜索";
+
+// v1 _querystring_without_page：翻页链接查询串＝原始 request.GET 剔除
+// page（非法/空参数原样保留——校验语义在 Django/B02 侧，前端不重写）
+const stripped = new URLSearchParams(Astro.url.searchParams);
+stripped.delete("page");
+const querystring = stripped.toString();
+
+const searchUrl = "/search/";
+const canonical = Astro.url.origin + searchUrl;
+---
+
+<BaseLayout
+  title={pageTitle}
+  chrome={chrome}
+  noindex
+  canonical={canonical}
+  bodyClass="template-searchresults"
+>
+  {results === undefined ? (
+    // 搜索失败态（F07-P1 → F08 共享化）：大搜索框保留供一键重试（q 回
+    // 显）；样式与文案语言在 FailureState（.confirm-error 既定「错误条」）。
+    <FailureState
+      title="搜索暂时不可用"
+      note="搜索服务出现临时故障，请稍后重试。"
+    >
+      <form class="big-search" role="search" action={searchUrl} method="get">
+        <svg
+          class="search-ico"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="search"
+          id="id_q"
+          name="q"
+          value={Astro.url.searchParams.get("q")?.trim() ?? ""}
+          aria-label="搜索词"
+          placeholder="搜资料、活动、软件…"
+        />
+        <button type="submit">搜索</button>
+      </form>
+    </FailureState>
+  ) : (
+    <Fragment>
+      <section class="ls-head" aria-labelledby="ls-title">
+        <h1 id="ls-title" class="visually-hidden">
+          {pageTitle}
+        </h1>
+        <form class="big-search" role="search" action={searchUrl} method="get">
+          <svg
+            class="search-ico"
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            type="search"
+            id="id_q"
+            name="q"
+            value={results.q}
+            aria-label="搜索词"
+            placeholder="搜资料、活动、软件…"
+          />
+          <button type="submit">搜索</button>
+        </form>
+
+        {results.filters.active && (
+          <Fragment>
+            <p class="s-sum">
+              找到 <strong>{results.pagination.total}</strong> 条
+              {results.q
+                ? `与「${results.q}」相关的内容`
+                : "符合当前条件的内容"}
+            </p>
+            <div class="type-chips" role="group" aria-label="按栏目筛选">
+              {results.chips.map((chip) => (
+                <a
+                  class:list={["t-chip", chip.active && "on"]}
+                  href={chip.url}
+                  aria-current={chip.active ? "true" : undefined}
+                >
+                  {chip.slug ? sectionShort(chip.slug) : chip.label}
+                </a>
+              ))}
+            </div>
+          </Fragment>
+        )}
+      </section>
+
+      {results.entries.length > 0 ? (
+        <Fragment>
+          <section class="results" aria-label="搜索结果">
+            {results.entries.map((entry) => (
+              <ResultRow entry={entry} highlightQ={results.q} showSection />
+            ))}
+          </section>
+          <Pager pagination={results.pagination} querystring={querystring} />
+        </Fragment>
+      ) : results.filters.active ? (
+        <div class="empty-state">
+          <p class="empty-title">没有符合当前条件的内容</p>
+          <p class="empty-hint">
+            已选条件：
+            {results.filters.conditions
+              .map((c) => `${c.label}「${c.value}」`)
+              .join("；")}
+          </p>
+          <a href={searchUrl}>清除搜索条件</a>
+        </div>
+      ) : null}
+    </Fragment>
+  )}
+</BaseLayout>
+
+<style>
+  /* 搜索页头（v1 peiligo.css「列表与搜索共享语言」逐字转写；大搜索框
+     共享规则在 content-listing.css）。断点反向为移动优先（基础值 =
+     v1 max-width:600px 档）。 */
+
+  .ls-head {
+    max-width: 860px;
+    margin-inline: auto;
+    padding-top: 14px;
+    text-align: center;
+  }
+
+  @media (min-width: 601px) {
+    .ls-head {
+      padding-top: 26px;
+    }
+  }
+
+  .s-sum {
+    margin: 18px 0 0;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+
+  .s-sum strong {
+    color: var(--ink);
+  }
+
+  /* 栏目筛选 chips（真实链接，aria-current 标注当前项；颜色不做唯一
+     区分——文字标签恒在） */
+  .type-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0 0;
+  }
+
+  .t-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 4px 14px;
+    background: var(--bg);
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink-2);
+  }
+
+  .t-chip:hover {
+    border-color: var(--teal);
+    color: var(--teal-deep);
+    text-decoration: none;
+  }
+
+  .t-chip.on {
+    background: var(--teal-deep);
+    border-color: var(--teal-deep);
+    color: #fff;
+  }
+
+  /* 搜索失败态样式（F07-P1）自 F08 起共享化为
+     components/system/FailureState.astro（逐值搬移），此处不再持有。 */
+</style>

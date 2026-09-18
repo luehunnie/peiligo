@@ -1,0 +1,61 @@
+---
+// 详情尾注三区（SPEC-001-F06）：附件 / 外部链接 / 标签。等价转写自 v1
+// notice_page.html / article_page.html / material_page.html 的共享 aside 区
+// （通知/文章/资料三型同序同构，软件工具与指南无此三区）：
+//   - 附件＝站内文档库链接（非外链，§11.4 不约束），附 humanize 体积
+//   - 外部链接＝.file 资源行（file 形态确认跳转；标题行即 URL 明文，
+//     v1 file_title=page.external_url 同款，无 URL 副行）
+//   - 标签＝纯展示 chips（v1 渲染 tag.name，非链接）
+// 各区仅在数据非空时输出（v1 {% if %} 同口径）。样式在全局 content-detail.css。
+import ExternalLinkJump from "./ExternalLinkJump.astro";
+import { filesizeformat } from "../../lib/format";
+import type { AttachmentRef, ExternalLinkRef } from "../../schemas/api-schema";
+
+interface Props {
+  attachments: AttachmentRef[];
+  external: ExternalLinkRef | null;
+  tags: string[];
+}
+
+const { attachments, external, tags } = Astro.props;
+---
+
+{attachments.length > 0 && (
+  <section class="article-aside" aria-label="附件">
+    <h2>附件</h2>
+    <ul>
+      {attachments.map((doc) => (
+        <li>
+          <a href={doc.url}>{doc.title}</a>
+          {doc.file_size !== null && doc.file_size > 0 && (
+            <Fragment>（{filesizeformat(doc.file_size)}）</Fragment>
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+{external && (
+  <section class="article-aside" aria-label="外部链接">
+    <h2>外部链接</h2>
+    <div class="files">
+      <ExternalLinkJump
+        url={external.url}
+        confirmHref={external.confirm_href}
+        fileTitle={external.url}
+      />
+    </div>
+  </section>
+)}
+
+{tags.length > 0 && (
+  <section class="article-aside" aria-label="标签">
+    <h2>标签</h2>
+    <ul class="tag-chips">
+      {tags.map((tag) => (
+        <li>{tag}</li>
+      ))}
+    </ul>
+  </section>
+)}

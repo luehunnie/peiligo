@@ -1,0 +1,366 @@
+---
+// 外链统一确认跳转页（SPEC-001-F06）。等价转写自 v1
+// home/templates/home/link_confirm.html（F-03/CM §11.4/SEC-21；Phase 8D
+// final-reference 转译）：小标记「外部链接」＋标题＋一句话说明；目标域名
+// 由契约给出（external_url_domain 同口径，仅主机名，不展示路径/查询）；
+// 四要素中的来源页由契约 source 提供（from 合法且所指页前台可见时才有，
+// null 时整段省略）；声明文案契约 notice_text（SiteSettings 覆盖或默认）。
+// 无任何自动跳转（无 meta refresh、无 JS、无 302）；「继续访问」href＝
+// 契约 go_href（go 端点不属本 API，Django 现状不变——输出层二次校验 +
+// 302，见 openapi LinkConfirm 注）；「返回 Peiligo」＝确定性站内链接。
+// 校验失败＝契约 200 + ok:false + problem → 拒绝态，绝不构造 go_href。
+// 自定义视图不入页面树 → 不进 sitemap；整页恒 noindex ＋ canonical。
+// 页脚反馈 mailto 隐私覆盖（Phase 9·Q）：正文只带站内路径，不带完整确认
+// URL（查询串即外链目标本体，可含敏感参数）。
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import FailureState from "../components/system/FailureState.astro";
+import { unavailableResponse } from "../lib/responses";
+import type { Chrome, LinkConfirm } from "../schemas/api-schema";
+import { api } from "../services/api";
+
+let chrome: Chrome | undefined;
+let confirm: LinkConfirm | undefined;
+try {
+  const [chromeResult, confirmResult] = await Promise.all([
+    api.getChrome(),
+    api.getLinkConfirm({
+      url: Astro.url.searchParams.get("url") ?? undefined,
+      from: Astro.url.searchParams.get("from") ?? undefined,
+    }),
+  ]);
+  if (chromeResult.ok) {
+    chrome = chromeResult.data;
+    if (confirmResult.ok) confirm = confirmResult.data;
+  }
+} catch {
+  // 客户端抛错（含基址 fail-closed 配置错误）＝部署边界事故，同一错误边界
+}
+if (!chrome) {
+  // chrome 不可用＝全站取数边界（页头/页脚无从渲染）：保持 v1 最小 500 页
+  return unavailableResponse();
+}
+// 链接确认属永不陈旧面（契约 4）：失败绝不回退，一律样式化失败态
+//（F08 统一失败态；HTTP 500 语义不变）
+const contentFailed = !confirm;
+if (contentFailed) {
+  Astro.response.status = 500;
+}
+// 刷新重试＝原样重放本请求（恢复后下一请求即 live 内容，契约 4/5）
+const retryHref = Astro.url.pathname + Astro.url.search;
+
+const backHref = confirm?.source?.url ?? "/";
+---
+
+<BaseLayout
+  title={confirm ? "即将访问外部网站" : "链接确认暂时不可用"}
+  chrome={chrome}
+  noindex
+  canonical={Astro.url.origin + Astro.url.pathname}
+  bodyClass="template-linkconfirm"
+>
+  {confirm ? (
+    <section class="confirm" aria-labelledby="cf-h">
+      <div class="confirm-card">
+        <span class="c-kicker">外部链接</span>
+        <h1 id="cf-h">即将访问外部网站</h1>
+        <p class="c-lead">你将离开 Peiligo，前往第三方网站。</p>
+
+        {confirm.ok ? (
+          <Fragment>
+            <div class="c-dest">
+              <span class="c-dest-ico" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </span>
+              <span class="c-domain">{confirm.target_domain}</span>
+            </div>
+
+            {confirm.source && (
+              <p class="c-source">
+                来源：<a href={confirm.source.url}>{confirm.source.title}</a>
+              </p>
+            )}
+
+            <div class="c-note">
+              <p>{confirm.notice_text}</p>
+            </div>
+
+            <div class="c-actions">
+              {/* go_href 契约可空：null 即无可继续目标，「继续访问」整体不
+                渲染（不构造兜底链接——前端零业务规则） */}
+              {confirm.go_href && (
+                <a class="c-primary" href={confirm.go_href} rel="nofollow">
+                  继续访问
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M7 17 17 7" />
+                    <path d="M9 7h8v8" />
+                  </svg>
+                </a>
+              )}
+              <a class="c-ghost" href={backHref}>
+                返回 Peiligo
+              </a>
+            </div>
+          </Fragment>
+        ) : (
+          <Fragment>
+            <p class="confirm-error">
+              该链接不安全或格式不正确，已阻止访问：{confirm.problem}
+            </p>
+            <div class="c-actions">
+              <a class="c-ghost" href="/">
+                返回 Peiligo
+              </a>
+            </div>
+          </Fragment>
+        )}
+      </div>
+    </section>
+  ) : (
+    // 确认服务失败（永不陈旧面，F08 统一失败态；HTTP 500 已在前置区设定）
+    <FailureState
+      title="链接确认暂时不可用"
+      note="链接确认服务出现临时故障，请稍后重试。"
+      retryHref={retryHref}
+      backHref="/"
+      backLabel="返回 Peiligo"
+    />
+  )}
+  {/* 页脚隐私覆盖（v1 feedback_mailto block）：覆盖 layout 缺省页脚，
+      mailto body 只带站内路径 */}
+  <SiteFooter
+    slot="footer"
+    siteName={chrome.site_name}
+    feedbackEmail={chrome.feedback_email}
+    pageTitle="页面反馈"
+    pageUrl="/link-confirm/"
+  />
+</BaseLayout>
+
+<style>
+  /* 外链确认页（v1 peiligo.css「外链确认页」转写；密度立场＝清晰可信：
+     一屏说清「要去哪、意味着什么、怎么选」；无倒计时、无自动跳转。
+     断点反向为移动优先：基础值 = v1 max-width:760px 档）。
+     动作区尺寸策略（F06-P1 修正）：按钮不写 width——移动端由
+     .c-actions 纵向 stretch 拉满，≥761px 行内排列时收为内容宽；
+     层级由「主钮 min-width 地板 + 实心深色 + 副钮描边」表达，
+     标签 white-space: nowrap 保证「继续访问」恒单行。
+     （原稿把桌面 width:auto 覆写块放在两条 width:100% 之间，
+     等特异性下 .c-ghost 命中后者 → 副钮 flex-basis 拉满整卡、
+     主钮被压到 min-content 换行，即 PR #21 评审缺陷。） */
+  .confirm {
+    display: grid;
+    place-items: start center;
+    padding: 44px 24px 72px;
+  }
+
+  @media (min-width: 761px) {
+    .confirm {
+      padding: 72px 24px 96px;
+    }
+  }
+
+  .confirm-card {
+    width: 100%;
+    max-width: 560px;
+    text-align: center;
+  }
+
+  .c-kicker {
+    display: inline-block;
+    padding: 4px 13px;
+    background: var(--teal-soft);
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--teal-deep);
+  }
+
+  .confirm-card h1 {
+    margin-top: 16px;
+    font-size: clamp(24px, 2.6vw, 30px);
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .c-lead {
+    margin-top: 8px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+  }
+
+  .c-dest {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px 16px;
+  }
+
+  @media (min-width: 761px) {
+    .c-dest {
+      margin-top: 24px;
+      padding: 17px 20px;
+    }
+  }
+
+  .c-dest-ico {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+  }
+
+  .c-dest-ico svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .c-domain {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
+  }
+
+  @media (min-width: 761px) {
+    .c-domain {
+      font-size: 19px;
+    }
+  }
+
+  .c-source {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+
+  .c-source a {
+    font-weight: 600;
+  }
+
+  .dot-sep {
+    color: #c4cdc7;
+  }
+
+  .c-note {
+    margin: 18px auto 0;
+    max-width: 470px;
+  }
+
+  .c-note p {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.85;
+  }
+
+  .c-actions {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  @media (min-width: 761px) {
+    .c-actions {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .c-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 200px;
+    min-height: 50px;
+    padding: 0 32px;
+    border-radius: 999px;
+    background: var(--teal-deep);
+    color: #fff;
+    font-size: 15.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 10px 22px rgb(29 90 80 / 0.26);
+    transition:
+      background-color 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .c-primary:hover {
+    background: var(--teal);
+    color: #fff;
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  .c-primary svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .c-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+    padding: 0 26px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--teal-deep);
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: inset 0 0 0 1.5px var(--line);
+    transition:
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .c-ghost:hover {
+    box-shadow: inset 0 0 0 1.5px var(--teal);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  .confirm-error {
+    margin-top: 24px;
+    padding: 12px 16px;
+    background: var(--coral-soft);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--coral-deep);
+  }
+</style>

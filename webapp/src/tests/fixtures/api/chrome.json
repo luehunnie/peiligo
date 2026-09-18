@@ -1,0 +1,12 @@
+{
+  "site_name": "Peiligo",
+  "nav_sections": [
+    { "slug": "chronicle", "title": "昆社纪事", "url": "/chronicle/" },
+    { "slug": "events", "title": "活动预告", "url": "/events/" },
+    { "slug": "materials", "title": "学习资料", "url": "/materials/" },
+    { "slug": "software", "title": "软件与工具", "url": "/software/" },
+    { "slug": "guide", "title": "校园指南", "url": "/guide/" }
+  ],
+  "feedback_email": "hello@peiligo.example",
+  "alert": { "text": "今晚 22:00–23:00 系统维护" }
+}

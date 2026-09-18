@@ -21,3 +21,5 @@ docs/
 *.log
 Dockerfile
 docker-compose*.yml
+# SPEC-001：Astro 前端（webapp/）有独立镜像与构建上下文，不进后端上下文。
+webapp/
