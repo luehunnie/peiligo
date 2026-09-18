@@ -79,7 +79,29 @@
 		}
 	}
 
+	# 访问日志（SPEC-001 残余风险闭合：预览票据不落日志）。内置 filter
+	# 编码器（caddy.logging.encoders.filter——caddy:2 主线自带，零插件、
+	# 零换镜像）只在日志面抹除，请求面零改动：Astro 仍从查询串原样取票，
+	# 路由表/状态码/上游一个字节不动。两处抹除：
+	#   - request>uri：query 过滤器删除 token 参数（其余查询参数与路径
+	#     原样保留；wrap json 与缺省 json 编码同形状，状态/耗时字段不动）；
+	#   - request>headers>Referer：regexp 过滤器把票据值抹成 REDACTED
+	#     （纵深防御——预览页已出 Referrer-Policy: no-referrer，此处兜
+	#     引用头残留）。
+	# 注意：regexp 过滤器的两参数是内联位置形式，写成子块会被静默忽略
+	# （caddy validate 也不报错）——本形态由 tests/test_caddy_log_redaction.py
+	# （配置守护，CI 门）与 deploy/verify-preview-log-redaction.sh（一次性
+	# 集成栈哨兵实测）双面钉住；残余备忘闭合见 PRODUCTION_RUNBOOK §12。
 	log {
 		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete token
+				}
+				request>headers>Referer regexp "token=[^&]+" "token=REDACTED"
+			}
+		}
 	}
 }

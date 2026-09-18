@@ -236,12 +236,17 @@ Astro 每请求直连取数 ⇒ 下一个请求即见（本地集成实测 0s，
 frontend 容器 StartedAt 前后一致）：两页到点后分别 **29.2s / 18.2s** 可见
 （调度节拍逐次 ~30.0s，都在首个到点节拍翻转；HTTP 400ms 轮询口径 18.198s）。
 
-> **残余风险备忘（预览票据）**：契约把「票据不落访问日志」义务定在 Astro 侧
-> （已落实：Astro 零请求日志、票据不入 DOM/错误对象）；Caddy 侧 access_log
-> 缺省含完整请求 URI，`/preview/?token=…` 会进入 caddy 容器日志（票据 ≤60s
-> 自失效，且 Caddyfile 为冻结路由表、本集成未动）。生产部署如需抹除，属
-> 运维侧决策：给 caddy 的 log 加 `format` 过滤或在输出管道剥离 `/preview/`
-> 查询串即可，不改路由行为。
+> **预览票据不落访问日志（双侧闭合，原残余风险备忘已消解）**：Astro 侧义务
+> （零请求日志、票据不入 DOM/错误对象、预览页 `Referrer-Policy: no-referrer`）
+> 之外，Caddy 侧由 access log 的**内置** filter 编码器闭合（caddy:2 主线自带，
+> 零插件零换镜像，只在日志面抹除、请求面零改动）：`request>uri` 经 `query`
+> 过滤器删 `token` 参数（其余查询参数/路径/状态/耗时照常，`wrap json` 与
+> 缺省编码同形状）；`request>headers>Referer` 经 `regexp` 过滤器把票据值抹成
+> `REDACTED`（纵深防御）。守护双面：`tests/test_caddy_log_redaction.py`
+> （配置形态钉住，CI 门——regexp 过滤器参数必须内联位置形态，写成子块会被
+> Caddy 静默忽略且 validate 不报错）；`deploy/verify-preview-log-redaction.sh`
+> （一次性集成栈哨兵实测：`/preview/?token=<哨兵>` 请求后 caddy 日志零哨兵，
+> 普通查询/状态/耗时照常）。
 两态都**不触发** Astro 重建/部署。
 
 ## 13. 与 Peilige / Peilike 的边界
