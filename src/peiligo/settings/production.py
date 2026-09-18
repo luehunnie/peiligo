@@ -47,7 +47,11 @@ SECURE_HSTS_PRELOAD = False
 
 # F-10：SSL 重定向豁免容器健康探针——healthcheck 走容器内回环 http
 # （不经 Caddy/TLS），301 到 https 会令探针自指不可达端口而误判。
-SECURE_REDIRECT_EXEMPT = [r"^healthz/$", r"^readyz/$"]
+# SPEC-001：同口径豁免 /api/v1/——Astro frontend 容器经 Compose 内网
+# 明文直调（与 db 连接同一信任域；公网侧 Caddy 对 /api/v1/* 恒 404，
+# ADR-0008 §S1，不存在公开明文暴露面），301 到 https://web:8000 会令
+# SSR 取数自指不可达（本地集成实测：缺此豁免即样式化错误页）。
+SECURE_REDIRECT_EXEMPT = [r"^healthz/$", r"^readyz/$", r"^api/v1/"]
 
 # ManifestStaticFilesStorage is recommended in production, to prevent
 # outdated JavaScript / CSS assets being served from cache

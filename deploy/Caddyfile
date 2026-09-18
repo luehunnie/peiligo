@@ -41,37 +41,42 @@
 		-Server
 	}
 
-	# 健康探针与静态/媒体直供（不变；/healthz* 恒指 web——基础设施探针
-	# 契约不随前端切换翻转；frontend 自身健康由镜像内置 HEALTHCHECK 直探）。
-	handle /healthz* {
-		reverse_proxy web:8000
-	}
-	handle_path /static/* {
-		root * /srv/static
-		file_server
-	}
-	handle_path /media/* {
-		root * /srv/media
-		file_server
-	}
-	# SPEC-001（ADR-0008 §S1）：API 不公开路由——两个开关态下恒 404。
-	respond /api/v1/* "Not Found" 404
-	# ADR-0008 §S1：保持 Django 现状的路径（管理面/文档/外链出口）恒指 web。
-	handle /django-admin/* {
-		reverse_proxy web:8000
-	}
-	handle /admin/* {
-		reverse_proxy web:8000
-	}
-	handle /documents/* {
-		reverse_proxy web:8000
-	}
-	handle /link-confirm/go/* {
-		reverse_proxy web:8000
-	}
-	# 其余全部 → 默认上游（唯一开关；缺省 v1＝web:8000）。
-	handle {
-		reverse_proxy {$PEILIGO_DEFAULT_UPSTREAM:web:8000}
+	# 路由表（ADR-0009 形状）。显式 route 块＝按书写顺序执行——零依赖
+	# Caddy 指令自动排序（respond/handle 混排时自动排序会把 API 404 沉底
+	# 成无匹配兜底，本地集成验证实测抓到并修复）。
+	route {
+		# 健康探针与静态/媒体直供（/healthz* 恒指 web——基础设施探针
+		# 契约不随前端切换翻转；frontend 自身健康由镜像内置 HEALTHCHECK 直探）。
+		handle /healthz* {
+			reverse_proxy web:8000
+		}
+		handle_path /static/* {
+			root * /srv/static
+			file_server
+		}
+		handle_path /media/* {
+			root * /srv/media
+			file_server
+		}
+		# SPEC-001（ADR-0008 §S1）：API 不公开路由——两个开关态下恒 404。
+		respond /api/v1/* "Not Found" 404
+		# ADR-0008 §S1：保持 Django 现状的路径（管理面/文档/外链出口）恒指 web。
+		handle /django-admin/* {
+			reverse_proxy web:8000
+		}
+		handle /admin/* {
+			reverse_proxy web:8000
+		}
+		handle /documents/* {
+			reverse_proxy web:8000
+		}
+		handle /link-confirm/go/* {
+			reverse_proxy web:8000
+		}
+		# 其余全部 → 默认上游（唯一开关；缺省 v1＝web:8000）。
+		handle {
+			reverse_proxy {$PEILIGO_DEFAULT_UPSTREAM:web:8000}
+		}
 	}
 
 	log {
