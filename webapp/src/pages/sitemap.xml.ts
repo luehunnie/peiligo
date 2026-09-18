@@ -2,8 +2,8 @@
 // （django.contrib.sitemaps sitemap.xml 模板口径）：urlset 0.9，每条
 // <loc>＋可选 <lastmod>（无 changefreq/priority——v1 未设即不输出）。
 // 条目模型与排除口径在契约 /sitemap 端点（仅 live；容器类与 noindex 页
-// 排除）；loc 契约为路径形态，公开域绝对化在此完成（request origin，
-// 与 robots.txt Sitemap 行同源）。lastmod 为 ISO date-time，v1 模板以
+// 排除）；loc 契约为路径形态，公开域绝对化在此完成（request origin 经
+// publicOrigin——与 robots.txt Sitemap 行同源，生产 https 同口径）。lastmod 为 ISO date-time，v1 模板以
 // date:"Y-m-d"（站点时区 Asia/Shanghai）渲染 → publishedDateParts 同一
 // 转译。失败 → v1 500 页等价最小错误响应（爬虫侧语义＝重试）。
 import type { APIRoute } from "astro";
@@ -11,6 +11,7 @@ import { unavailableResponse } from "../lib/responses";
 import { publishedDateParts } from "../lib/dates";
 import type { SitemapEntry } from "../schemas/api-schema";
 import { api } from "../services/api";
+import { publicOrigin } from "../lib/security-headers";
 
 /** XML 文本转义（loc 理论为站内路径，转义保证任何值下输出仍良构）。 */
 function xmlEscape(text: string) {
@@ -31,7 +32,10 @@ export const GET: APIRoute = async ({ request }) => {
   }
   if (!sitemap) return unavailableResponse();
 
-  const origin = new URL(request.url).origin;
+  const origin = publicOrigin(
+    new URL(request.url),
+    request.headers.get("x-forwarded-proto"),
+  );
   const urls = sitemap.entries
     .map((entry: SitemapEntry) => {
       const loc = `${origin}${entry.loc.startsWith("/") ? "" : "/"}${entry.loc}`;

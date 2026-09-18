@@ -47,3 +47,16 @@ export function isSecureRequest(
 ): boolean {
   return protocol === "https:" || forwardedProto === "https";
 }
+
+/** 公开 origin（robots.txt Sitemap 行／sitemap.xml loc 绝对化用）。host 取
+ *  请求 Host（Astro node 适配器按 Host 头构建 request.url，含非标端口，
+ *  v1 request.get_host() 同口径）；scheme 按 isSecureRequest 同一信任模型
+ *  ——生产经 Caddy TLS 终结时 X-Forwarded-Proto: https ⇒ 输出 https 绝对
+ *  地址（v1 SECURE_PROXY_SSL_HEADER 同语义；纯 http 直连时无转发头，
+ *  回退 http，本地/staging 行为逐字节不变）。 */
+export function publicOrigin(url: URL, forwardedProto: string | null): string {
+  const scheme = isSecureRequest(url.protocol, forwardedProto)
+    ? "https"
+    : "http";
+  return `${scheme}://${url.host}`;
+}

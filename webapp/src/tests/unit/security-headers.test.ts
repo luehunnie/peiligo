@@ -8,6 +8,7 @@ import {
   HSTS_POLICY,
   SECURITY_HEADERS,
   isSecureRequest,
+  publicOrigin,
 } from "../../lib/security-headers";
 
 // v1 src/peiligo/csp.py CSP_POLICY 逐字誊抄（改动任一侧即应红灯）。
@@ -52,5 +53,24 @@ describe("security headers（SPEC-001-F10 安全 parity）", () => {
     expect(isSecureRequest("http:", "https")).toBe(true);
     expect(isSecureRequest("http:", null)).toBe(false);
     expect(isSecureRequest("http:", "http")).toBe(false);
+  });
+
+  it("publicOrigin：scheme 走转发头信任模型，host 含非标端口（v1 get_host 同口径）", () => {
+    // 纯 http 直连（本地/staging/e2e）：无转发头 → http，行为逐字节不变
+    expect(publicOrigin(new URL("http://127.0.0.1:4321/x"), null)).toBe(
+      "http://127.0.0.1:4321",
+    );
+    // 生产经 Caddy TLS 终结：Host 透传（含公网 443 标准端口时 host 无端口），
+    // X-Forwarded-Proto: https ⇒ https 绝对地址（v1 SECURE_PROXY_SSL_HEADER）
+    expect(publicOrigin(new URL("http://peiligo.example.edu/x"), "https")).toBe(
+      "https://peiligo.example.edu",
+    );
+    expect(publicOrigin(new URL("http://localhost:18443/x"), "https")).toBe(
+      "https://localhost:18443",
+    );
+    expect(publicOrigin(new URL("http://localhost:18443/x"), "http")).toBe(
+      "http://localhost:18443",
+    );
+    expect(publicOrigin(new URL("https://h/x"), null)).toBe("https://h");
   });
 });
