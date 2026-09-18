@@ -73,9 +73,12 @@ class SchedulerLoopTests(TestCase):
 
     def test_default_interval_meets_visibility_contract(self):
         """维护态缺省节拍 ≤30s（ADR-0008 Gate 5 验收条件）：预约发布
-        ≤30s 可见契约以 `SCHED_INTERVAL_SECONDS ≤ 30` 承接——缺省回退值
-        与 compose / deploy/.env.example 三处同源，本测试钉住命令侧不回退。"""
+        ≤30s 可见契约以 `SCHED_INTERVAL_SECONDS ≤ 30` 承接——命令缺省、
+        compose 缺省回退、deploy/.env.example 三处同源，本测试三处全钉
+        （任一处回退 >30 即红，不留「仅注释同源」的漂移面）。"""
         import os
+        import re
+        from pathlib import Path
 
         from peiligo.applog.management.commands.publish_scheduler import Command
 
@@ -83,6 +86,17 @@ class SchedulerLoopTests(TestCase):
         try:
             parser = Command().create_parser("manage.py", "publish_scheduler")
             self.assertLessEqual(parser.get_default("interval"), 30)
+
+            deploy = Path(__file__).resolve().parents[1] / "deploy"
+            compose = (deploy / "docker-compose.yml").read_text(encoding="utf-8")
+            m = re.search(r"\$\{SCHED_INTERVAL_SECONDS:-(\d+)\}", compose)
+            self.assertIsNotNone(m, "compose 缺 SCHED_INTERVAL_SECONDS 缺省回退")
+            self.assertLessEqual(int(m.group(1)), 30)
+
+            env_example = (deploy / ".env.example").read_text(encoding="utf-8")
+            m = re.search(r"^SCHED_INTERVAL_SECONDS=(\d+)$", env_example, re.M)
+            self.assertIsNotNone(m, ".env.example 缺 SCHED_INTERVAL_SECONDS")
+            self.assertLessEqual(int(m.group(1)), 30)
         finally:
             if env is not None:
                 os.environ["SCHED_INTERVAL_SECONDS"] = env

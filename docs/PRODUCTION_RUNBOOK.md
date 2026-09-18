@@ -212,7 +212,7 @@ test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1
 > ① 预览消费页（webapp `/preview/`）已接线——后台「新前端预览」→ 铸票 →
 > 同源 `/preview/?token=` → 内网 `/api/v1/preview` 兑换 → 同模板渲染草稿，
 > 失败一律样式化 404（e2e：`webapp/src/tests/e2e/preview.spec.ts`；集成栈
-> 实测见本节切换后核验第 4 步）；② 定时发布时效——`SCHED_INTERVAL_SECONDS`
+> 实测见本节切换后核验第 3 步预览行）；② 定时发布时效——`SCHED_INTERVAL_SECONDS`
 > 维护态缺省即 30（compose／deploy/.env.example／publish_scheduler 命令三处
 > 同源），Gate 5 验收条件「≤30 且 scheduler 运行中」开箱满足，集成栈实测
 > 到点可见 <30s（本节发布时效契约）。调低于 30 合法；调高或停跑 scheduler
@@ -234,7 +234,14 @@ Astro 每请求直连取数 ⇒ 下一个请求即见（本地集成实测 0s，
 `SCHED_INTERVAL_SECONDS`（维护态缺省 30s，Gate 5 验收条件 ≤30）＋执行抖动；
 集成栈实测（`SCHED_INTERVAL_SECONDS=30` 缺省、零重建零重启 frontend，
 frontend 容器 StartedAt 前后一致）：两页到点后分别 **29.2s / 18.2s** 可见
-（调度节拍逐次 ~30.0s，都在首个到点节拍翻转；HTTP 轮询口径 18.198s）。
+（调度节拍逐次 ~30.0s，都在首个到点节拍翻转；HTTP 400ms 轮询口径 18.198s）。
+
+> **残余风险备忘（预览票据）**：契约把「票据不落访问日志」义务定在 Astro 侧
+> （已落实：Astro 零请求日志、票据不入 DOM/错误对象）；Caddy 侧 access_log
+> 缺省含完整请求 URI，`/preview/?token=…` 会进入 caddy 容器日志（票据 ≤60s
+> 自失效，且 Caddyfile 为冻结路由表、本集成未动）。生产部署如需抹除，属
+> 运维侧决策：给 caddy 的 log 加 `format` 过滤或在输出管道剥离 `/preview/`
+> 查询串即可，不改路由行为。
 两态都**不触发** Astro 重建/部署。
 
 ## 13. 与 Peilige / Peilike 的边界

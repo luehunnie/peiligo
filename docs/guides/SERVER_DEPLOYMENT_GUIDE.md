@@ -107,7 +107,7 @@ git pull --ff-only origin main
 | `DOMAIN` | ✅ | Caddy 站点主机名(自动证书的主体) | `peiligo.example.edu` | 否 |
 | `FEEDBACK_EMAIL` | ◻️ | 反馈邮箱环境兜底(正式载体 = 后台「站点设置」,可后台改、即时生效) | `feedback@peiligo.example.edu` | 否 |
 | `GUNICORN_WORKERS` | ◻️ | web 进程数,缺省 `2` | `2` | 否 |
-| `SCHED_INTERVAL_SECONDS` | ◻️ | 定时发布调度间隔,缺省 `60` 秒 | `60` | 否 |
+| `SCHED_INTERVAL_SECONDS` | ◻️ | 定时发布调度间隔,缺省 `30` 秒(≤30s 发布时效契约/Gate 5) | `30` | 否 |
 | `HSTS_SECONDS` | ◻️ | HSTS 时长;**首期建议 `3600` 观察期**,不设 = 一年终态 | `3600` | 否 |
 | `BACKUP_ROOT` | ◻️ | 备份集根;**缺省落具名卷 `backups`**,仅要落到宿主目录/独立盘时设置(bind mount 自理) | `/srv/peiligo-backups` | 否 |
 | `SECONDARY_BACKUP_DIR` | **强烈建议** | 备份独立副本目录;**必须指向另一块独立存储**(NFS/外接盘);不设 = 无独立副本,监控显式 WARN | `/mnt/backup-nas/peiligo` | 否 |

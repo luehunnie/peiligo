@@ -92,6 +92,19 @@ test.describe("预览成功面（同模板渲染草稿）", () => {
 });
 
 test.describe("失败闭合（无效/过期/复用/越权票据与上游故障同面）", () => {
+  test("预览面不入 sitemap/robots（契约「不入 sitemap/搜索/导航」直接钉住）", async ({
+    request,
+  }) => {
+    // sitemap 仅由 API 已发布项构建（sitemap.xml.ts）、robots 无预览路径；
+    // 本断言把该结构义务直接钉进测试面，防未来改动引入泄漏。
+    const sitemap = await request.get("/sitemap.xml");
+    expect(sitemap.status()).toBe(200);
+    expect(await sitemap.text()).not.toContain("/preview");
+    const robots = await request.get("/robots.txt");
+    expect(robots.status()).toBe(200);
+    expect(await robots.text()).not.toContain("/preview");
+  });
+
   test("缺票据 → 样式化 404，且零预览取数", async ({ page, request }) => {
     const res = await page.goto("/preview/");
     expect(res?.status()).toBe(404);

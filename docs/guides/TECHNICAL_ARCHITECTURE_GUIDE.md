@@ -233,7 +233,7 @@ web 容器启动时串行完成:①循环等数据库**真实可达**(Django 连
 |---|---|---|
 | `db` | `postgres:18` | `POSTGRES_DB/USER/PASSWORD` 注入;`pg_isready` 健康检查;`pgdata` 卷(挂载点取 `/var/lib/postgresql`,适配 postgres:18+ 镜像的 pg_ctlcluster 布局) |
 | `web` | 本仓 Dockerfile | production settings;env 显式透传(含 `WAGTAILADMIN_BASE_URL:?` 必填快速失败);media/static/backups 三卷;容器内 `/healthz/` 探针(start_period 60s,请求 Host 取 `ALLOWED_HOSTS` 首项);depends_on db healthy |
-| `scheduler` | 同镜像 | 命令 `python manage.py publish_scheduler`;`SCHED_INTERVAL_SECONDS`(缺省 60);depends_on **web healthy** |
+| `scheduler` | 同镜像 | 命令 `python manage.py publish_scheduler`;`SCHED_INTERVAL_SECONDS`(缺省 30,≤30s 发布时效契约/Gate 5);depends_on **web healthy** |
 | `caddy` | `caddy:2` | 80/443;`DOMAIN` 注入 Caddyfile;`caddy_data`/`caddy_config` 卷;static/media 只读挂载;站点响应统一带 `Strict-Transport-Security: max-age=31536000` 与 `X-Content-Type-Options: nosniff`(Phase 9,`deploy/Caddyfile`) |
 
 全部服务 `restart: unless-stopped`;秘密只经 `${VAR}` 插值自 `deploy/.env`,镜像内不含运行期秘密。变量全表见 [SERVER_DEPLOYMENT_GUIDE.md](SERVER_DEPLOYMENT_GUIDE.md)。
