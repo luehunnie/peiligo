@@ -7,9 +7,11 @@
 //     客户端不可伪造；TLS 终结属 B03 生产接线）；
 //   - 其余四项＝Django 5.2 SecurityMiddleware 缺省行为（nosniff /
 //     X-Frame-Options: DENY / Referrer-Policy: same-origin / COOP: same-origin），
-//     与 v1 /legacy/ 实测响应一致（docs/evidence/f11-staging/headers.txt）。
+//     与 v1 /legacy/ 实测响应一致（证据路径 docs/evidence/f11-staging/
+//     headers.txt 属验收版仓库，不在本仓）。
 // 消费方：src/middleware.ts（全部 SSR 响应盖章，不覆盖既有值＝v1 setdefault
-// 同语义）。Astro 前端不伺服管理面（Caddyfile.staging 路由表归 Django），
+// 同语义）。Astro 前端不伺服管理面（验收版仓库 Caddyfile.staging 路由表
+// 归 Django；本仓对应物＝deploy/Caddyfile），
 // 故无需 v1 中间件的管理面前缀豁免。测试：tests/unit/security-headers.test.ts
 // ＋ e2e security-headers.spec（含 CSP 浏览器实弹拦截探针）。
 

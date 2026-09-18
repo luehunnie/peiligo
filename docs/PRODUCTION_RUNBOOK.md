@@ -187,31 +187,45 @@ git pull（或换 tag）→ docker compose ... up -d --build   # entrypoint 自�
 **cutover（v1 → v2；中断上限 <60s，B03 实测 ~3s）**
 
 ```sh
-# 0) 前置核验：全体 healthy，且当前 v1 在根
+# 0) 前置核验：全体 healthy，且当前 v1 在根。
+#    走 https＋--resolve（Caddy 对 :80 一律 308 跳 https，明文探测只会拿到
+#    空体 308——健康系统上也会"失败"；--resolve 保 SNI/Host 指向真域名，
+#    连接走本机回环，与 §1 健康检查同一形态）。
 compose ps
-curl -fsS http://127.0.0.1/ -H 'Host: <域名>' | grep -q '/static/'
+curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ | grep -q '/static/'
 # 1) 切换＝翻转开关（deploy/.env 置 PEILIGO_DEFAULT_UPSTREAM=frontend:4321），仅重建 caddy
 compose up -d --force-recreate caddy
 # 2) 就绪判定（中断窗口终点）：新前端 200 且 Astro 资产上根
-for i in $(seq 1 60); do curl -fsS http://127.0.0.1/ -H 'Host: <域名>' 2>/dev/null \
+for i in $(seq 1 60); do curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ 2>/dev/null \
   | grep -q '/_astro/' && break; sleep 1; done
 # 3) 切换后核验：SSR 真实渲染 + API 仍不公开 + 管理面可达
-curl -fsS http://127.0.0.1/ -H 'Host: <域名>' | grep -q Peiligo
-test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/api/v1/chrome -H 'Host: <域名>')" = 404
-test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/django-admin/login/ -H 'Host: <域名>')" = 200
+curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ | grep -q Peiligo
+test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1 https://<域名>/api/v1/chrome)" = 404
+test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1 https://<域名>/django-admin/login/)" = 200
 ```
+
+> **切换前两项裁决（ADR-0008 边界条款，未决即视为带病、禁止静默切换）**：
+> ① 定时发布时效——scheduler 缺省 60s 一拍（`SCHED_INTERVAL_SECONDS=60`），
+> 要满足 ≤30s 契约须在 deploy/.env 置 `SCHED_INTERVAL_SECONDS ≤ 30` 后
+> `compose up -d scheduler` 生效；② 预览消费页（webapp `/preview/`）按
+> 验收态暂缺（服务层已就绪，编辑点「新前端预览」暂落 404）——接线或豁免
+> 由 Human 在切换前裁定。
 
 **回滚 A：全量回退 v1（上限 <5 分钟；B03 实测 ~3s）**——v2 出现阻断性问题
 时的兜底。deploy/.env 把开关改回 `web:8000`，同一条
-`compose up -d --force-recreate caddy`；就绪判定＝`/` 重新含 `/static/`。
+`compose up -d --force-recreate caddy`；就绪判定＝`/` 重新含 `/static/`
+（同上用 `--resolve … https://<域名>/` 形态探测）。
 只动 caddy 容器——DB、Wagtail、frontend 全不接触，可无限次重演。
 Wagtail 发布两个态下都照常（定时发布不经过前端容器）。
 
 **回滚 B：v2 内换前端镜像（秒级）**——仅前端自身回归时用：
 `docker compose ... up -d --build frontend`（或指回上一镜像 tag），caddy/web 不动。
 
-**发布时效契约**：Wagtail 发布内容 ≤30s 内对新前端可见（scheduler 60s 一轮
-＋ Astro 每请求直连取数），**不触发** Astro 重建/部署。
+**发布时效契约（两条路径分述）**：后台直接发布（Publish）立即落库，
+Astro 每请求直连取数 ⇒ 下一个请求即见（本地集成实测 0s，远优于 ≤30s）；
+定时发布由 scheduler 到点翻转 ⇒ 可见时延受 `SCHED_INTERVAL_SECONDS`
+节拍限制（缺省 60s ⇒ 最坏 ~60s，须按上面裁决①调低）。两态都**不触发**
+Astro 重建/部署。
 
 ## 13. 与 Peilige / Peilike 的边界
 

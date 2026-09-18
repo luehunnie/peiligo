@@ -3,6 +3,10 @@ SPEC-001 ADR-0009 · 本仓库内新撰写（非上游恢复，与 0008 的 verb
 载体不同）。授权链＝SPEC-001 Spec Issue（#2，G1 Human 已授权）Ticket F11
 （#11，R2）——Spec「Relevant ADRs 预期产出②《部署拓扑》ADR 在此定稿」。
 状态适用范围显式限于 staging；生产接线终决属 B03（R3）/Human Gate。
+〔正仓集成注（2026-09-18）：下文引用的 docs/cutover-frontend.md 与
+evidence/b03-integration-rehearsal 属验收版仓库，不在本仓；本仓对应物＝
+deploy/Caddyfile＋deploy/docker-compose.yml 与 docs/PRODUCTION_RUNBOOK.md
+§12。〕
 B03 补记（2026-09-17）：切换/回滚机制已在本 ADR 路由表形状内定稿（唯一开关
 ＝路由表第 7 行默认上游 STAGING_DEFAULT_UPSTREAM）并本地演练实测通过
 （docs/cutover-frontend.md + evidence/b03-integration-rehearsal）——零路由表

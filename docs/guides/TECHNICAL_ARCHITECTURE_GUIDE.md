@@ -27,7 +27,7 @@
 | 测试 | pytest 9.1.1 + pytest-django 4.14.0 | 54 个测试文件 |
 | Lint / 格式 | ruff 0.16.3 | `ruff check` + `ruff format` |
 | 依赖审计 | pip-audit 2.10.1 | dev 依赖 |
-| CI | GitHub Actions | 单 job 质量门(见 §12) |
+| CI | GitHub Actions | 双 job 质量门（后端＋前端，见本指南 CI 节） |
 
 版本组合由 [ADR-0001](../adr/0001-wagtail-django-python-versions.md) 冻结(Wagtail 7.4.x LTS + Django 5.2 LTS + Python 3.13)。
 
@@ -75,7 +75,7 @@ flowchart TB
 - `/static/*`、`/media/*` → Caddy 直接读卷供文件(web 只出动态);
 - `/api/v1/*` → 恒 404(API 仅经 Compose 内网供 Astro SSR 取数,不公开路由,ADR-0008 §S1);
 - `/django-admin/`、`/admin/`、`/documents/`、`/link-confirm/go/` → 反代 web(管理面/文档/外链出口,恒指 web);
-- **其余全部 → 默认上游 `PEILIGO_DEFAULT_UPSTREAM`(唯一开关)**:缺省 `web:8000`＝v1 整站回根(部署后公开面零变化);置 `frontend:4321`＝新 Astro 前端回根。翻转仅重建 caddy 容器(秒级),切换/回滚 runbook 见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §11;
+- **其余全部 → 默认上游 `PEILIGO_DEFAULT_UPSTREAM`(唯一开关)**:缺省 `web:8000`＝v1 整站回根(部署后公开面零变化);置 `frontend:4321`＝新 Astro 前端回根。翻转仅重建 caddy 容器(秒级),切换/回滚 runbook 见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §12;
 - Caddy 管理接口仅绑定 `localhost:2019`;访问日志走 stdout。
 
 ## 3. Django 与 Wagtail 的分工
