@@ -1,5 +1,28 @@
 # F-09：Caddy 反向代理（HTTPS 终结；主机名经 $DOMAIN 环境注入，零硬编码）。
 # 证书自动申请/续期落 caddy_data 卷；静态/媒体直供（web 容器只出动态）。
+#
+# SPEC-001：新前端（Astro，frontend 容器）并入同一 Compose 内网，浏览器
+# 仍是单一 origin——路由表沿用 ADR-0009 冻结形状（B03 已演练实测），
+# 生产适配仅三点：无 basic_auth、无全局 noindex、无 /legacy/ 并排路径
+# （v1 整站即回滚态本身，不需要并排）：
+#   1. /healthz* /static/ /media/   基础设施探针＋静态/媒体直供（不变）
+#   2. /api/v1/*                    404。ADR-0008 §S1 冻结条款：API 仅经
+#                                   Compose 内网供 Astro SSR 取数，不公开路由
+#   3. /django-admin/ /admin/ /documents/ /link-confirm/go/
+#                                   → web:8000（ADR-0008 §S1 保持 Django
+#                                   现状：管理面、文档、外链出口 go 端点）
+#   4. 其余                         → 默认上游 PEILIGO_DEFAULT_UPSTREAM——
+#                                   前端切换/回滚唯一开关（见下）。
+#
+# 唯一开关：默认上游（第 4 行）。两个方向共用同一开关，路由表形状冻结不变：
+#   v1 态（缺省）＝web:8000——公开面与本文件历史行为逐路径等价（部署后零变化）；
+#   v2 态（cutover）＝frontend:4321——新 Astro 站点回根（含 /search/、
+#                  /link-confirm/、/preview/、robots.txt、sitemap.xml）。
+# 翻转＝改 deploy/.env 的 PEILIGO_DEFAULT_UPSTREAM 后
+#   `docker compose ... up -d --force-recreate caddy`（仅入口容器重建，
+#   web/frontend/db/数据面零接触，秒级；runbook 与阈值见 docs/PRODUCTION_RUNBOOK.md）。
+# 缺省值与 deploy/docker-compose.yml 的 ${PEILIGO_DEFAULT_UPSTREAM:-web:8000}
+# 是 twins——改一处须同步另一处（compose 注入空值会让本回退失效）。
 {
 	# 管理接口仅本地回环（无跨机管理面需求）
 	admin localhost:2019
@@ -18,7 +41,8 @@
 		-Server
 	}
 
-	# 健康探针与静态/媒体直供；其余全部反代 gunicorn。
+	# 健康探针与静态/媒体直供（不变；/healthz* 恒指 web——基础设施探针
+	# 契约不随前端切换翻转；frontend 自身健康由镜像内置 HEALTHCHECK 直探）。
 	handle /healthz* {
 		reverse_proxy web:8000
 	}
@@ -30,8 +54,24 @@
 		root * /srv/media
 		file_server
 	}
-	handle {
+	# SPEC-001（ADR-0008 §S1）：API 不公开路由——两个开关态下恒 404。
+	respond /api/v1/* "Not Found" 404
+	# ADR-0008 §S1：保持 Django 现状的路径（管理面/文档/外链出口）恒指 web。
+	handle /django-admin/* {
 		reverse_proxy web:8000
+	}
+	handle /admin/* {
+		reverse_proxy web:8000
+	}
+	handle /documents/* {
+		reverse_proxy web:8000
+	}
+	handle /link-confirm/go/* {
+		reverse_proxy web:8000
+	}
+	# 其余全部 → 默认上游（唯一开关；缺省 v1＝web:8000）。
+	handle {
+		reverse_proxy {$PEILIGO_DEFAULT_UPSTREAM:web:8000}
 	}
 
 	log {

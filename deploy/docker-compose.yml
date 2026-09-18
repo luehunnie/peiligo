@@ -91,6 +91,24 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # SPEC-001：新前端应用容器（Astro SSR，生产镜像本体构建自 webapp/）。
+  # 无状态：零卷、零宿主端口——仅 Compose 内网供 Caddy 反代与 SSR 取数。
+  # 取数经内网直调 web 容器（same-origin 行为由 Caddy 统一呈现）。
+  frontend:
+    build:
+      context: ../webapp
+      dockerfile: Dockerfile
+    environment:
+      # 内网基址 fail-closed（webapp/src/services/api.ts）：生产必须显式
+      # 注入，未设置/非法即取数抛错，绝不静默回退。
+      PEILIGO_API_BASE_URL: http://web:8000/api/v1
+    depends_on:
+      web:
+        condition: service_healthy
+    # 健康语义冻结于 webapp/src/pages/healthz.ts：进程活着即健康（镜像内置
+    # HEALTHCHECK；上游 API 故障不翻转，编排层不得据此重启）。
+    restart: unless-stopped
+
   caddy:
     image: caddy:2
     ports:
@@ -98,6 +116,13 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN}
+      # SPEC-001：前端切换/回滚唯一开关（Caddyfile 路由表默认上游）。
+      # 缺省 web:8000＝v1 整站回根（部署后公开面零变化）；cutover 时置
+      # frontend:4321。翻转仅重建本容器（秒级），web/frontend/db/数据面
+      # 零接触。缺省值与 Caddyfile 的 {$PEILIGO_DEFAULT_UPSTREAM:web:8000}
+      # 回退值 twins——改一处须同步另一处（compose 注入空值会让 Caddy
+      # 回退失效）。
+      PEILIGO_DEFAULT_UPSTREAM: ${PEILIGO_DEFAULT_UPSTREAM:-web:8000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -105,7 +130,10 @@ services:
       - static:/srv/static:ro
       - media:/srv/media:ro
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

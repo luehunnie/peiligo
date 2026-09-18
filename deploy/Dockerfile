@@ -43,6 +43,8 @@ COPY guides/ ./guides/
 COPY resources/ ./resources/
 COPY search/ ./search/
 COPY frontend/ ./frontend/
+# SPEC-001 B02（ADR-0008）：只读 Headless API app（零模型零迁移）。
+COPY api/ ./api/
 COPY locale/ ./locale/
 COPY src/ ./src/
 COPY static/ ./static/
