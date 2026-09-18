@@ -44,7 +44,7 @@ flowchart TB
         CADDY["caddy :80/:443<br/>TLS 终结 · 自动证书<br/>static/media 直供"]
         WEB["web<br/>Gunicorn :8000<br/>Django + Wagtail<br/>entrypoint: 等库→migrate→static"]
         FE["frontend<br/>Astro SSR :4321<br/>(webapp/,无状态零卷)"]
-        SCH["scheduler<br/>publish_scheduler 循环<br/>(缺省 60s 一轮)"]
+        SCH["scheduler<br/>publish_scheduler 循环<br/>(缺省 30s 一轮)"]
         DB[("db<br/>PostgreSQL 18<br/>pgdata 卷")]
         VM[("media 卷")]
         VS[("static 卷")]

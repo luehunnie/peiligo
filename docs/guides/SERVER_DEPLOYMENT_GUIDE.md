@@ -33,7 +33,7 @@ flowchart TB
     CADDY -->|"默认上游开关<br/>PEILIGO_DEFAULT_UPSTREAM"| FE["frontend 容器<br/>Astro SSR(webapp/,无状态)"]
     FE -->|内网取数 /api/v1| WEB
     WEB --> DB[("db 容器<br/>PostgreSQL 18 · pgdata 卷")]
-    SCH["scheduler 容器<br/>publish_scheduler(60s)"] --> DB
+    SCH["scheduler 容器<br/>publish_scheduler(30s)"] --> DB
     SCH -.->|等 web healthy| WEB
     subgraph PERSIST ["持久存储(全部不可随意删除)"]
         V1[("pgdata")]

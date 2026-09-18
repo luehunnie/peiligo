@@ -185,7 +185,7 @@ ALLOWED_HOSTS=localhost
 CSRF_TRUSTED_ORIGINS=https://localhost
 WAGTAILADMIN_BASE_URL=https://localhost
 DOMAIN=localhost
-# 可选:GUNICORN_WORKERS=2 / SCHED_INTERVAL_SECONDS=60
+# 可选:GUNICORN_WORKERS=2 / SCHED_INTERVAL_SECONDS=30(缺省即 30,满足 ≤30s 发布时效契约)
 ```
 
 `localhost` 域名下 Caddy 用**本地自签证书**(不申请公网证书),浏览器会提示不受信任——本地验证接受告警或信任 Caddy 本地 CA 即可;`ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS`/`WAGTAILADMIN_BASE_URL` 三处都按 `https://localhost` 同源填写。

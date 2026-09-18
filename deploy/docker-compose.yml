@@ -82,6 +82,9 @@ services:
       dockerfile: deploy/Dockerfile
     # F-09（独立审查 P2 修复）：间隔经 SCHED_INTERVAL_SECONDS 环境统一
     # 配置（命令缺省同源读取），不再硬编码 --interval 60 形成死旋钮。
+    # ADR-0008 Gate 5 部署验收条件：`SCHED_INTERVAL_SECONDS ≤ 30` 且本容器
+    # 运行中——维护态缺省即 30，预约发布 ≤30s 可见契约开箱满足（本地集成
+    # 实测见 PRODUCTION_RUNBOOK §12；调低于 30 合法，调高即切换 blocker）。
     command: ["python", "manage.py", "publish_scheduler"]
     environment:
       DJANGO_SETTINGS_MODULE: peiligo.settings.production
@@ -89,7 +92,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       MEDIA_ROOT: /data/media
-      SCHED_INTERVAL_SECONDS: ${SCHED_INTERVAL_SECONDS:-60}
+      SCHED_INTERVAL_SECONDS: ${SCHED_INTERVAL_SECONDS:-30}
     depends_on:
       web:
         condition: service_healthy

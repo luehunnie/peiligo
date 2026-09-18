@@ -6,7 +6,10 @@ F-07 包装命令 ``run_publish_scheduled``（其自身输出 event=
 周期——单次失败不终结调度进程；容器由 compose restart 策略保障进程级
 存活，调度状态完全来自 DB（approved_go_live_at），重启即续跑。
 
-间隔经 --interval 或环境 SCHED_INTERVAL_SECONDS 配置（缺省 60 秒）；
+间隔经 --interval 或环境 SCHED_INTERVAL_SECONDS 配置（缺省 30 秒——
+ADR-0008 Gate 5 部署验收条件：生产 `SCHED_INTERVAL_SECONDS ≤ 30` 且
+scheduler 运行中，承接预约发布 ≤30s 可见契约；compose 与 deploy/.env.example
+同源缺省 30，改一处须同步另两处）。
 --once 模式只跑一个周期即退出（手工补跑与测试载体）。
 """
 
@@ -27,8 +30,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--interval",
             type=int,
-            default=int(os.environ.get("SCHED_INTERVAL_SECONDS", "60")),
-            help="两个运行周期之间的间隔秒数（缺省 60，或 SCHED_INTERVAL_SECONDS）。",
+            default=int(os.environ.get("SCHED_INTERVAL_SECONDS", "30")),
+            help="两个运行周期之间的间隔秒数（缺省 30，或 SCHED_INTERVAL_SECONDS）。",
         )
         parser.add_argument(
             "--once",

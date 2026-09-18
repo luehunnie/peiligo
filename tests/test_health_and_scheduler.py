@@ -70,3 +70,19 @@ class SchedulerLoopTests(TestCase):
         ):
             # 不抛出＝长驻循环不会因单次故障退出（下一周期重试）
             call_command("publish_scheduler", "--once", stderr=StringIO())
+
+    def test_default_interval_meets_visibility_contract(self):
+        """维护态缺省节拍 ≤30s（ADR-0008 Gate 5 验收条件）：预约发布
+        ≤30s 可见契约以 `SCHED_INTERVAL_SECONDS ≤ 30` 承接——缺省回退值
+        与 compose / deploy/.env.example 三处同源，本测试钉住命令侧不回退。"""
+        import os
+
+        from peiligo.applog.management.commands.publish_scheduler import Command
+
+        env = os.environ.pop("SCHED_INTERVAL_SECONDS", None)
+        try:
+            parser = Command().create_parser("manage.py", "publish_scheduler")
+            self.assertLessEqual(parser.get_default("interval"), 30)
+        finally:
+            if env is not None:
+                os.environ["SCHED_INTERVAL_SECONDS"] = env

@@ -154,9 +154,11 @@ docker compose ... exec web python manage.py backup_prune --days 30 --apply
 
 ## 10. 定时发布
 
-`scheduler` 服务常驻跑 `publish_scheduler`（默认 60s 一轮；`--once` 供 cron
-模式/测试）。结果双落：结构化日志 `publish_scheduled.run` + F-13 心跳
-（ops_report 据此判新鲜度）。重启安全：待发布状态在 DB，重启后自动续跑。
+`scheduler` 服务常驻跑 `publish_scheduler`（默认 30s 一轮，经
+`SCHED_INTERVAL_SECONDS` 配置、维护态缺省即满足 Gate 5 验收条件 ≤30；
+`--once` 供 cron 模式/测试）。结果双落：结构化日志 `publish_scheduled.run`
++ F-13 心跳（ops_report 据此判新鲜度）。重启安全：待发布状态在 DB，重启后
+自动续跑。
 
 ## 11. 升级发布与回滚
 
@@ -198,18 +200,23 @@ compose up -d --force-recreate caddy
 # 2) 就绪判定（中断窗口终点）：新前端 200 且 Astro 资产上根
 for i in $(seq 1 60); do curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ 2>/dev/null \
   | grep -q '/_astro/' && break; sleep 1; done
-# 3) 切换后核验：SSR 真实渲染 + API 仍不公开 + 管理面可达
+# 3) 切换后核验：SSR 真实渲染 + API 仍不公开 + 管理面可达 + 预览链路走通
 curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ | grep -q Peiligo
 test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1 https://<域名>/api/v1/chrome)" = 404
 test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1 https://<域名>/django-admin/login/)" = 200
+#    预览（G5 切换前置检查①，ADR-0008）：后台编辑页点「新前端预览」→
+#    /preview/?token= 渲染草稿；无票/坏票访问 /preview/ 得样式化 404。
 ```
 
-> **切换前两项裁决（ADR-0008 边界条款，未决即视为带病、禁止静默切换）**：
-> ① 定时发布时效——scheduler 缺省 60s 一拍（`SCHED_INTERVAL_SECONDS=60`），
-> 要满足 ≤30s 契约须在 deploy/.env 置 `SCHED_INTERVAL_SECONDS ≤ 30` 后
-> `compose up -d scheduler` 生效；② 预览消费页（webapp `/preview/`）按
-> 验收态暂缺（服务层已就绪，编辑点「新前端预览」暂落 404）——接线或豁免
-> 由 Human 在切换前裁定。
+> **原「切换前两项裁决」已于最终集成批次闭合**（此前为显式跟踪的迁移限制）：
+> ① 预览消费页（webapp `/preview/`）已接线——后台「新前端预览」→ 铸票 →
+> 同源 `/preview/?token=` → 内网 `/api/v1/preview` 兑换 → 同模板渲染草稿，
+> 失败一律样式化 404（e2e：`webapp/src/tests/e2e/preview.spec.ts`；集成栈
+> 实测见本节切换后核验第 4 步）；② 定时发布时效——`SCHED_INTERVAL_SECONDS`
+> 维护态缺省即 30（compose／deploy/.env.example／publish_scheduler 命令三处
+> 同源），Gate 5 验收条件「≤30 且 scheduler 运行中」开箱满足，集成栈实测
+> 到点可见 <30s（本节发布时效契约）。调低于 30 合法；调高或停跑 scheduler
+> 即重新成为切换 blocker。
 
 **回滚 A：全量回退 v1（上限 <5 分钟；B03 实测 ~3s）**——v2 出现阻断性问题
 时的兜底。deploy/.env 把开关改回 `web:8000`，同一条
@@ -223,9 +230,12 @@ Wagtail 发布两个态下都照常（定时发布不经过前端容器）。
 
 **发布时效契约（两条路径分述）**：后台直接发布（Publish）立即落库，
 Astro 每请求直连取数 ⇒ 下一个请求即见（本地集成实测 0s，远优于 ≤30s）；
-定时发布由 scheduler 到点翻转 ⇒ 可见时延受 `SCHED_INTERVAL_SECONDS`
-节拍限制（缺省 60s ⇒ 最坏 ~60s，须按上面裁决①调低）。两态都**不触发**
-Astro 重建/部署。
+定时发布由 scheduler 到点翻转 ⇒ 可见时延上界＝一个调度节拍
+`SCHED_INTERVAL_SECONDS`（维护态缺省 30s，Gate 5 验收条件 ≤30）＋执行抖动；
+集成栈实测（`SCHED_INTERVAL_SECONDS=30` 缺省、零重建零重启 frontend，
+frontend 容器 StartedAt 前后一致）：两页到点后分别 **29.2s / 18.2s** 可见
+（调度节拍逐次 ~30.0s，都在首个到点节拍翻转；HTTP 轮询口径 18.198s）。
+两态都**不触发** Astro 重建/部署。
 
 ## 13. 与 Peilige / Peilike 的边界
 
