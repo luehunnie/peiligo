@@ -1,0 +1,243 @@
+---
+// 内容页正文壳（SPEC-001-F06 + E9 预览消费）。从 pages/[section]/[dept]/
+// [slug].astro 原样上提的模板分型渲染段（v1 壳的 expired 横幅＋面包屑＋
+// article 结构，五类内容页同壳），使正式详情页与 E9 预览消费页
+// （pages/preview.astro）共用同一渲染模板——契约 openapi /preview
+// 「同模板渲染」义务的单一出处，零逻辑复制。
+// 输入＝E6/E9 同一序列化层产出（PreviewDetail ⊇ PageDetail）：
+//   - 正式详情：可见性谓词已由 Django 裁定（live/expired 放行语义）；
+//   - 预览草稿：expired/expire_at 等按草稿数据如实填充，横幅同样如实
+//     渲染（可见性谓词不适用）。
+import "../../styles/content-shared.css";
+import "../../styles/content-detail.css";
+import ArticleBody from "./ArticleBody.astro";
+import Breadcrumb from "./Breadcrumb.astro";
+import DetailAside from "./DetailAside.astro";
+import EventInfo from "./EventInfo.astro";
+import ExternalLinkJump from "./ExternalLinkJump.astro";
+import Linebreaks from "./Linebreaks.astro";
+import { publishedDateParts } from "../../lib/dates";
+import { sectionTone } from "../../lib/sections";
+import type { PageDetail } from "../../schemas/api-schema";
+
+interface Props {
+  detail: PageDetail;
+}
+
+const { detail } = Astro.props;
+
+// v1 壳：面包屑＝首页 / [所属板块] / 当前页。契约 breadcrumb 本就含首页
+// 段（api/serializers.breadcrumb：首页 → 板块 → 当前页，容器段永不出现；
+// Breadcrumb 组件再输出硬编码首页链接），故父段取当前页前一段（倒数第二
+// 段）＝板块——对契约三段形与板块页自身两段形都正确；取 crumbs[0] 会把
+// 契约首段「首页」当板块渲染成 首页/首页 并丢掉板块链接（集成栈实测抓到）。
+const crumbs = detail.breadcrumb;
+const parent = crumbs.length > 1 ? crumbs[crumbs.length - 2] : undefined;
+const currentTitle = crumbs[crumbs.length - 1]?.title ?? detail.title;
+
+// 题头元信息（v1 各类型 article_meta block，段序冻结）：段间「·」由
+// .art-meta gap 呈现（v1 flex gap:8px，dot-sep 仅作分隔符着色文本）。
+const published = publishedDateParts(detail.first_published_at).datetime;
+const expireAt = publishedDateParts(detail.expire_at).datetime;
+const backHref = detail.section ? `/${detail.section.slug}/` : undefined;
+---
+
+{detail.expired && (
+  <div class="expired-banner" role="status">
+    此内容已过期，归档保留供查阅；最新信息请以发布部门口径为准。
+  </div>
+)}
+
+<Breadcrumb
+  parentTitle={parent?.title}
+  parentUrl={parent?.url ?? undefined}
+  title={currentTitle}
+/>
+
+<article class="content-article">
+  <header class="art-head">
+    {detail.section && (
+      <span class:list={["tag", `tone-${sectionTone(detail.section.slug)}`]}>
+        {detail.section.title}
+      </span>
+    )}
+    <h1>{detail.title}</h1>
+    <p class="art-meta">
+      {/* v1 article_meta：段序随类型冻结（下方逐型转写） */}
+      {detail.type === "material" && (
+        <Fragment>
+          <span>{detail.department?.name}</span>
+          <span class="dot-sep">·</span>
+          <span>{detail.discipline}</span>
+          <span class="dot-sep">·</span>
+          <span>{detail.material_type}</span>
+          <span class="dot-sep">·</span>
+          <time datetime={published}>{published} 发布</time>
+        </Fragment>
+      )}
+      {detail.type === "guide" && (
+        <Fragment>
+          <span>{detail.category}</span>
+          <span class="dot-sep">·</span>
+          <span>{detail.department?.name}</span>
+          <span class="dot-sep">·</span>
+          <span>最后确认 {detail.last_confirmed_on.slice(0, 10)}</span>
+        </Fragment>
+      )}
+      {(detail.type === "notice" ||
+        detail.type === "article" ||
+        detail.type === "software") && (
+        <Fragment>
+          <span>{detail.department?.name}</span>
+          <span class="dot-sep">·</span>
+          <time datetime={published}>{published} 发布</time>
+          {(detail.type === "notice" || detail.type === "article") &&
+            detail.expire_at && (
+              <Fragment>
+                <span class="dot-sep">·</span>
+                <span>有效期至 {expireAt}</span>
+              </Fragment>
+            )}
+        </Fragment>
+      )}
+    </p>
+    {(detail.type === "notice" ||
+      detail.type === "article" ||
+      detail.type === "material") &&
+      detail.summary && <p class="article-lede">{detail.summary}</p>}
+  </header>
+
+  {detail.cover && (
+    <figure class="art-cover">
+      <img
+        src={detail.cover.src}
+        width={detail.cover.width}
+        height={detail.cover.height}
+        alt={detail.cover.alt}
+      />
+    </figure>
+  )}
+
+  {/* 逐类型正文片段（v1 article_body block） */}
+  {(detail.type === "notice" || detail.type === "article") && (
+    <Fragment>
+      <EventInfo event={detail.event} />
+      <div class="article-body">
+        <ArticleBody blocks={detail.body} />
+      </div>
+      <DetailAside
+        attachments={detail.attachments}
+        external={detail.external}
+        tags={detail.tags}
+      />
+    </Fragment>
+  )}
+  {detail.type === "material" && (
+    <Fragment>
+      <div class="article-body">
+        <ArticleBody blocks={detail.body} />
+      </div>
+      <DetailAside
+        attachments={detail.attachments}
+        external={detail.external}
+        tags={detail.tags}
+      />
+    </Fragment>
+  )}
+  {detail.type === "software" && (
+    <Fragment>
+      <section class="event-info" aria-label="软件信息">
+        <h2>基本信息</h2>
+        <dl class="meta-list">
+          <div>
+            <dt>适用平台</dt>
+            <dd>{detail.platforms.join("、")}</dd>
+          </div>
+          <div>
+            <dt>来源链接</dt>
+            <dd class="url-text">
+              <ExternalLinkJump
+                url={detail.source.url}
+                confirmHref={detail.source.confirm_href}
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>授权或费用说明</dt>
+            <dd>{detail.license_note}</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="article-body" aria-label="用途说明">
+        <h2>用途说明</h2>
+        <ArticleBody blocks={detail.body} />
+      </section>
+    </Fragment>
+  )}
+  {detail.type === "guide" && (
+    <div class="article-body">
+      <dl class="meta-list guide-fields">
+        <div>
+          <dt>地点</dt>
+          <dd>{detail.location}</dd>
+        </div>
+        <div>
+          <dt>开放时间</dt>
+          <dd>
+            <Linebreaks text={detail.opening_hours} />
+          </dd>
+        </div>
+        <div>
+          <dt>联系方式</dt>
+          <dd>
+            <Linebreaks text={detail.contact} />
+          </dd>
+        </div>
+        {detail.extra_notes && (
+          <div>
+            <dt>补充说明</dt>
+            <dd>
+              <Linebreaks text={detail.extra_notes} />
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>责任来源或责任单位</dt>
+          <dd>{detail.responsible_party}</dd>
+        </div>
+        <div>
+          <dt>维护方式</dt>
+          <dd>{detail.maintenance_mode_label}</dd>
+        </div>
+        <div>
+          <dt>最后确认日期或更新时间</dt>
+          <dd>{detail.last_confirmed_on.slice(0, 10)}</dd>
+        </div>
+      </dl>
+    </div>
+  )}
+
+  {backHref && detail.section && (
+    <p class="art-back">
+      <a href={backHref}>← 返回{detail.section.title}</a>
+    </p>
+  )}
+</article>
+
+<style>
+  /* 过期横幅：v1 templates/base.html 逐字转写（expired 页原 slug URL
+     放行渲染，页首横幅；role=status）。 */
+  .expired-banner {
+    max-width: var(--wrap);
+    margin: 14px auto 0;
+    padding: 12px 20px;
+    background: var(--amber-soft);
+    border-left: 4px solid var(--amber);
+    border-radius: 0 12px 12px 0;
+    font-size: 14px;
+    color: var(--amber-deep);
+  }
+
+  /* 指南九字段表：v1 guide_page.html .guide-fields（无独立规则，沿用
+     meta-list 栅格；类名保留 v1 锚点）。 */
+</style>

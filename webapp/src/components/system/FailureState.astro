@@ -1,0 +1,100 @@
+---
+// 站内失败态（SPEC-001-F08：数据失败/空结果样式化统一处理）。
+// chrome 可用而页面内容取数失败/契约违约时的统一样式化错误块：
+// 可见标题 + role=alert 错误条（coral-soft/radius-small「错误条」既定
+// 语言，与 link-confirm .confirm-error、F07 搜索失败页同源）+ 可操作
+// 出路（刷新重试＝同 URL 重放 GET，恢复后下一请求即 live 内容——契约
+// 4/5；返回出口）。零 JS、零内联样式；样式即 F07-P1 已评审语言
+// （.fail-title/.fail-note/.fail-home），选择器名保持不变（e2e 同口径）。
+// 文案分工（frontent voice：说清发生了什么 + 现在能做什么，不致歉不含糊）：
+// 标题按面命名（内容/搜索/链接确认），note 统一「临时故障，请稍后重试」。
+interface Props {
+  /** 可见 H1：按失败面命名（如 内容暂时无法加载 / 搜索暂时不可用） */
+  title: string;
+  /** role=alert 错误条文案 */
+  note: string;
+  /** 刷新重试链接（缺省不渲染——搜索页的重试出路是 slot 里的表单） */
+  retryHref?: string;
+  /** 返回出口（缺省「返回首页」→ /；外链确认页传「返回 Peiligo」） */
+  backHref?: string;
+  backLabel?: string;
+}
+
+const {
+  title,
+  note,
+  retryHref,
+  backHref = "/",
+  backLabel = "返回首页",
+} = Astro.props;
+---
+
+<section class="fail-state" aria-labelledby="fail-title">
+  <h1 id="fail-title" class="fail-title">
+    {title}
+  </h1>
+  <p class="fail-note" role="alert">
+    {note}
+  </p>
+  <slot />
+  <p class="fail-home">
+    {retryHref && <a href={retryHref}>刷新重试</a>}
+    {retryHref && (
+      <span class="fail-sep" aria-hidden="true">
+        ·
+      </span>
+    )}
+    <a href={backHref}>{backLabel}</a>
+  </p>
+</section>
+
+<style>
+  /* F07-P1 搜索失败态样式的共享化（逐值搬移，非新设计）：标题用站内
+     可见标题字阶（link-confirm h1 同款 clamp）；错误条沿用 link-confirm
+     .confirm-error 既定语言（coral-soft / radius-small）；断点反向为
+     移动优先。 */
+  .fail-state {
+    max-width: 860px;
+    margin-inline: auto;
+    padding-top: 14px;
+    text-align: center;
+  }
+
+  @media (min-width: 601px) {
+    .fail-state {
+      padding-top: 26px;
+    }
+  }
+
+  .fail-title {
+    margin: 8px 0 0;
+    font-size: clamp(24px, 2.6vw, 30px);
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .fail-note {
+    max-width: 470px;
+    margin: 14px auto 0;
+    padding: 12px 16px;
+    background: var(--coral-soft);
+    border-radius: var(--radius-small);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--coral-deep);
+  }
+
+  .fail-home {
+    margin: 18px 0 0;
+    font-size: 14px;
+  }
+
+  .fail-home a {
+    font-weight: 600;
+  }
+
+  .fail-sep {
+    margin: 0 6px;
+    color: var(--ink-2);
+  }
+</style>

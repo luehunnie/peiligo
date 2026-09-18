@@ -1,0 +1,438 @@
+/*
+ * 详情页族（五型同壳）阅读语言（SPEC-001-F06，自 content.css 8dbc67d 拆出）
+ *
+ * 逐字转写自 v1 `static/css/peiligo.css`（48fd5d6）中五类内容页（纪事/
+ * 活动/资料/工具/指南）共用的详情壳与正文语言：文章壳（.content-article
+ * 及题头/题图/返回行，Phase 8D final-reference 转译）、正文阅读区
+ * （.article-body/.block-image，728px 长文宽度口径）、元信息表
+ * （.event-info/.meta-list，活动信息/软件基本信息/指南九字段共用 dl）、
+ * 详情尾注区（.article-aside 附件/外部链接/标签）与外部资源行
+ * （.files/.file，离开站前经外链确认页；正文流内行与 aside 字段级行
+ * 同族，.article-body .file 即二者接缝）。唯一结构性改写与 F02
+ * base.css 相同：v1 max-width 桌面优先断点反向为移动优先 min-width
+ * （基础值 = v1 最窄档，761px 起逐属性恢复宽档值）。
+ *
+ * 消费方：/[section]/{dept}/{slug}/（先引 content-shared.css 再引本
+ * 文件）。区块内规则原值原序随迁（F06-P1），v1 单一来源对照关系不变。
+ *
+ * 规模说明（source-size 审计口径）：本文件 >400 行属预期——五类详情页
+ * 同壳同正文语言，壳/正文/元信息/尾注/资源行渲染于同一文档且互相引用
+ * （如 .article-body .file），按块再拆会割裂 v1 单一来源对照关系；
+ * 单一职责＝详情页族阅读语言。
+ */
+
+/* ===== 文章详情壳（Phase 8D final-reference 转译，五类内容页同壳。
+   密度立场＝安静：色只出现在 tag、链接与资源行，正文区保持纸面） ===== */
+
+.content-article {
+  max-width: 780px;
+}
+
+.art-head {
+  padding-top: 16px;
+}
+
+/* 移动优先：基础值 = v1 @media (max-width: 760px) 档 */
+.art-head h1 {
+  margin-top: 14px;
+  max-width: 22em;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.32;
+}
+
+@media (min-width: 761px) {
+  .art-head h1 {
+    font-size: clamp(26px, 3.2vw, 34px);
+  }
+}
+
+.art-meta {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.dot-sep {
+  color: #c4cdc7;
+}
+
+.article-lede {
+  margin: 10px 0 0;
+  font-size: 15.5px;
+  color: var(--ink-2);
+}
+
+/* 封面：原始比例整幅呈现（无破坏性裁切） */
+.art-cover {
+  margin: 18px 0 0;
+}
+
+.art-cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgb(29 90 80 / 0.08);
+}
+
+@media (min-width: 761px) {
+  .art-cover {
+    margin-top: 22px;
+  }
+
+  .art-cover img {
+    border-radius: 18px;
+  }
+}
+
+.art-back {
+  max-width: 728px;
+  margin-top: 16px;
+  font-size: 13.5px;
+}
+
+.art-back a {
+  color: var(--teal-deep);
+  font-weight: 700;
+}
+
+.art-back a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ===== 正文阅读区（final-reference .art-body 口径：728px 长文宽度、
+   16.5px/1.88 行距、强标题层级；强调与链接保持品牌青） ===== */
+
+.article-body {
+  max-width: 728px;
+  margin-top: 22px;
+  font-size: 15.5px;
+  line-height: 1.88;
+}
+
+.article-body h2 {
+  margin-top: 30px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
+.article-body h3 {
+  margin-top: 1.4em;
+  font-size: 17.5px;
+}
+
+.article-body b,
+.article-body strong {
+  color: var(--teal-deep);
+}
+
+.article-body a:not(.file) {
+  color: var(--teal-deep);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgb(47 122 110 / 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.18s ease;
+}
+
+.article-body a:not(.file):hover {
+  text-decoration-color: var(--teal-deep);
+}
+
+.article-body ul,
+.article-body ol {
+  margin: 14px 0 0;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--ink);
+}
+
+.article-body li::marker {
+  color: var(--teal);
+}
+
+.article-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.article-body th,
+.article-body td {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.article-body th {
+  background: var(--teal-soft);
+}
+
+.article-body blockquote {
+  margin: 1em 0;
+  padding: 4px 16px;
+  border-left: 3px solid var(--line);
+  color: var(--ink-2);
+}
+
+.article-body pre {
+  overflow-x: auto;
+  padding: 14px;
+  background: var(--teal-soft);
+  border-radius: 12px;
+  font-size: 13.5px;
+}
+
+.article-body code {
+  font-size: 0.92em;
+  background: var(--teal-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.article-body pre code {
+  background: transparent;
+  padding: 0;
+}
+
+@media (min-width: 761px) {
+  .article-body {
+    margin-top: 30px;
+    font-size: 16.5px;
+  }
+
+  .article-body h2 {
+    margin-top: 38px;
+    font-size: 21px;
+  }
+
+  .article-body ul,
+  .article-body ol {
+    font-size: 16px;
+  }
+}
+
+/* 插图块（正文流内 figure） */
+
+.block-image {
+  margin: 18px 0;
+}
+
+.block-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+
+.block-image figcaption {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* ===== 元信息表（活动信息/软件基本信息/指南九字段共用 dl） ===== */
+
+.event-info {
+  margin: 22px 0;
+  padding: 18px 20px;
+  background: var(--teal-soft);
+  border-radius: 16px;
+}
+
+.event-info h2 {
+  font-size: 15.5px;
+  margin-bottom: 10px;
+}
+
+.meta-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+/* 移动优先：基础值 = v1 @media (max-width: 760px) 档 */
+.meta-list div {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 761px) {
+  .meta-list div {
+    grid-template-columns: 96px 1fr;
+  }
+}
+
+.meta-list dt {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.meta-list dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.url-text {
+  overflow-wrap: anywhere;
+}
+
+/* ===== 详情尾注区（附件/外部链接/标签；正文与文末资源之间的轻分隔） ===== */
+
+.article-aside {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.article-aside h2 {
+  font-size: 15.5px;
+}
+
+.article-aside ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.article-aside li {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.attachment-meta {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.block-attachment a {
+  font-weight: 700;
+}
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-chips li {
+  padding: 3px 12px;
+  background: var(--teal-soft);
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--teal-deep);
+}
+
+/* ===== 外部资源行（final-reference .file：离开站前经外链确认页；
+   外链块行渲染于正文流内，字段级外链行渲染于 .article-aside） ===== */
+
+.files {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.article-body .file {
+  margin-top: 18px;
+}
+
+.file:hover {
+  border-color: var(--teal);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgb(25 31 28 / 0.06);
+  text-decoration: none;
+}
+
+.file-ico {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+}
+
+.file-ico svg {
+  width: 19px;
+  height: 19px;
+}
+
+.file-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-text strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.file-text em {
+  display: block;
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 1px;
+}
+
+.file-arrow {
+  flex: none;
+  /* F09 偏差（AA 非文本 ≥3:1）：v1 一次性色 #97a39d 对白底 2.61:1，
+     改用既有中性弱文字 token --ink-2 → 5.07:1（资源行附件箭头指示） */
+  color: var(--ink-2);
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.file-arrow svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+.file:hover .file-arrow {
+  color: var(--teal-deep);
+  transform: translate(2px, -2px);
+}

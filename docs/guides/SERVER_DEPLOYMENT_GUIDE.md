@@ -28,10 +28,12 @@ CPU / 内存 / 磁盘容量 / IP / 虚拟机编号**不在本文冻结**——�
 ```mermaid
 flowchart TB
     NET["Internet"] --> DNS["DNS A/AAAA 记录 → 服务器"]
-    DNS --> CADDY["caddy 容器 :443<br/>自动申请/续期 Let's Encrypt 证书<br/>static/media 直供 · 其余反代 web"]
+    DNS --> CADDY["caddy 容器 :443<br/>自动申请/续期 Let's Encrypt 证书<br/>static/media 直供 · 动态按路由表反代"]
     CADDY --> WEB["web 容器<br/>entrypoint: 等库→migrate→static→gunicorn"]
+    CADDY -->|"默认上游开关<br/>PEILIGO_DEFAULT_UPSTREAM"| FE["frontend 容器<br/>Astro SSR(webapp/,无状态)"]
+    FE -->|内网取数 /api/v1| WEB
     WEB --> DB[("db 容器<br/>PostgreSQL 18 · pgdata 卷")]
-    SCH["scheduler 容器<br/>publish_scheduler(60s)"] --> DB
+    SCH["scheduler 容器<br/>publish_scheduler(30s)"] --> DB
     SCH -.->|等 web healthy| WEB
     subgraph PERSIST ["持久存储(全部不可随意删除)"]
         V1[("pgdata")]
@@ -105,7 +107,7 @@ git pull --ff-only origin main
 | `DOMAIN` | ✅ | Caddy 站点主机名(自动证书的主体) | `peiligo.example.edu` | 否 |
 | `FEEDBACK_EMAIL` | ◻️ | 反馈邮箱环境兜底(正式载体 = 后台「站点设置」,可后台改、即时生效) | `feedback@peiligo.example.edu` | 否 |
 | `GUNICORN_WORKERS` | ◻️ | web 进程数,缺省 `2` | `2` | 否 |
-| `SCHED_INTERVAL_SECONDS` | ◻️ | 定时发布调度间隔,缺省 `60` 秒 | `60` | 否 |
+| `SCHED_INTERVAL_SECONDS` | ◻️ | 定时发布调度间隔,缺省 `30` 秒(≤30s 发布时效契约/Gate 5) | `30` | 否 |
 | `HSTS_SECONDS` | ◻️ | HSTS 时长;**首期建议 `3600` 观察期**,不设 = 一年终态 | `3600` | 否 |
 | `BACKUP_ROOT` | ◻️ | 备份集根;**缺省落具名卷 `backups`**,仅要落到宿主目录/独立盘时设置(bind mount 自理) | `/srv/peiligo-backups` | 否 |
 | `SECONDARY_BACKUP_DIR` | **强烈建议** | 备份独立副本目录;**必须指向另一块独立存储**(NFS/外接盘);不设 = 无独立副本,监控显式 WARN | `/mnt/backup-nas/peiligo` | 否 |
@@ -320,6 +322,7 @@ docker compose ... logs -f web    # 或等待下一轮 ops_report
 
 | 类型 | 做法 | 风险 |
 |---|---|---|
+| **前端切换回退**(SPEC-001) | deploy/.env 把 `PEILIGO_DEFAULT_UPSTREAM` 改回 `web:8000` → `compose up -d --force-recreate caddy`;只动 caddy 容器,秒级;详见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §12 | 低;web/db/frontend 零接触 |
 | **代码回滚** | 用上一发布提交重新构建并 `up -d --build`(该提交当时也应走同流程) | 低;entrypoint 幂等 |
 | **数据库 migration 回滚** | **没有自动回滚**。代码回滚不会(也不应)自动降 schema;若新迁移必须撤销,按 Django `migrate <app> <旧号>` 个案处理并先在隔离库验证 | 中;须逐案评估 |
 | **数据回滚(restore)** | 走 §10 隔离恢复流程,**不是**代码回滚的替代品;当前库被新代码写过之后直接覆盖恢复会丢数据 | **高**;永远先隔离演练,优先 staging 验证 |

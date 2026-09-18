@@ -1,0 +1,53 @@
+---
+// 活动信息表（SPEC-001-F06）。等价转写自 v1 notice_page.html/article_page.html
+// 的 event-info 区（CONTENT_MODEL §7：仅校园活动板块下有值；状态三态为
+// 纯计算推导，B02 契约给机器码，经 lib/sections.eventStatusLabel 回译 v1
+// 中文标签）。报名链接＝B02 预计算 confirm_href 的行内确认跳转链接。
+// 线上活动地点文案「线上活动」与 v1 一致。样式在全局 content-detail.css。
+import ExternalLinkJump from "./ExternalLinkJump.astro";
+import { eventStatusLabel } from "../../lib/sections";
+import { formatDateTime } from "../../lib/format";
+import type { EventInfo } from "../../schemas/api-schema";
+
+interface Props {
+  /** 活动字段（NoticeDetail/ArticleDetail.event；null 不渲染） */
+  event: EventInfo | null;
+}
+
+const { event } = Astro.props;
+---
+
+{event && (
+  <section class="event-info" aria-label="活动信息">
+    <h2>活动信息</h2>
+    <dl class="meta-list">
+      <div>
+        <dt>状态</dt>
+        <dd>{eventStatusLabel(event.status)}</dd>
+      </div>
+      <div>
+        <dt>开始时间</dt>
+        <dd>{formatDateTime(event.start_at)}</dd>
+      </div>
+      <div>
+        <dt>结束时间</dt>
+        <dd>{formatDateTime(event.end_at)}</dd>
+      </div>
+      <div>
+        <dt>活动地点</dt>
+        <dd>{event.is_online ? "线上活动" : event.location}</dd>
+      </div>
+      {event.registration && (
+        <div>
+          <dt>报名</dt>
+          <dd class="url-text">
+            <ExternalLinkJump
+              url={event.registration.url}
+              confirmHref={event.registration.confirm_href}
+            />
+          </dd>
+        </div>
+      )}
+    </dl>
+  </section>
+)}

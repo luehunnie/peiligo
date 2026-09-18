@@ -1,0 +1,276 @@
+---
+// 首页五分类导航（SPEC-001-F05）。等价转写自 v1
+// home/templates/home/home_page.html「板块导航」与 peiligo.css「板块身份」。
+// 冻结顺序＝SECTIONS（home.sections 原序）；cat-<tone> 身份底色与
+// ico-<tone> 图标底色伴随 slug（图标＝v1 同款线性族，仅 CSS 类、无数据
+// 字段）；未识别 slug 不猜色（sectionTone 回落空串，仅丢身份色）。
+import { sectionTone } from "../../lib/sections";
+import type { Home } from "../../schemas/api-schema";
+
+interface Props {
+  /** 板块列表（home.sections，冻结顺序） */
+  sections: Home["sections"];
+}
+
+const { sections } = Astro.props;
+---
+
+<nav class="cats" aria-label="校园板块">
+  {sections.map((section) => (
+    <a
+      class:list={["cat", `cat-${sectionTone(section.slug)}`]}
+      href={section.url}
+    >
+      {section.slug === "chronicle" && (
+        <span class="sec-ico ico-jishi" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 6.5A1.5 1.5 0 0 1 5.5 5H16a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 16 19H5.5A1.5 1.5 0 0 1 4 17.5Z" />
+            <path d="M17.5 8H19a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19h-2.6" />
+            <path d="M7 9h7M7 12.5h7M7 16h4" />
+          </svg>
+        </span>
+      )}
+      {section.slug === "events" && (
+        <span class="sec-ico ico-huodong" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" y1="22" x2="4" y2="15" />
+          </svg>
+        </span>
+      )}
+      {section.slug === "materials" && (
+        <span class="sec-ico ico-ziliao" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z" />
+            <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" />
+          </svg>
+        </span>
+      )}
+      {section.slug === "software" && (
+        <span class="sec-ico ico-gongju" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="2.5" />
+            <polyline points="7.5 9.5 10.5 12 7.5 14.5" />
+            <line x1="12.5" y1="15.5" x2="16.5" y2="15.5" />
+          </svg>
+        </span>
+      )}
+      {section.slug === "guide" && (
+        <span class="sec-ico ico-zhinan" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="9.5" />
+            <polygon points="16 8 14 14 8 16 10 10 16 8" />
+          </svg>
+        </span>
+      )}
+      <span class="cat-label">{section.title}</span>
+    </a>
+  ))}
+</nav>
+
+<style>
+  /* v1 peiligo.css「板块身份」逐字转写；断点反向为移动优先（tokens.css
+     断点表）：基础值 = v1 @media (max-width: 760px) 档（横向滑动条，仅该
+     轨滚动、文档不横向溢出）。F14 人工批准修正（Issue #37）：滑动条延展
+     至平板档（<981 一律横滑），981px 起恢复桌面网格（v1 761–980 三列
+     网格档不再保留）。 */
+
+  /* --- 板块身份（冻结映射：仅 CSS 类，无数据字段） --- */
+
+  .sec-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    color: #fff;
+  }
+
+  .sec-ico svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .ico-jishi {
+    background: var(--coral);
+  }
+
+  .ico-huodong {
+    background: var(--amber);
+  }
+
+  .ico-ziliao {
+    background: var(--blue);
+  }
+
+  .ico-gongju {
+    background: var(--violet);
+  }
+
+  .ico-zhinan {
+    background: var(--teal);
+  }
+
+  /* --- 五分类导航（移动档：横向滑动条，仅该轨滚动，文档不横向溢出） --- */
+
+  .cats {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -20px;
+    padding-inline: 20px;
+    padding-top: 18px;
+    scroll-snap-type: x proximity;
+    /* 吸附位对齐内边距侧（scroll-padding = padding-inline）：首卡吸附位
+       即初始 0（静止态稳定、保留 20px 沟槽），滑动后各卡落位同沟槽 */
+    scroll-padding-inline: 20px;
+  }
+
+  .cats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cat {
+    flex: none;
+    /* 卡宽 = 轨内容宽 / 2.65：静止时恒定呈现「两张整卡 + 右侧第 3 张
+       65% 切面」（参考图构图，切面比例与视口无关故全轨段稳定），右侧
+       部分卡即滑动暗示（无箭头/圆点/渐隐，快讯 rail 同一百分比卡宽
+       惯用法）；390px 档 ≈ 原 132px 定宽，视觉零回归。 */
+    width: calc(100% / 2.65);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px 15px;
+    border-radius: 18px;
+    scroll-snap-align: start;
+    transition:
+      transform 0.18s ease,
+      background-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .cat:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgb(25 31 28 / 0.08);
+    text-decoration: none;
+  }
+
+  .cat .sec-ico {
+    transition: transform 0.18s ease;
+  }
+
+  .cat:hover .sec-ico {
+    transform: rotate(-6deg) scale(1.05);
+  }
+
+  .cat-label {
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+
+  .cat-jishi {
+    background: var(--coral-soft);
+  }
+
+  .cat-jishi:hover {
+    background: #f9ddcc;
+  }
+
+  .cat-huodong {
+    background: var(--amber-soft);
+  }
+
+  .cat-huodong:hover {
+    background: #fae7c3;
+  }
+
+  .cat-ziliao {
+    background: var(--blue-soft);
+  }
+
+  .cat-ziliao:hover {
+    background: #d9e6f7;
+  }
+
+  .cat-gongju {
+    background: var(--violet-soft);
+  }
+
+  .cat-gongju:hover {
+    background: #e2dcf6;
+  }
+
+  .cat-zhinan {
+    background: var(--teal-soft);
+  }
+
+  .cat-zhinan:hover {
+    background: #d8e8e2;
+  }
+
+  /* ===== 桌面档（F14 修正：滑动条保持到 980，≥981 五列网格） ===== */
+
+  @media (min-width: 981px) {
+    /* 分类：桌面网格五列（v1 ≥981 桌面档） */
+    .cats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      overflow-x: visible;
+      margin-inline: 0;
+      padding-inline: 0;
+      padding-top: 22px;
+      scroll-snap-type: none;
+    }
+
+    .cat {
+      width: auto;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      scroll-snap-align: none;
+    }
+  }
+</style>

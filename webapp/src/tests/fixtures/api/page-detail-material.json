@@ -1,0 +1,68 @@
+{
+  "type": "material",
+  "id": 63,
+  "title": "高等数学（下）期末复习资料",
+  "slug": "calculus-review",
+  "url": "/materials/library/calculus-review/",
+  "section": {
+    "slug": "materials",
+    "title": "学习资料"
+  },
+  "department": {
+    "name": "图书馆",
+    "slug": "library"
+  },
+  "first_published_at": "2026-05-12T14:00:00+08:00",
+  "last_published_at": "2026-05-12T14:00:00+08:00",
+  "expire_at": null,
+  "noindex": false,
+  "expired": false,
+  "cover": null,
+  "breadcrumb": [
+    {
+      "title": "首页",
+      "url": "/"
+    },
+    {
+      "title": "学习资料",
+      "url": "/materials/"
+    },
+    {
+      "title": "高等数学（下）期末复习资料",
+      "url": null
+    }
+  ],
+  "summary": "覆盖第七章至第十二章知识点与典型例题。",
+  "discipline": "公共基础课",
+  "material_type": "复习提纲",
+  "body": [
+    {
+      "type": "paragraph",
+      "value": {
+        "html": "本资料由学习支持中心整理，按章节归纳<strong>重点公式</strong>与易错点。"
+      }
+    },
+    {
+      "type": "attachment",
+      "value": {
+        "title": "复习提纲（第七至九章）.pdf",
+        "url": "/documents/63/part1.pdf",
+        "file_size": 1048576
+      }
+    }
+  ],
+  "attachments": [
+    {
+      "title": "真题汇编 2024-2026.pdf",
+      "url": "/documents/63/past-papers.pdf",
+      "file_size": 26214400
+    },
+    {
+      "title": "公式速查卡",
+      "url": "/documents/63/formula-card.pdf",
+      "file_size": null
+    }
+  ],
+  "external": null,
+  "tags": ["高等数学"]
+}

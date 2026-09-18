@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "target_domain": "www.zotero.org",
+  "notice_text": "即将离开本校网站，前往外部链接。",
+  "source": { "title": "Zotero 文献管理", "url": "/software/its/zotero/" },
+  "go_href": "/link-confirm/go/?url=https%3A%2F%2Fwww.zotero.org%2F",
+  "problem": ""
+}

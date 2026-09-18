@@ -1,0 +1,12 @@
+---
+// 全站 404 入口（SPEC-001-F08）：Astro SSR 未匹配路由统一渲染本页
+// （Node 适配器以 404 状态伺服；chrome 可用时为 v1 templates/404.html
+// 等价的样式化页，chrome 不可用时降级为 responses.ts 无壳最小 404，
+// 见 components/system/NotFoundPage.astro）。状态码在此显式钉死：
+// 组件分支不感知 HTTP 语义，页面统一负责。
+import NotFoundPage from "../components/system/NotFoundPage.astro";
+
+Astro.response.status = 404;
+---
+
+<NotFoundPage />

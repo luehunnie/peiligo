@@ -1,0 +1,117 @@
+---
+// 内容页详情（SPEC-001-F06）。等价转写自 v1 共享文章详情壳
+// templates/article_detail.html（Phase 8D：五类内容页同壳）＋五个类型模板
+// （notices/notice_page.html、notices/article_page.html、
+// resources/material_page.html、resources/software_tool_page.html、
+// guides/guide_page.html）。模板继承关系改写为单文件按 detail.type 的
+// 分型渲染；E9 预览消费页（pages/preview.astro）起，正文壳上提为
+// components/content/ContentArticle.astro（同模板渲染单一出处）。
+//
+// 路由边界：/{section}/{dept}/{slug}/，section 封闭五冻结值；容器段
+// （dept）与内容 slug 均由契约 getPageDetail 的 404 承载（容器 URL 在
+// Wagtail 侧即恒 404，B02 同口径返回 not_found）。404 边界（路由非法、
+// API not_found）一律渲染样式化 404 页（v1 templates/404.html 等价；
+// chrome 已取得则传入免重复取数，chrome 不可用时组件降级无壳最小 404）。
+//
+// 数据面（契约 4）：chrome 与 getPageDetail 每请求并行直连；详情失败时
+// ≤5min 陈旧回退由 F04 客户端负责。其余失败分两档（F08 统一错误边界）：
+// chrome 失败＝全站取数边界 → v1 500 页等价最小错误响应；chrome 可用而
+// 详情失败且无陈旧版本可回退 → 站内样式化失败态（FailureState，状态 500，
+// 刷新重试＝同 URL 重放）。
+//
+// SEO（v1 base.html）：query 参数态或逐页 noindex 开关（契约 noindex 字段）
+// → robots noindex；query 态 canonical 指向去参基础 URL。
+import ContentArticle from "../../../components/content/ContentArticle.astro";
+import FailureState from "../../../components/system/FailureState.astro";
+import NotFoundPage from "../../../components/system/NotFoundPage.astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { bodyClassForType } from "../../../lib/body-class";
+import { unavailableResponse } from "../../../lib/responses";
+import type {
+  Chrome,
+  PageDetail,
+  SectionSlug,
+} from "../../../schemas/api-schema";
+import { api } from "../../../services/api";
+
+const SECTION_SLUGS: readonly SectionSlug[] = [
+  "chronicle",
+  "events",
+  "materials",
+  "software",
+  "guide",
+];
+
+const { section, dept, slug } = Astro.params;
+const invalidRoute =
+  !dept || !slug || !SECTION_SLUGS.includes(section as SectionSlug);
+const sectionSlug = section as SectionSlug;
+
+let chrome: Chrome | undefined;
+let detail: PageDetail | undefined;
+let detailNotFound = false;
+if (!invalidRoute) {
+  try {
+    const [chromeResult, detailResult] = await Promise.all([
+      api.getChrome(),
+      api.getPageDetail(sectionSlug, dept as string, slug as string),
+    ]);
+    if (chromeResult.ok) chrome = chromeResult.data;
+    if (!detailResult.ok && detailResult.reason === "not-found") {
+      // v1：未知路径（含容器 URL、越界 slug）由 404 页承载（IA §11）
+      detailNotFound = true;
+    } else if (chromeResult.ok && detailResult.ok) {
+      detail = detailResult.data;
+    }
+  } catch {
+    // 客户端抛错（含基址 fail-closed 配置错误）＝部署边界事故，同一错误边界
+  }
+}
+if (invalidRoute || detailNotFound) {
+  // 样式化 404（v1 templates/404.html 等价）；chrome 已取得则传入免重复取数
+  Astro.response.status = 404;
+}
+if (!chrome && !invalidRoute && !detailNotFound) {
+  // chrome 不可用＝全站取数边界（页头/页脚无从渲染）：保持 v1 最小 500 页
+  return unavailableResponse();
+}
+// 至此或有 chrome（详情失败且无陈旧版本可回退）或走 404 分支
+const contentFailed = !detail;
+if (contentFailed && !invalidRoute && !detailNotFound) {
+  Astro.response.status = 500;
+}
+// 刷新重试＝原样重放本请求（恢复后下一请求即 live 内容，契约 4/5）
+const retryHref = Astro.url.pathname + Astro.url.search;
+
+const hasQuery = Astro.url.searchParams.toString() !== "";
+const canonical = hasQuery ? Astro.url.origin + Astro.url.pathname : undefined;
+---
+
+{invalidRoute || detailNotFound ? (
+  // 404 边界（路由非法 / API not_found）：样式化 404（chrome 已取得则
+  // 传入免重复取数；chrome 缺失时组件内部自取并降级无壳最小 404）
+  <NotFoundPage chrome={chrome} />
+) : (
+  /* 非法路由/not-found 之外 chrome 必已定义（chrome 缺失已在 frontmatter
+     前置返回最小 500）；chrome as Chrome 仅为收窄模板分支类型 */
+  <BaseLayout
+    title={detail ? detail.title : "内容暂时无法加载"}
+    chrome={chrome as Chrome}
+    noindex={hasQuery || detail?.noindex}
+    canonical={canonical}
+    bodyClass={detail ? bodyClassForType(detail.type) : undefined}
+  >
+    {detail ? (
+      // 正文壳（含 expired 横幅/面包屑/五型分型渲染）＝ContentArticle
+      // 单一出处（与 E9 预览消费页同模板）
+      <ContentArticle detail={detail} />
+    ) : (
+      // 详情失败且无陈旧版本可回退（F08 统一失败态；HTTP 500 已在前置区设定）
+      <FailureState
+        title="内容暂时无法加载"
+        note="内容服务出现临时故障，请稍后重试。"
+        retryHref={retryHref}
+      />
+    )}
+  </BaseLayout>
+)}

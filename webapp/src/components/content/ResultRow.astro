@@ -1,0 +1,84 @@
+---
+// 列表/归档共享结果行（SPEC-001-F06）。等价转写自 v1
+// templates/includes/list_row.html（final-reference .r-row：行式，非卡片）：
+// 板块徽标 tone 来自条目 section_slug（零数据字段，小字一律 deep 变体）；
+// 摘要回落链（summary → license_note → location）由 B02 预聚合为
+// list_summary（api/serializers.py _content_summary），90 字截断按 v1
+// truncatechars 口径在此执行；高亮与 show_section 仅 /search/ 传入（F07）。
+// 样式在全局 content-shared.css（.tag/.tone-*/.badge-expired）与 content-listing.css（.r-row 行流）。
+import { highlightFragments } from "../../lib/highlight";
+import { truncatechars } from "../../lib/format";
+import {
+  eventStatusLabel,
+  sectionShort,
+  sectionTone,
+} from "../../lib/sections";
+import { publishedDateParts } from "../../lib/dates";
+import type { ListEntry } from "../../schemas/api-schema";
+
+interface Props {
+  /** 列表行数据（getSectionList / getSectionArchive / getSearch 条目） */
+  entry: ListEntry;
+  /** 仅 /search/ 传入（F07）：高亮关键词＝契约 q strip 回显；空/缺省
+   *  不高亮（等价 v1 {% if highlight_q %} 守卫）。切片经 lib/highlight，
+   *  此处 Astro 文本插值逐字转义，仅自产 <mark>。 */
+  highlightQ?: string;
+  /** 仅 /search/ 传入（v1 show_section=1）：跨板块结果在 r-meta 追加
+   *  栏目归属段。 */
+  showSection?: boolean;
+}
+
+const { entry, highlightQ = "", showSection = false } = Astro.props;
+const tone = entry.section_slug ? sectionTone(entry.section_slug) : "";
+const date = publishedDateParts(entry.published_at).datetime;
+
+// 高亮渲染：先 90 字截断后切片（v1 truncatechars|highlight 管线顺序）。
+// 片段是惰性纯文本数据，插值输出由 Astro 逐字转义；缺省守卫等价 v1
+// {% if highlight_q %}（不高亮时直接输出原文本，零切片开销）。
+const summaryText = entry.list_summary
+  ? truncatechars(entry.list_summary, 90)
+  : "";
+const titleFragments = highlightQ
+  ? highlightFragments(entry.title, highlightQ)
+  : null;
+const summaryFragments =
+  highlightQ && summaryText
+    ? highlightFragments(summaryText, highlightQ)
+    : null;
+
+// v1 r-meta 段序：部门 · 发布日期 [· 活动状态 [· 栏目]]；缺省段整段
+// 省略（v1 以 {% if %} 守卫活动状态与 show_section 段；部门/日期在真实
+// 数据恒有值，null 不渲染占位）。
+const metaParts = [
+  entry.department_name,
+  date,
+  entry.event_status ? eventStatusLabel(entry.event_status) : "",
+  showSection && entry.section_title ? entry.section_title : "",
+].filter(Boolean);
+---
+
+<a class="r-row" href={entry.url}>
+  <span class:list={["tag", tone && `tone-${tone}`]}>
+    {entry.section_slug
+      ? sectionShort(entry.section_slug)
+      : entry.section_title}
+  </span>
+  <div class="r-main">
+    <h2>
+      {titleFragments
+        ? titleFragments.map((f) => (f.hit ? <mark>{f.text}</mark> : f.text))
+        : entry.title}
+      {entry.expired && <span class="badge-expired">已过期</span>}
+    </h2>
+    {summaryText && (
+      <p>
+        {summaryFragments
+          ? summaryFragments.map((f) =>
+              f.hit ? <mark>{f.text}</mark> : f.text,
+            )
+          : summaryText}
+      </p>
+    )}
+    <p class="r-meta">{metaParts.join(" · ")}</p>
+  </div>
+</a>

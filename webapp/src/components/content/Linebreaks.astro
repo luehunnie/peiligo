@@ -1,0 +1,16 @@
+---
+// v1 linebreaksbr 过滤器等价（SPEC-001-F06）：换行 → <br>（指南页联系
+// 方式/开放时间/补充说明三字段；纯文本，无其他 HTML 语义）。frontmatter
+// 是纯 TS 无 JSX，故以组件承载元素输出。
+interface Props {
+  text: string;
+}
+const { text } = Astro.props;
+---
+
+{text.split("\n").map((line, index, all) => (
+  <Fragment>
+    {line}
+    {index < all.length - 1 && <br />}
+  </Fragment>
+))}

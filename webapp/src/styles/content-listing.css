@@ -1,0 +1,260 @@
+/*
+ * 列表/归档页族行流语言（SPEC-001-F06，自 content.css 8dbc67d 拆出）
+ *
+ * 逐字转写自 v1 `static/css/peiligo.css`（48fd5d6）中通栏行式结果流：
+ * 结果行（.results/.r-row，列表与归档共享，final-reference .r-row 非
+ * 卡片口径）、分页（.pager，仅列表页消费——归档不分页）、空态
+ * （.empty-state，极简口径）与板块直达链接（.section-links，空态引导，
+ * v1 与 404 页共用但 404 不引本文件）。唯一结构性改写与 F02 base.css
+ * 相同：v1 max-width 桌面优先断点反向为移动优先 min-width（基础值 =
+ * v1 最窄档，601px 起逐属性恢复宽档值）。
+ *
+ * 消费方：/[section]/、/[section]/archive/ 与 /search/（F07 起搜索页
+ * 共行流语言；先引 content-shared.css 再引本文件）。区块内规则原值原序
+ * 随迁（F06-P1），v1 单一来源对照关系不变；列表页头与归档页头仍 scoped
+ * 于所属页面，大搜索框 .big-search 为列表/搜索两页共享故随 F07 迁入。
+ */
+
+/* ===== 结果行（final-reference .r-row：通栏行式，非卡片；列表/归档共享） ===== */
+
+.results {
+  max-width: 860px;
+  margin: 18px auto 0;
+}
+
+/* 移动优先：基础值 = v1 @media (max-width: 600px) 档 */
+.r-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+@media (min-width: 601px) {
+  .r-row {
+    flex-direction: row;
+    gap: 14px;
+    padding: 17px 4px;
+  }
+}
+
+.r-row:hover {
+  text-decoration: none;
+}
+
+.r-row:hover h2 {
+  color: var(--teal-deep);
+}
+
+.r-main {
+  min-width: 0;
+}
+
+.r-main h2 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.r-main p {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.r-meta {
+  margin: 5px 0 0;
+  font-size: 12px;
+  /* F09 偏差（AA 文本 ≥4.5:1）：v1 一次性色 #97a39d 对白底 2.61:1，
+     改用既有中性弱文字 token --ink-2 → 5.07:1（与首页 .news-meta 的
+     G3 同源修正一致；层级仍低于正文摘要 13.5px --ink-2） */
+  color: var(--ink-2);
+}
+
+/* ===== 分页（final-reference .pager） ===== */
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 860px;
+  margin: 26px auto 0;
+}
+
+.pg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+a.pg:hover {
+  border-color: var(--teal);
+  color: var(--teal-deep);
+  text-decoration: none;
+}
+
+.pg.on {
+  background: var(--teal-deep);
+  border-color: var(--teal-deep);
+  color: #fff;
+}
+
+.pg-gap {
+  color: var(--ink-2);
+  padding: 0 2px;
+}
+
+.pg.next-pg {
+  padding: 0 18px;
+}
+
+/* ===== 空态（final-reference 极简口径：居中短文案，不做重卡片） ===== */
+
+.empty-state {
+  max-width: 640px;
+  margin: 40px auto 0;
+  padding: 36px 20px;
+  text-align: center;
+}
+
+.empty-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.empty-hint {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.empty-hint a {
+  font-weight: 600;
+}
+
+/* 板块直达链接（空态引导；v1 与 404 页共用） */
+
+.section-links {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-links li a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 4px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.section-links li a:hover {
+  border-color: var(--teal);
+  color: var(--teal-deep);
+  text-decoration: none;
+}
+
+/* ===== 大搜索框（v1「列表与搜索共享语言」；列表页与搜索页共用；
+   页头小搜索属 F03 SiteHeader） ===== */
+
+.big-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 720px;
+  margin: 18px auto 0;
+  padding: 6px 6px 6px 14px;
+  background: var(--teal-soft);
+  border: 2px solid var(--teal);
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgb(47 122 110 / 0.1);
+  transition: background var(--motion-fast) ease;
+}
+
+/* F09（WCAG 2.2 AA 2.4.7 焦点可见）：v1 恒态描边无聚焦态变化，键盘聚焦
+   搜索框无可见指示。复用页头小搜索的既定聚焦语言（teal-soft → 白底，
+   2px teal 描边对白底 5.1:1 承担指示）；非聚焦像素逐像素不变。 */
+.big-search:focus-within {
+  background: var(--bg);
+}
+
+@media (min-width: 601px) {
+  .big-search {
+    padding-left: 18px;
+  }
+}
+
+.big-search svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--teal-deep);
+}
+
+.big-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15.5px;
+  color: var(--ink);
+}
+
+.big-search input:focus {
+  outline: none;
+}
+
+.big-search input::placeholder {
+  /* F09 偏差（AA 文本 ≥4.5:1）：v1 --ink-2 对 teal-soft 底 4.41:1（临界
+     不足），改用同族深字 token --teal-deep → 6.94:1（页头小搜索的 G3
+     同源修正一致，弱化层级保留，无新增色值） */
+  color: var(--teal-deep);
+}
+
+.big-search button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--teal-deep);
+  color: #fff;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+@media (min-width: 601px) {
+  .big-search button {
+    padding: 0 26px;
+  }
+}
+
+.big-search button:hover {
+  background: var(--teal);
+}

@@ -35,7 +35,11 @@ services:
       DJANGO_SETTINGS_MODULE: peiligo.settings.production
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SECRET_KEY: ${SECRET_KEY}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      # SPEC-001：内网服务名 web 追加进 ALLOWED_HOSTS——frontend 容器经
+      # Compose 内网直调 http://web:8000/api/v1（Host: web:8000），Django
+      # 按 Host 校验必须放行内部名（本地集成实测：缺它即 DisallowedHost
+      # 400，Astro 走样式化错误页）。公开域仍以 .env 的 ALLOWED_HOSTS 为准。
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?ALLOWED_HOSTS is required},web
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
       # 终审 L-1：后台通知邮件基准地址（production env_required；compose
       # 侧 `:?` 同口径快速失败，部署 .env 与 DOMAIN 同源填写）。
@@ -78,6 +82,9 @@ services:
       dockerfile: deploy/Dockerfile
     # F-09（独立审查 P2 修复）：间隔经 SCHED_INTERVAL_SECONDS 环境统一
     # 配置（命令缺省同源读取），不再硬编码 --interval 60 形成死旋钮。
+    # ADR-0008 Gate 5 部署验收条件：`SCHED_INTERVAL_SECONDS ≤ 30` 且本容器
+    # 运行中——维护态缺省即 30，预约发布 ≤30s 可见契约开箱满足（本地集成
+    # 实测见 PRODUCTION_RUNBOOK §12；调低于 30 合法，调高即切换 blocker）。
     command: ["python", "manage.py", "publish_scheduler"]
     environment:
       DJANGO_SETTINGS_MODULE: peiligo.settings.production
@@ -85,10 +92,28 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       MEDIA_ROOT: /data/media
-      SCHED_INTERVAL_SECONDS: ${SCHED_INTERVAL_SECONDS:-60}
+      SCHED_INTERVAL_SECONDS: ${SCHED_INTERVAL_SECONDS:-30}
     depends_on:
       web:
         condition: service_healthy
+    restart: unless-stopped
+
+  # SPEC-001：新前端应用容器（Astro SSR，生产镜像本体构建自 webapp/）。
+  # 无状态：零卷、零宿主端口——仅 Compose 内网供 Caddy 反代与 SSR 取数。
+  # 取数经内网直调 web 容器（same-origin 行为由 Caddy 统一呈现）。
+  frontend:
+    build:
+      context: ../webapp
+      dockerfile: Dockerfile
+    environment:
+      # 内网基址 fail-closed（webapp/src/services/api.ts）：生产必须显式
+      # 注入，未设置/非法即取数抛错，绝不静默回退。
+      PEILIGO_API_BASE_URL: http://web:8000/api/v1
+    depends_on:
+      web:
+        condition: service_healthy
+    # 健康语义冻结于 webapp/src/pages/healthz.ts：进程活着即健康（镜像内置
+    # HEALTHCHECK；上游 API 故障不翻转，编排层不得据此重启）。
     restart: unless-stopped
 
   caddy:
@@ -98,6 +123,13 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN}
+      # SPEC-001：前端切换/回滚唯一开关（Caddyfile 路由表默认上游）。
+      # 缺省 web:8000＝v1 整站回根（部署后公开面零变化）；cutover 时置
+      # frontend:4321。翻转仅重建本容器（秒级），web/frontend/db/数据面
+      # 零接触。缺省值与 Caddyfile 的 {$PEILIGO_DEFAULT_UPSTREAM:web:8000}
+      # 回退值 twins——改一处须同步另一处（compose 注入空值会让 Caddy
+      # 回退失效）。
+      PEILIGO_DEFAULT_UPSTREAM: ${PEILIGO_DEFAULT_UPSTREAM:-web:8000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -105,7 +137,10 @@ services:
       - static:/srv/static:ro
       - media:/srv/media:ro
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

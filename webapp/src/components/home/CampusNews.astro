@@ -1,0 +1,289 @@
+---
+// 首页校园快讯（SPEC-001-F05）。等价转写自 v1
+// home/templates/home/home_page.html「校园快讯」区块与 peiligo.css
+// 「首页」news 样式：移动档横向 rail（右侧露出下一张一角），761px 起三等
+// 分网格（低数据构图：1 条大卡 / 2 条两等分，:has() 缺 support 时自然回落
+// 三等分，仍为合法构图）。板块徽标 tone 伴随（行内 .tag，soft 底 + deep
+// 字）；日期 Asia/Shanghai MM-DD（lib/dates）、活动三态中文标签
+// （lib/sections，v1 模板口径）。无封面条目由 SectionPoster 板块海报补位。
+import { publishedDateParts } from "../../lib/dates";
+import {
+  eventStatusLabel,
+  sectionShort,
+  sectionTone,
+} from "../../lib/sections";
+import type { Home } from "../../schemas/api-schema";
+import SectionPoster from "./SectionPoster.astro";
+
+interface Props {
+  /** 快讯条目（home.campus_news；调用方仅在非空时渲染本组件） */
+  items: Home["campus_news"];
+}
+
+const { items } = Astro.props;
+---
+
+<section class="news" aria-labelledby="news-title">
+  <div class="sec-head">
+    <h2 id="news-title">校园快讯</h2>
+  </div>
+  <div class="news-rail">
+    {items.map((item) => {
+      const date = publishedDateParts(item.published_at);
+      return (
+        <a
+          class:list={[
+            "news-card",
+            item.section_slug && `tone-${sectionTone(item.section_slug)}`,
+          ]}
+          href={item.href}
+        >
+          <div class="news-art" aria-hidden="true">
+            {item.cover ? (
+              <img
+                class="news-img"
+                src={item.cover.src}
+                width={item.cover.width}
+                height={item.cover.height}
+                alt={item.cover.alt}
+              />
+            ) : (
+              <SectionPoster slug={item.section_slug} />
+            )}
+          </div>
+          <div class="news-body">
+            {item.section_slug && (
+              <span
+                class:list={["tag", `tone-${sectionTone(item.section_slug)}`]}
+              >
+                {sectionShort(item.section_slug)}
+              </span>
+            )}
+            <h3>{item.title}</h3>
+            {item.summary && <p>{item.summary}</p>}
+            <span class="news-meta">
+              {item.department && `${item.department} · `}
+              <time datetime={date.datetime}>{date.display}</time>
+              {item.event_status && ` · ${eventStatusLabel(item.event_status)}`}
+            </span>
+          </div>
+        </a>
+      );
+    })}
+  </div>
+</section>
+
+<style>
+  /* v1 peiligo.css「首页」news 段逐字转写；断点反向为移动优先（tokens.css
+     断点表）：基础值 = v1 @media (max-width: 760px) 档，761px 起恢复桌面
+     网格。海报 SVG 由子组件 SectionPoster 渲染（无本组件作用域标记），
+     相关选择器经 :global() 命中。 */
+
+  /* 行内栏目徽标：soft 底 + deep 字（小字对比达标），颜色伴随文字标签 */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    align-self: flex-start;
+    min-height: 24px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .tone-jishi {
+    background: var(--coral-soft);
+    color: var(--coral-deep);
+  }
+
+  .tone-huodong {
+    background: var(--amber-soft);
+    color: var(--amber-deep);
+  }
+
+  .tone-ziliao {
+    background: var(--blue-soft);
+    color: var(--blue-deep);
+  }
+
+  .tone-gongju {
+    background: var(--violet-soft);
+    color: var(--violet-deep);
+  }
+
+  .tone-zhinan {
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+  }
+
+  /* --- 校园快讯（移动档：横向 rail，右侧露出下一张的一角，仅该轨滚动） --- */
+
+  .news {
+    padding-top: 40px;
+  }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .sec-head h2 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+
+  .news-rail {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -20px;
+    padding-inline: 20px;
+    margin-top: 18px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .news-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .news-card {
+    flex: none;
+    width: 82%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .news-card:only-child {
+    width: 100%;
+  }
+
+  .news-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 8px 18px rgb(25 31 28 / 0.07),
+      0 22px 44px rgb(25 31 28 / 0.1);
+    text-decoration: none;
+  }
+
+  .news-art {
+    aspect-ratio: 400 / 260;
+    overflow: hidden;
+    background: var(--teal-soft);
+  }
+
+  .news-art :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.25s ease;
+  }
+
+  .news-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.25s ease;
+  }
+
+  .news-card:hover .news-art :global(svg),
+  .news-card:hover .news-img {
+    transform: scale(1.02);
+  }
+
+  .news-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 18px 18px;
+  }
+
+  .news-body h3 {
+    margin: 10px 0 0;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.4;
+    transition: color 0.18s ease;
+  }
+
+  .news-card:hover .news-body h3 {
+    color: var(--teal-deep);
+  }
+
+  .news-body p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+
+  .news-meta {
+    margin-top: 12px;
+    font-size: 12.5px;
+    /* G3 偏差（AA 文本 ≥4.5:1）：v1 一次性色 #97a39d 对白底 2.61:1，
+       改用既有中性弱文字 token --ink-2 → 5.07:1（层级仍低于正文摘要） */
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ===== 平板/桌面档（v1 max-width 断点反向：761） ===== */
+
+  @media (min-width: 761px) {
+    /* 快讯：三等分网格；低数据构图（1 条大卡 / 2 条两等分，无 :has 支持
+       时自然回落三等分网格，仍为合法构图） */
+    .news {
+      padding-top: 52px;
+    }
+
+    .news-rail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      overflow-x: visible;
+      margin-inline: 0;
+      padding-inline: 0;
+      scroll-snap-type: none;
+    }
+
+    .news-card {
+      width: auto;
+      scroll-snap-align: none;
+    }
+
+    .news-card:only-child {
+      width: auto;
+    }
+
+    .news-body h3 {
+      font-size: 19.5px;
+    }
+
+    .news-rail:has(.news-card:only-child) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .news-rail:has(.news-card:only-child) .news-card {
+      max-width: 720px;
+    }
+
+    .news-rail:has(.news-card:nth-child(2):last-child) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

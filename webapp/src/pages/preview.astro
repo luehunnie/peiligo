@@ -1,0 +1,89 @@
+---
+// E9 预览消费页（SPEC-001 契约 openapi /preview 描述＋ADR-0008 §3.1 第
+// 3→5 步的 Astro 侧承接；消费端义务的唯一页面）。请求流：
+//   ①编辑在 /admin/ 点「新前端预览」→ ②Django 铸造 ≤60s 签名票据并 302
+//   到本页 /preview/?token=… → ③本页（Astro SSR）将 token 原样透传内网
+//   /api/v1/preview（服务端经 PEILIGO_API_BASE_URL 直连 Django，浏览器零
+//   参与、零 Cookie 转发）→ ④Django 校验票据/会话/权限/FormState 后按
+//   E6 同一序列化层回 preview:true 草稿 → ⑤本页以与正式详情页同一模板
+//   （ContentArticle＋BaseLayout＋body class）渲染草稿。
+//
+// 安全边界（契约明文义务，逐项落点）：
+//   - token 原样透传：不解析、不校验、不缓存、不写日志或错误对象
+//     （服务层 api.ts 同约；本页不 console 任何含 token 的值）；
+//   - 预览权威全在 Django 侧：本页零权限判定、零草稿回退（getPreview
+//     直连不进 ≤5min 陈旧缓存），失败闭合；
+//   - 失败一律同一样式化 404（NotFoundPage）：缺票/坏票/过期票据/复用
+//     （会话注销后）/越权/上游 404·5xx/契约违约/网络失败——不区分原因
+//     （与兑换端点同口径防预言机），无任何草稿数据外泄；
+//   - 响应头：Cache-Control: no-store ＋ X-Robots-Tag: noindex ＋
+//     Referrer-Policy: no-referrer（本页先置——middleware 为 setdefault
+//     语义不覆盖既有值）；CSP 等其余安全头由全站中间件照章盖章（同
+//     全站纪律）；HTML 面再以 robots meta noindex 双保险；
+//   - 不入 sitemap/搜索/导航：本页不出现在任何列表（sitemap 来自 API
+//     已发布项，导航来自 chrome 五板块），仅票据直达可达。
+import ContentArticle from "../components/content/ContentArticle.astro";
+import NotFoundPage from "../components/system/NotFoundPage.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { bodyClassForType } from "../lib/body-class";
+import type { Chrome, PreviewDetail } from "../schemas/api-schema";
+import { api } from "../services/api";
+
+// 第 3 步票据面：query 单跳，原样取用（不回显、不记录）。
+const token = Astro.url.searchParams.get("token") ?? "";
+
+// 响应义务头先置（middleware setdefault 不覆盖既有值）。
+Astro.response.headers.set("cache-control", "no-store");
+Astro.response.headers.set("x-robots-tag", "noindex");
+Astro.response.headers.set("referrer-policy", "no-referrer");
+
+let chrome: Chrome | undefined;
+let detail: PreviewDetail | undefined;
+if (token) {
+  try {
+    // chrome 与草稿并行直连（chrome 缺失＝无壳 404 降级，同全站口径）；
+    // 任一失败（含 schema-violation/网络）＝detail 不落地，走 404 分支。
+    const [chromeResult, previewResult] = await Promise.all([
+      api.getChrome(),
+      api.getPreview(token),
+    ]);
+    if (chromeResult.ok) chrome = chromeResult.data;
+    if (chromeResult.ok && previewResult.ok) detail = previewResult.data;
+  } catch {
+    // 基址 fail-closed 等部署边界事故：同一样式化 404，不泄露环境细节
+  }
+}
+if (!detail) {
+  Astro.response.status = 404;
+}
+---
+
+{detail && chrome ? (
+  // 同模板渲染：与正式详情页同一壳（BaseLayout body class 按五型冻结值）
+  // ＋同一正文（ContentArticle，草稿字段如实呈现，可见性谓词不适用）。
+  // 恒 noindex（meta robots＋X-Robots-Tag 双面），零 canonical。
+  <BaseLayout
+    title={detail.title}
+    chrome={chrome}
+    noindex={true}
+    bodyClass={bodyClassForType(detail.type)}
+  >
+    <ContentArticle detail={detail} />
+    {/* 页脚隐私覆盖（同 link-confirm 页先例）：缺省页脚 mailto body 会带
+        当前页绝对地址——预览 URL 查询串即票据本体，不得自动进入反馈邮件
+        或页面任何外发通道；覆盖后 body 只带站内路径 /preview/。 */}
+    <SiteFooter
+      slot="footer"
+      siteName={chrome.site_name}
+      feedbackEmail={chrome.feedback_email}
+      pageTitle="页面反馈"
+      pageUrl="/preview/"
+    />
+  </BaseLayout>
+) : (
+  // 失败闭合：样式化 404（chrome 已取得则传入免重复取数；chrome 缺失时
+  // 组件内部自取并降级无壳最小 404）——无效/过期/复用/越权票据同此面。
+  // footerPageUrl 隐私覆盖：票据不得经缺省页脚 mailto 进入页面外发内容。
+  <NotFoundPage chrome={chrome} footerPageUrl="/preview/" />
+)}

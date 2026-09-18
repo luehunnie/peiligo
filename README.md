@@ -69,11 +69,12 @@
 | Django | 5.2 LTS（锁定 5.2.17） |
 | Wagtail | 7.4 LTS（锁定 7.4.3，2026-09 安全升级） |
 | 数据库 | PostgreSQL 18 |
-| 前端 | Django Templates 服务端渲染（SSR），零客户端 JS 框架 |
-| 应用服务器 | Gunicorn |
-| 部署 | Docker Compose + Caddy（自动 HTTPS） |
-| 测试 / Lint | pytest + Ruff |
-| CI | GitHub Actions |
+| 前端（v1，回滚保留） | Django Templates 服务端渲染（SSR），零客户端 JS 框架 |
+| 前端（v2，SPEC-001 集成） | Astro 7 SSR（`webapp/`，请求时直连只读 Headless API，零客户端框架 JS） |
+| 应用服务器 | Gunicorn（web）＋ Node standalone（frontend） |
+| 部署 | Docker Compose（web + frontend 双应用容器）+ Caddy（自动 HTTPS，同源路由与切换开关） |
+| 测试 / Lint | pytest + Ruff；vitest + astro check + Playwright（webapp） |
+| CI | GitHub Actions（后端 + 前端双质量门） |
 
 > 架构历史：项目早期曾采用 Vue + FastAPI 方案，后经架构裁决
 > （ADR-0001～0003）改为 Django + Wagtail 服务端渲染整体重建，
@@ -90,6 +91,13 @@
 - **发布安全审查（Phase 9 Release Security Gate）：PASS**（2026-09-12）。
   生产配置安全加固合并入 main：公开页面 CSP、HSTS、Secure Cookie、
   登录防爆破（django-axes）、Wagtail 7.4.2 → 7.4.3 安全升级。
+- **新前端集成（SPEC-001）：已集成**（2026-09-18）。经验收的 Astro
+  前端（原 peiligo-frontend-rebuild 仓库 PR #40 验收集）并入本仓库：
+  `webapp/`（前端应用）＋ `api/`（只读 Headless API，零迁移）＋ 生产
+  Compose 双应用容器与同源路由。公开根默认仍由 v1（Wagtail）服务；
+  切换到新前端＝唯一开关 `PEILIGO_DEFAULT_UPSTREAM`（见
+  [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md) §12，切换/回滚均只
+  重建入口容器，秒级）。v1 模板/静态完整保留为回滚工件。
 - **服务器 Production 部署：尚未执行**。正式域名 / DNS / TLS、生产
   密钥、备份独立存储、性能与无障碍验证、生产告警接线等属于部署
   阶段工作，见下方「部署」。
@@ -122,7 +130,7 @@ python manage.py runserver
 为管理后台。`.env.example` 中的 `DATABASE_URL` / `SECRET_KEY` /
 `TEST_DATABASE_URL` 等均为哑值样例，请替换为本机真实开发值。
 
-更多本地运行方式（含 Docker Compose 本地实跑）见
+更多本地运行方式（含 Docker Compose 本地实跑、新前端 webapp/ 开发）见
 [docs/guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md](docs/guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md)。
 
 ## 部署
@@ -158,7 +166,7 @@ DNS / TLS 配置、生产密钥与 `.env` 准备、`SECONDARY_BACKUP_DIR`
 - [docs/guides/SERVER_DEPLOYMENT_GUIDE.md](docs/guides/SERVER_DEPLOYMENT_GUIDE.md) — 服务器部署指南
 - [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md) —
   生产运行手册（首次部署、备份、监控、恢复演练）
-- [docs/adr/](docs/adr/README.md) — 架构决策记录（ADR-0001～0007）
+- [docs/adr/](docs/adr/README.md) — 架构决策记录（ADR-0001～0009；0008/0009 随 SPEC-001 集成收入）
 
 历史审查与签收记录（冻结，不再更新）：`docs/G2_FREEZE_EVIDENCE.md`、
 `docs/POST_G2_IMPLEMENTATION_GAP_AUDIT.md`、`docs/reviews/`。

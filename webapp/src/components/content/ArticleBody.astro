@@ -1,0 +1,96 @@
+---
+// 正文块渲染（SPEC-001-F06）。等价转写自 v1 templates/blocks/*.html 与
+// Wagtail TableBlock 缺省渲染（CONTENT_MODEL §11.1 六块只读投影）：
+//   - heading：仅 h2/h3（页面标题是唯一 h1）
+//   - paragraph：Django 侧渲染的安全 HTML 片段，整片插入不二次加工
+//     （set:html；契约 §2.3：转义责任已在服务端管线完成）
+//   - image / attachment / external_link：v1 blocks 同款标记
+//   - table：first_row_is_table_header 时首行进 thead（Wagtail 缺省语义）
+// 本组件只产出块序列；.article-body 容器由页面按 v1 各类型模板提供
+// （通知/文章/资料＝div.article-body，软件工具＝section.article-body[aria-label]）。
+import ExternalLinkJump from "./ExternalLinkJump.astro";
+import { filesizeformat } from "../../lib/format";
+import type { Block } from "../../schemas/api-schema";
+
+interface Props {
+  /** 正文块序列（PageDetail.body） */
+  blocks: Block[];
+}
+
+const { blocks } = Astro.props;
+---
+
+{blocks.map((block) => {
+  if (block.type === "heading") {
+    return block.value.level === "h2" ? (
+      <h2>{block.value.text}</h2>
+    ) : (
+      <h3>{block.value.text}</h3>
+    );
+  }
+  if (block.type === "paragraph") {
+    return <Fragment set:html={block.value.html} />;
+  }
+  if (block.type === "image") {
+    const image = block.value;
+    return (
+      <figure class="block-image">
+        <img
+          src={image.src}
+          width={image.width}
+          height={image.height}
+          alt={image.alt}
+          loading="lazy"
+        />
+      </figure>
+    );
+  }
+  if (block.type === "attachment") {
+    const doc = block.value;
+    return (
+      <p class="block-attachment">
+        <a href={doc.url}>{doc.title}</a>
+        {doc.file_size !== null && doc.file_size > 0 && (
+          <span class="attachment-meta">{filesizeformat(doc.file_size)}</span>
+        )}
+      </p>
+    );
+  }
+  if (block.type === "table") {
+    const { data, first_row_is_table_header } = block.value;
+    const headerRow = first_row_is_table_header ? data[0] : undefined;
+    const bodyRows = first_row_is_table_header ? data.slice(1) : data;
+    return (
+      <table>
+        {headerRow && (
+          <thead>
+            <tr>
+              {headerRow.map((cell) => (
+                <th scope="col">{cell}</th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          {bodyRows.map((row) => (
+            <tr>
+              {row.map((cell) => (
+                <td>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  // external_link：final-reference .file 资源行（标题＋URL 明文＋外跳图标）
+  const link = block.value;
+  return (
+    <ExternalLinkJump
+      url={link.url}
+      confirmHref={link.confirm_href}
+      fileTitle={link.text}
+      fileNote
+    />
+  );
+})}

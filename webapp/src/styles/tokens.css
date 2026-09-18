@@ -1,0 +1,82 @@
+/*
+ * 设计 token（SPEC-001-F02）
+ *
+ * 唯一权威来源：v1 前端 `static/css/peiligo.css`（peiligo/main = 48fd5d6）
+ * 的 :root 令牌，逐值照抄、名称不变；派生刻度（圆角/动效/断点）按 v1
+ * 实际用法与 final-reference/design-system.md 冻结口径整理。
+ * 对照表：docs/design-tokens.md；机器校验：src/tests/unit/tokens.test.ts。
+ *
+ * 规则（契约 3 / 契约 6）：
+ *   - 不在本文件（及任何样式）另造色值；新增颜色 = 视觉等价破坏，STOP。
+ *   - 无网络字体/第三方 origin；字栈为系统字（--font 逐字保留）。
+ *   - 断点保持 v1 三档结构阈值，反向为移动优先 min-width：
+ *       v1 @media (max-width: 600px) → @media (min-width: 601px)
+ *       v1 @media (max-width: 760px) → @media (min-width: 761px)
+ *       v1 @media (max-width: 980px) → @media (min-width: 981px)
+ *     验收宽度映射：390（核心，移动档）/ 768（次要，平板档）/ 1440（桌面）。
+ */
+
+:root {
+  /* ===== 颜色（v1 :root 原值，逐项照抄） ===== */
+  /* 品牌青（壳层锚点）：图标实心块 / 链接 / focus */
+  --teal: #2f7a6e;
+  --teal-deep: #1d5a50;
+  --teal-soft: #e8f1ee;
+  /* 唯一暖 CTA 色（hero 按钮/chip）；不做小字文字色 */
+  --yellow: #ffc940;
+  /* 五栏目 accent：纪事=coral 活动=amber 资料=blue 工具=violet 指南=teal。
+     亮 accent 禁止作小字文字色，小字一律用 *-deep 深字变体 */
+  --coral: #e8590c;
+  --amber: #e8960c;
+  --blue: #3e7bc2;
+  --violet: #7a5fc9;
+  /* 栏目浅调（tag 底 / 浅面板 / tile 底） */
+  --coral-soft: #fdeee4;
+  --amber-soft: #fdf3e0;
+  --blue-soft: #e9f0fa;
+  --violet-soft: #efecfa;
+  /* 中性 */
+  --ink: #191f1c;
+  --ink-2: #66716b;
+  --line: #e7eae8;
+  --bg: #ffffff;
+  /* 无障碍深字变体（亮 accent 的小字替代文字色，均 ≥4.5:1） */
+  --coral-deep: #a63a02;
+  --amber-deep: #8a5803;
+  --blue-deep: #2c5e94;
+  --violet-deep: #5b3fa0;
+
+  /* ===== 字体（v1 逐字；系统字栈，无网络字体） ===== */
+  --font:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+
+  /* ===== 版心 ===== */
+  /* v1 .wrap：max-width 1160px；左右内距 20px（见 base.css，非 final-reference 的 24px） */
+  --wrap: 1160px;
+
+  /* ===== 圆角刻度（v1 冻结口径：24 / 18 / 12–14 / 13 / 999） =====
+     「12–14px」档的两个锚点值均设 token（v1 中 12px 用于分页/代码块/
+     资源图标块等，14px 用于小卡/资源行）。刻度外的 v1 一次性圆角
+     （2/10/16px）不设 token，由后续组件票在使用处按 v1 逐字转写。 */
+  --radius-hero: 24px; /* hero 大板 */
+  --radius-card: 18px; /* 大卡（快讯/资源卡/封面） */
+  --radius-panel: 14px; /* 小卡/信息卡/资源行 */
+  --radius-small: 12px; /* 分页块/代码块/资源图标块/错误条 */
+  --radius-icon: 13px; /* 42px 栏目图标方块 */
+  --radius-pill: 999px; /* 按钮/chip/搜索胶囊 */
+
+  /* ===== 动效刻度（v1 实际使用值：0.15 / 0.18 / 0.2 / 0.25s，全部 ease；
+     design-system.md 纪律：150–250ms，hover 上浮 2–4px，禁长动效） ===== */
+  --motion-fast: 0.15s; /* skip-link、页头搜索 */
+  --motion-base: 0.18s; /* 默认过渡（链接色/描边/上浮） */
+  --motion-card: 0.2s; /* 卡片 hover（transform/阴影） */
+  --motion-media: 0.25s; /* 媒体缩放（图/插画 1.02） */
+
+  /* ===== 断点常量（声明性文档；media query 无法使用变量，
+     使用处按上表写 min-width 字面值，与本表一致） ===== */
+  --bp-sm: 601px; /* v1 max-width: 600px 反转（小手机档结束） */
+  --bp-md: 761px; /* v1 max-width: 760px 反转（移动档结束） */
+  --bp-lg: 981px; /* v1 max-width: 980px 反转（平板档结束） */
+}

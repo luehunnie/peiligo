@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.github
+.astro
+test-results
+playwright-report
+.playwright-cli
+.env
+.env.production

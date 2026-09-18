@@ -1,0 +1,131 @@
+---
+// 全站页脚（SPEC-001-F03）。逐字转写自 v1 templates/base.html + static/css/
+// peiligo.css「共享外壳·页脚」（peiligo/main = 48fd5d6，final-reference 定稿：
+// teal-deep 实底、品牌左/说明右）。文案口径不变：
+//   - 关于＝站点说明静态文案（不建独立页面）
+//   - 反馈＝统一工作邮箱 mailto（v1 默认块：subject=页面标题、body=当前页
+//     绝对地址；Astro.url 在 SSR 下即请求 URL）——邮箱值自 F05 起取
+//     chrome.feedback_email 每请求传入（v1 取值链 SiteSettings.feedback_email
+//     → settings.FEEDBACK_EMAIL 环境兜底，契约端点同源直连，等价接入）
+//   - © 年份：v1 {% now "Y" %}＝请求年；SSR 下 new Date() 即请求时刻，等价
+// 外链确认页的 mailto 隐私覆盖（body 只带站内路径）经 footer 具名插槽实现。
+import { feedbackMailto } from "../lib/site";
+import type { Chrome } from "../schemas/api-schema";
+
+interface Props {
+  /** 反馈邮件主题（v1 page.title|default:"页面反馈"） */
+  pageTitle?: string;
+  /** 品牌站名（chrome.site_name，每请求直连） */
+  siteName: Chrome["site_name"];
+  /** 反馈邮箱（chrome.feedback_email，每请求直连） */
+  feedbackEmail: Chrome["feedback_email"];
+  /** 反馈 mailto 正文地址覆盖（缺省＝当前请求绝对地址）。外链确认页传
+   * 站内路径（F06：v1 link_confirm.html 隐私覆盖——确认 URL 查询串即外链
+   * 目标本体，不得自动进入反馈邮件） */
+  pageUrl?: string;
+}
+
+const { pageTitle, siteName, feedbackEmail, pageUrl } = Astro.props;
+const mailto = feedbackMailto(
+  feedbackEmail,
+  pageTitle ?? "",
+  pageUrl ?? Astro.url.toString(),
+);
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    {/* v1 同款相邻书写（无源码空白）。注意：footer-brand 为 inline-flex，
+        文本节点与 .wm-dot 本就是两个 flex 项，8px gap 作用于其间——v1 渲染
+        即「Peiligo␣.」；单行书写仅为源码逐字对齐 v1，非改变渲染。 */}
+    {/* prettier-ignore */}
+    <span class="footer-brand"><img src="/img/peiligo-school-logo.png" width="24" height="24" alt="" />{siteName}<span class="wm-dot">.</span></span>
+    <div class="footer-notes">
+      <p>
+        关于：本站面向校内学生，按五大板块组织校园信息；内容由各部门经站点后台发布，如对内容有疑问，请以发布部门的官方口径为准。
+      </p>
+      {/* v1 渲染为「请致信 email 。」（</a> 与 。 间模板换行折成一个空格） */}
+      <p>
+        反馈：发现内容错误、链接失效或版权问题，请致信
+        <a href={mailto}>{feedbackEmail}</a> 。
+      </p>
+      <p class="footer-meta">
+        © {year} {siteName}
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  /* v1 peiligo.css 逐字转写；断点反向为移动优先（tokens.css 断点表）：
+     基础值 = v1 @media (max-width: 760px) 档，761px 起恢复品牌左/说明右。 */
+
+  .site-footer {
+    flex-shrink: 0;
+    margin-top: 64px;
+    background: var(--teal-deep);
+    color: #fff;
+  }
+
+  .footer-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding-block: 24px;
+  }
+
+  .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    font-size: 16.5px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .footer-brand img {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+  }
+
+  .footer-brand .wm-dot {
+    color: var(--yellow);
+  }
+
+  .footer-notes {
+    max-width: 640px;
+  }
+
+  .footer-notes p {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    /* G3 偏差（AA 文本 ≥4.5:1）：v1 白 0.62 对 teal-deep 实底 4.17:1，
+       升至 0.72 → 5.04:1（弱化层级保留） */
+    color: rgb(255 255 255 / 0.72);
+  }
+
+  .footer-notes a {
+    color: rgb(255 255 255 / 0.85);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .footer-meta {
+    margin-top: 10px;
+  }
+
+  @media (min-width: 761px) {
+    .footer-inner {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 32px;
+    }
+  }
+</style>

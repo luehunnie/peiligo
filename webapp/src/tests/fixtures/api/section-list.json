@@ -1,0 +1,40 @@
+{
+  "section": {
+    "slug": "chronicle",
+    "title": "昆社纪事",
+    "url": "/chronicle/",
+    "archive_url": "/chronicle/archive/"
+  },
+  "entries": [
+    {
+      "type": "notice",
+      "id": 42,
+      "title": "关于图书馆调整开放时间的通知",
+      "url": "/chronicle/jwc/library-hours/",
+      "expired": false,
+      "section_slug": "chronicle",
+      "section_title": "昆社纪事",
+      "department_name": "图书馆",
+      "published_at": "2026-09-10T09:00:00+08:00",
+      "event_status": null,
+      "list_summary": "即日起至本学期末调整开放时间。"
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "page_count": 1,
+    "per_page": 20,
+    "has_next": false,
+    "has_previous": false
+  },
+  "filters": {
+    "q": "",
+    "section": null,
+    "dept": null,
+    "type": null,
+    "tag": null,
+    "active": false,
+    "conditions": []
+  }
+}

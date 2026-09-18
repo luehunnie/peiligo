@@ -1,0 +1,73 @@
+{
+  "q": "图书馆",
+  "entries": [
+    {
+      "type": "notice",
+      "id": 42,
+      "title": "关于图书馆调整开放时间的通知",
+      "url": "/chronicle/jwc/library-hours/",
+      "expired": false,
+      "section_slug": "chronicle",
+      "section_title": "昆社纪事",
+      "department_name": "图书馆",
+      "published_at": "2026-09-10T09:00:00+08:00",
+      "event_status": null,
+      "list_summary": "即日起至本学期末调整开放时间。"
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "page_count": 1,
+    "per_page": 20,
+    "has_next": false,
+    "has_previous": false
+  },
+  "filters": {
+    "q": "图书馆",
+    "section": null,
+    "dept": null,
+    "type": null,
+    "tag": null,
+    "active": true,
+    "conditions": [{ "label": "关键词", "value": "图书馆" }]
+  },
+  "chips": [
+    {
+      "slug": "",
+      "label": "全部",
+      "url": "/search/?q=%E5%9B%BE%E4%B9%A6%E9%A6%86",
+      "active": true
+    },
+    {
+      "slug": "chronicle",
+      "label": "昆社纪事",
+      "url": "/search/?q=%E5%9B%BE%E4%B9%A6%E9%A6%86&section=chronicle",
+      "active": false
+    },
+    {
+      "slug": "events",
+      "label": "活动预告",
+      "url": "/search/?q=%E5%9B%BE%E4%B9%A6%E9%A6%86&section=events",
+      "active": false
+    },
+    {
+      "slug": "materials",
+      "label": "学习资料",
+      "url": "/search/?q=%E5%9B%BE%E4%B9%A6%E9%A6%86&section=materials",
+      "active": false
+    },
+    {
+      "slug": "software",
+      "label": "软件与工具",
+      "url": "/search/?q=%E5%9B%BE%E4%B9%A6%E9%A6%86&section=software",
+      "active": false
+    },
+    {
+      "slug": "guide",
+      "label": "校园指南",
+      "url": "/search/?q=%E5%9B%BE%E4%B9%A6%E9%A6%86&section=guide",
+      "active": false
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+/*
+ * 内容页跨页面共享原子层（SPEC-001-F06，自 content.css 8dbc67d 拆出）
+ *
+ * 逐字转写自 v1 `static/css/peiligo.css`（48fd5d6）中列表行与详情题头
+ * 共用的三件套：栏目徽标（.tag/.tone-*，ResultRow 行首与详情题头）、
+ * 面包屑（.breadcrumb，全部内容页）、过期徽标（.badge-expired，列表行
+ * 与详情横幅共用）。唯一结构性改写与 F02 base.css 相同：v1 max-width
+ * 桌面优先断点反向为移动优先 min-width（基础值 = v1 最窄档，601px 起
+ * 逐属性恢复宽档值）。
+ *
+ * 消费方：/[section]/、/[section]/archive/、/[section]/{dept}/{slug}/
+ * 三个页面均先引本文件再引各自页面族样式；接缝按选择器实际归属页面族
+ * 划定（F06-P1），区块内规则原值原序随迁，v1 单一来源对照关系不变。
+ */
+
+/* ===== 栏目徽标（列表行 / 详情题头；soft 底 + deep 字，颜色伴随文字） ===== */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  align-self: flex-start;
+  min-height: 24px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.tone-jishi {
+  background: var(--coral-soft);
+  color: var(--coral-deep);
+}
+
+.tone-huodong {
+  background: var(--amber-soft);
+  color: var(--amber-deep);
+}
+
+.tone-ziliao {
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+}
+
+.tone-gongju {
+  background: var(--violet-soft);
+  color: var(--violet-deep);
+}
+
+.tone-zhinan {
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+}
+
+/* ===== 面包屑（final-reference .crumbs 尺度，保留既有 ol 结构） ===== */
+
+.breadcrumb {
+  padding-top: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumb a {
+  color: var(--teal-deep);
+  font-weight: 600;
+}
+
+.breadcrumb li[aria-current] {
+  color: var(--ink-2);
+}
+
+.breadcrumb li + li::before {
+  content: "/";
+  margin-right: 8px;
+  color: #b3bdb7;
+}
+
+/* ===== 过期体系（详情页横幅 + 列表行徽标，历史口径可见性配套） ===== */
+
+.badge-expired {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  margin-left: 6px;
+  background: var(--amber-soft);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--amber-deep);
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+
+/* ===== 搜索关键词高亮（仅 /search/ 行渲染自产 <mark>；切片语义见
+   lib/highlight.ts，v1 peiligo.css 原值原序） ===== */
+
+mark {
+  background: rgb(255 201 64 / 0.45);
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 3px;
+}

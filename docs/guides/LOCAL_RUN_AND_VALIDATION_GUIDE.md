@@ -185,7 +185,7 @@ ALLOWED_HOSTS=localhost
 CSRF_TRUSTED_ORIGINS=https://localhost
 WAGTAILADMIN_BASE_URL=https://localhost
 DOMAIN=localhost
-# 可选:GUNICORN_WORKERS=2 / SCHED_INTERVAL_SECONDS=60
+# 可选:GUNICORN_WORKERS=2 / SCHED_INTERVAL_SECONDS=30(缺省即 30,满足 ≤30s 发布时效契约)
 ```
 
 `localhost` 域名下 Caddy 用**本地自签证书**(不申请公网证书),浏览器会提示不受信任——本地验证接受告警或信任 Caddy 本地 CA 即可;`ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS`/`WAGTAILADMIN_BASE_URL` 三处都按 `https://localhost` 同源填写。
@@ -258,6 +258,47 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml down -v
 ```
 
 > 💡 **清理磁盘时的安全边界**:清本项目用 `down`(保留数据)或 `down -v`(连数据卷一起删,仅限确认重来)即可,**不要**用 `docker system prune -a --volumes` 这类全机清理命令——它们会把同一台 Docker 上**其他项目**(例如 Peilige、Peilike 等)的镜像、卷、网络一并删除,可能毁掉别的工程的数据。确需回收镜像层时,先用 `docker image ls` 确认对象,再按镜像 ID 或 `docker image prune`(仅悬空层)精确清理。
+
+---
+
+## 方式 C:新前端(webapp/,Astro)开发
+
+新前端是 `webapp/` 下的 Astro SSR 应用,经 Headless API(`api/` app,`/api/v1/` 只读端点)从 Wagtail 取数。**内容编辑永远在 Wagtail 后台**;webapp 只负责把 API 数据渲染成页面(对应关系见下表)。
+
+```bash
+# 前置:Node 22+;只需做一次
+cd webapp && npm ci
+
+# 开发运行(两个终端):
+#   终端 1 = 方式 A 的 Django runserver(数据源)
+#   终端 2 = Astro dev server
+PEILIGO_API_ALLOW_LOCAL_DEFAULT=1 npm run dev   # http://localhost:4321;该环境变量仅放行「非生产」的本地缺省基址 http://127.0.0.1:8000/api/v1
+```
+
+改完代码跑质量门(与 CI `frontend-quality-gate` 同一套):
+
+```bash
+npm run lint && npm run format:check   # 风格
+npm run check                          # astro check(strict 类型)
+npm test                               # vitest 单测(含契约/溯源守卫)
+npm run build && npm run check:csp     # 产物构建 + CSP 门(无内联/跨源)
+npm run e2e                            # Playwright 核心路径(自带 mock API,不需 Django)
+npm run licenses:check && npm audit --audit-level=moderate
+```
+
+Wagtail 内容 → 新前端页面对应:
+
+| Wagtail 侧 | API 端点(`api/` app) | 新前端页面(`webapp/src/pages/`) |
+|---|---|---|
+| 首页(home.HomePage) | `GET /api/v1/home` | `index.astro` |
+| 五板块页/容器 | `GET /api/v1/sections/<slug>`(archive 加 `/archive`) | `[section]/index.astro`、`[section]/archive.astro` |
+| 五类内容页(通知/文章/资料/工具/指南) | `GET /api/v1/pages/<section>/<dept>/<slug>` | `[section]/[dept]/[slug].astro` |
+| 站点设置/导航页脚 | `GET /api/v1/chrome` | 布局组件(`SiteHeader`/`SiteFooter`) |
+| 全站搜索 | `GET /api/v1/search` | `search.astro` |
+| 外链确认页 | `GET /api/v1/link-confirm` | `link-confirm.astro` |
+| 后台「新前端预览」按钮 | `GET /api/v1/preview`(60s 单跳票据) | `preview.astro`(同模板渲染草稿;无票/坏票一律样式化 404) |
+
+生产接线(两个应用容器 + 同源路由 + 切换/回滚开关)见 [../PRODUCTION_RUNBOOK.md](../PRODUCTION_RUNBOOK.md) §12;架构与 API 契约见 [../adr/0008-headless-api-contract.md](../adr/0008-headless-api-contract.md)、[../adr/0009-staging-topology.md](../adr/0009-staging-topology.md)、[../api/README.md](../api/README.md)。
 
 ---
 

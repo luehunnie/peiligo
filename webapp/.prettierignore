@@ -1,0 +1,13 @@
+dist/
+.astro/
+test-results/
+playwright-report/
+package-lock.json
+docs/dependencies.md
+# apply_overlay.py 产出的冻结基线 checkout（peiligo@pin 只读产物）。
+overlay-checkout/
+# Human 冻结的 PRD 转录（SPEC-001 原文，禁止 Agent 改动）——排除格式化，而非改动原文。
+# 背景：main 的 format:check 自该文档合入起即红（非 F04 引入）；由本行修复 CI 门。
+# 范围：仅此一个冻结文件（F04 收紧：原 docs/specs/ 整目录豁免过宽）。移除路径：
+# SPEC-001 最终合并回收冻结转录后，删除本行即可（届时文件一并归档，format:check 不受影响）。
+docs/specs/SPEC-001-public-frontend-rebuild.md

@@ -1,0 +1,71 @@
+---
+// 样式化 404 页（SPEC-001-F08）。等价转写自 v1 templates/404.html
+// （48fd5d6，IA §11）：站内壳 + H1「页面不存在」+ 引导文案 + 板块直达
+// 链接（站内搜索、五板块、返回首页；v1 与空态共用 .section-links 药丸
+// 链接语言，content-listing.css 既定）。v1 nav_sections 为冻结常量、
+// 壳数据不依赖 DB；新架构壳数据来自 chrome（每请求直连），故分两档：
+//   - chrome 可用 → 站内壳完整 404（v1 视觉等价，无 noindex meta——
+//     v1 404.html 亦无，HTTP 404 状态即信号）；
+//   - chrome 不可用（全站取数边界）→ 无壳最小 404（responses.ts
+//     NOT_FOUND_HTML 同一出处；状态码不变，仅降壳——v1 的 fail-soft
+//     精神在新架构下的最近等价）。
+// 消费方：pages/404.astro（未匹配路由）与各页 404 边界（非法 slug、
+// 内容 not-found）；已有 chrome 的页面经 prop 传入，避免重复取数。
+import "../../styles/content-listing.css";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { NOT_FOUND_HTML } from "../../lib/responses";
+import SiteFooter from "../SiteFooter.astro";
+import type { Chrome } from "../../schemas/api-schema";
+import { api } from "../../services/api";
+
+interface Props {
+  /** 已取得的 chrome（页面在 404 判定前已并行取数时传入；缺省自取） */
+  chrome?: Chrome;
+  /** 反馈 mailto body 地址覆盖（隐私面先例＝外链确认页）：URL 查询串
+   * 含敏感值的页面（如 /preview/ 的单跳票据）传入站内路径，避免缺省
+   * 「当前页绝对地址」自动进入反馈邮件与页面外发内容 */
+  footerPageUrl?: string;
+}
+
+let chrome = Astro.props.chrome;
+const footerPageUrl = Astro.props.footerPageUrl;
+if (!chrome) {
+  const chromeResult = await api.getChrome();
+  if (chromeResult.ok) chrome = chromeResult.data;
+}
+---
+
+{chrome ? (
+  <BaseLayout title="页面不存在" chrome={chrome} bodyClass="template-404">
+    {/* v1 404.html 逐字转写：不针对部门段做部门化引导（IA §11 末条） */}
+    <h1>页面不存在</h1>
+    <p>你访问的地址不存在或已移动。可以试试：</p>
+    <ul class="section-links">
+      <li>
+        <a href="/search/">站内搜索</a>
+      </li>
+      {chrome.nav_sections.map((s) => (
+        <li>
+          <a href={s.url}>{s.title}</a>
+        </li>
+      ))}
+      <li>
+        <a href="/">返回首页</a>
+      </li>
+    </ul>
+    {/* 显式页脚（等价 BaseLayout 缺省插槽：同 props 渲染；显式写出是为了
+        footerPageUrl 隐私覆盖——条件式 slot 覆盖会让 Astro 视插槽为已提供
+        而吞掉回退页脚。缺省行为＝pageTitle「页面不存在」＋当前绝对地址，
+        与 BaseLayout 缺省逐参一致）。 */}
+    <SiteFooter
+      slot="footer"
+      siteName={chrome.site_name}
+      feedbackEmail={chrome.feedback_email}
+      pageTitle="页面不存在"
+      pageUrl={footerPageUrl ?? Astro.url.toString()}
+    />
+  </BaseLayout>
+) : (
+  // chrome 不可用：无壳最小 404（responses.ts 同一出处，零模板注入面）
+  <Fragment set:html={NOT_FOUND_HTML} />
+)}

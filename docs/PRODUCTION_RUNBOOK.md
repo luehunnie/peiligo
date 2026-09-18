@@ -154,9 +154,11 @@ docker compose ... exec web python manage.py backup_prune --days 30 --apply
 
 ## 10. 定时发布
 
-`scheduler` 服务常驻跑 `publish_scheduler`（默认 60s 一轮；`--once` 供 cron
-模式/测试）。结果双落：结构化日志 `publish_scheduled.run` + F-13 心跳
-（ops_report 据此判新鲜度）。重启安全：待发布状态在 DB，重启后自动续跑。
+`scheduler` 服务常驻跑 `publish_scheduler`（默认 30s 一轮，经
+`SCHED_INTERVAL_SECONDS` 配置、维护态缺省即满足 Gate 5 验收条件 ≤30；
+`--once` 供 cron 模式/测试）。结果双落：结构化日志 `publish_scheduled.run`
++ F-13 心跳（ops_report 据此判新鲜度）。重启安全：待发布状态在 DB，重启后
+自动续跑。
 
 ## 11. 升级发布与回滚
 
@@ -168,3 +170,90 @@ git pull（或换 tag）→ docker compose ... up -d --build   # entrypoint 自�
 
 禁止事项沿用批次冻结口径：不做 force push / reset --hard / 真实生产库
 直接 restore；一切恢复走 §6 的显式目标参数。
+
+## 12. 前端切换 / 回滚（SPEC-001；唯一开关）
+
+> 形状沿用 ADR-0009 路由表 + B03 演练定稿（原 `compose.staging.yaml` /
+> `STAGING_DEFAULT_UPSTREAM` 的生产对应物）。**唯一开关＝默认上游**
+> `PEILIGO_DEFAULT_UPSTREAM`（deploy/.env；缺省 `web:8000`＝v1 整站回根）。
+> 以下命令以 `cd deploy && docker compose --env-file .env -f docker-compose.yml`
+> 为前提，简写为 `compose`。
+
+| 态 | `PEILIGO_DEFAULT_UPSTREAM` | `/` 由谁服务 | 说明 |
+| --- | --- | --- | --- |
+| v1（缺省） | `web:8000` | Wagtail（v1 整站） | 部署后公开面零变化 |
+| v2（cutover） | `frontend:4321` | 新 Astro 前端 | `/admin/`、`/documents/`、`/link-confirm/go/`、`/static/`、`/media/`、`/healthz*` 恒指 web，不随开关翻转 |
+
+路由表恒定：`/api/v1/*` 在两个态下都 404（ADR-0008 §S1，API 仅内网）。
+
+**cutover（v1 → v2；中断上限 <60s，B03 实测 ~3s）**
+
+```sh
+# 0) 前置核验：全体 healthy，且当前 v1 在根。
+#    走 https＋--resolve（Caddy 对 :80 一律 308 跳 https，明文探测只会拿到
+#    空体 308——健康系统上也会"失败"；--resolve 保 SNI/Host 指向真域名，
+#    连接走本机回环，与 §1 健康检查同一形态）。
+compose ps
+curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ | grep -q '/static/'
+# 1) 切换＝翻转开关（deploy/.env 置 PEILIGO_DEFAULT_UPSTREAM=frontend:4321），仅重建 caddy
+compose up -d --force-recreate caddy
+# 2) 就绪判定（中断窗口终点）：新前端 200 且 Astro 资产上根
+for i in $(seq 1 60); do curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ 2>/dev/null \
+  | grep -q '/_astro/' && break; sleep 1; done
+# 3) 切换后核验：SSR 真实渲染 + API 仍不公开 + 管理面可达 + 预览链路走通
+curl -kfsS --resolve <域名>:443:127.0.0.1 https://<域名>/ | grep -q Peiligo
+test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1 https://<域名>/api/v1/chrome)" = 404
+test "$(curl -ks -o /dev/null -w '%{http_code}' --resolve <域名>:443:127.0.0.1 https://<域名>/django-admin/login/)" = 200
+#    预览（G5 切换前置检查①，ADR-0008）：后台编辑页点「新前端预览」→
+#    /preview/?token= 渲染草稿；无票/坏票访问 /preview/ 得样式化 404。
+```
+
+> **原「切换前两项裁决」已于最终集成批次闭合**（此前为显式跟踪的迁移限制）：
+> ① 预览消费页（webapp `/preview/`）已接线——后台「新前端预览」→ 铸票 →
+> 同源 `/preview/?token=` → 内网 `/api/v1/preview` 兑换 → 同模板渲染草稿，
+> 失败一律样式化 404（e2e：`webapp/src/tests/e2e/preview.spec.ts`；集成栈
+> 实测见本节切换后核验第 3 步预览行）；② 定时发布时效——`SCHED_INTERVAL_SECONDS`
+> 维护态缺省即 30（compose／deploy/.env.example／publish_scheduler 命令三处
+> 同源），Gate 5 验收条件「≤30 且 scheduler 运行中」开箱满足，集成栈实测
+> 到点可见 <30s（本节发布时效契约）。调低于 30 合法；调高或停跑 scheduler
+> 即重新成为切换 blocker。
+
+**回滚 A：全量回退 v1（上限 <5 分钟；B03 实测 ~3s）**——v2 出现阻断性问题
+时的兜底。deploy/.env 把开关改回 `web:8000`，同一条
+`compose up -d --force-recreate caddy`；就绪判定＝`/` 重新含 `/static/`
+（同上用 `--resolve … https://<域名>/` 形态探测）。
+只动 caddy 容器——DB、Wagtail、frontend 全不接触，可无限次重演。
+Wagtail 发布两个态下都照常（定时发布不经过前端容器）。
+
+**回滚 B：v2 内换前端镜像（秒级）**——仅前端自身回归时用：
+`docker compose ... up -d --build frontend`（或指回上一镜像 tag），caddy/web 不动。
+
+**发布时效契约（两条路径分述）**：后台直接发布（Publish）立即落库，
+Astro 每请求直连取数 ⇒ 下一个请求即见（本地集成实测 0s，远优于 ≤30s）；
+定时发布由 scheduler 到点翻转 ⇒ 可见时延上界＝一个调度节拍
+`SCHED_INTERVAL_SECONDS`（维护态缺省 30s，Gate 5 验收条件 ≤30）＋执行抖动；
+集成栈实测（`SCHED_INTERVAL_SECONDS=30` 缺省、零重建零重启 frontend，
+frontend 容器 StartedAt 前后一致）：两页到点后分别 **29.2s / 18.2s** 可见
+（调度节拍逐次 ~30.0s，都在首个到点节拍翻转；HTTP 400ms 轮询口径 18.198s）。
+
+> **预览票据不落访问日志（双侧闭合，原残余风险备忘已消解）**：Astro 侧义务
+> （零请求日志、票据不入 DOM/错误对象、预览页 `Referrer-Policy: no-referrer`）
+> 之外，Caddy 侧由 access log 的**内置** filter 编码器闭合（caddy:2 主线自带，
+> 零插件零换镜像，只在日志面抹除、请求面零改动）：`request>uri` 经 `query`
+> 过滤器删 `token` 参数（其余查询参数/路径/状态/耗时照常，`wrap json` 与
+> 缺省编码同形状）；`request>headers>Referer` 经 `regexp` 过滤器把票据值抹成
+> `REDACTED`（纵深防御）。守护双面：`tests/test_caddy_log_redaction.py`
+> （配置形态钉住，CI 门——regexp 过滤器参数必须内联位置形态，写成子块会被
+> Caddy 静默忽略且 validate 不报错）；`deploy/verify-preview-log-redaction.sh`
+> （一次性集成栈哨兵实测：`/preview/?token=<哨兵>` 请求后 caddy 日志零哨兵，
+> 普通查询/状态/耗时照常）。
+两态都**不触发** Astro 重建/部署。
+
+## 13. 与 Peilige / Peilike 的边界
+
+Peiligo、Peilige、Peilike 是三个相互独立的同级项目（见仓库根 README）：
+独立仓库、独立 Compose 项目、独立数据卷与网络。运维本项目时只使用
+`deploy/docker-compose.yml`（项目名缺省取目录名），**禁止** `docker system
+prune -a --volumes` 等全机清理——会殃及同机其他项目的镜像与卷（详见
+[guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md](guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md)
+Troubleshooting 节）。

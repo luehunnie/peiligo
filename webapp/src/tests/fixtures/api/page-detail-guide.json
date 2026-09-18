@@ -1,0 +1,44 @@
+{
+  "type": "guide",
+  "id": 78,
+  "title": "校图书馆使用指南",
+  "slug": "library-guide",
+  "url": "/guide/jwc/library-guide/",
+  "section": {
+    "slug": "guide",
+    "title": "生活指南"
+  },
+  "department": {
+    "name": "教务处",
+    "slug": "jwc"
+  },
+  "first_published_at": "2026-03-02T09:00:00+08:00",
+  "last_published_at": "2026-08-30T09:00:00+08:00",
+  "expire_at": null,
+  "noindex": false,
+  "expired": false,
+  "cover": null,
+  "breadcrumb": [
+    {
+      "title": "首页",
+      "url": "/"
+    },
+    {
+      "title": "生活指南",
+      "url": "/guide/"
+    },
+    {
+      "title": "校图书馆使用指南",
+      "url": null
+    }
+  ],
+  "category": "学习场所",
+  "location": "主校区东区",
+  "opening_hours": "周一至周五 8:00–22:00\n周末及节假日 9:00–21:00",
+  "contact": "服务台：内线 6200\n邮箱：library@example.edu.cn",
+  "extra_notes": "考试周延长开放，另行通知。",
+  "responsible_party": "图书馆",
+  "maintenance_mode": "curated",
+  "maintenance_mode_label": "站点编辑维护",
+  "last_confirmed_on": "2026-08-30"
+}

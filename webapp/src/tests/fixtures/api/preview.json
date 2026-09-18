@@ -1,0 +1,27 @@
+{
+  "preview": true,
+  "type": "notice",
+  "id": 42,
+  "title": "关于图书馆调整开放时间的通知（草稿）",
+  "slug": "library-hours",
+  "url": "/chronicle/jwc/library-hours/",
+  "section": { "slug": "chronicle", "title": "昆社纪事" },
+  "department": { "name": "图书馆", "slug": "library" },
+  "first_published_at": null,
+  "last_published_at": null,
+  "expire_at": "2027-09-10T00:00:00+08:00",
+  "noindex": false,
+  "expired": false,
+  "cover": null,
+  "breadcrumb": [
+    { "title": "首页", "url": "/" },
+    { "title": "昆社纪事", "url": "/chronicle/" },
+    { "title": "关于图书馆调整开放时间的通知（草稿）", "url": null }
+  ],
+  "summary": "草稿摘要。",
+  "event": null,
+  "body": [{ "type": "paragraph", "value": { "html": "草稿正文。" } }],
+  "attachments": [],
+  "external": null,
+  "tags": []
+}

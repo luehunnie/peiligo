@@ -1,0 +1,32 @@
+---
+// 面包屑（SPEC-001-F06）。等价转写自 v1 templates/includes/breadcrumb.html
+// （IA §6.3 方案 A）：首页无面包屑；路径含板块、不含容器段（部门容器前台
+// 404，永不出现）；除最后一段（当前页，纯文本 + aria-current）外，每段均为
+// 可点链接且指向 200 URL。样式在全局 content-shared.css（跨页面共用）。
+interface Props {
+  /** 上一段（板块页）标题；无则整段不输出（如板块页自身） */
+  parentTitle?: string;
+  /** 上一段 URL（与 parentTitle 成对） */
+  parentUrl?: string;
+  /** 当前页标题（纯文本 + aria-current） */
+  title: string;
+}
+
+const { parentTitle, parentUrl, title } = Astro.props;
+---
+
+<nav class="breadcrumb" aria-label="面包屑">
+  <ol>
+    <li>
+      <a href="/">首页</a>
+    </li>
+    {parentTitle && parentUrl && (
+      <li>
+        <a href={parentUrl}>{parentTitle}</a>
+      </li>
+    )}
+    <li>
+      <span aria-current="page">{title}</span>
+    </li>
+  </ol>
+</nav>
