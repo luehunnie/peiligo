@@ -18,8 +18,11 @@ Header → 紧急提示（例外性轻量条）→ Hero 轮播 → 五分类导�
   冻结映射（cat-<tone> 类 + 同款线性图标），颜色不作唯一区分物（文字
   标签恒在）。容器不是入口、永不进入（§6.2）。
 - 校园快讯＝旧「推荐/最新通知/近期活动」三区的统一组稿消费点（至多
-  3 张卡，去重、确定性组稿见 _campus_news_entries；后端能力原样保留）。
-  卡片为单一整体链接；封面回落＝板块静态几何插画（不逐条目生成）。
+  6 张卡，去重、确定性组稿见 _campus_news_entries；后端能力原样保留）。
+  全断点横向滚动轨（原生 overflow 滚动＋scroll-snap；各断点只露下一张
+  卡的局部露边 peek，引导滑动——仅该轨滚动，文档不横向溢出）。卡片为
+  单一整体链接；封面回落＝板块静态几何插画（不逐条目生成）。非当前
+  年份的条目日期带年份展示（历史通知可辨识）。
 - 旧独立搜索卡已移除（站内搜索由页头全局搜索承担）。
 {% endcomment %}
 
@@ -86,13 +89,16 @@ Header → 紧急提示（例外性轻量条）→ Hero 轮播 → 五分类导�
     {% endfor %}
 </nav>
 
-{# 校园快讯（统一发现轨；0 条整区不渲染，1/2/3 条自然呈现，至多 3 张卡） #}
+{# 校园快讯（统一发现轨；0 条整区不渲染，不足额自然呈现，至多 6 张卡）。 #}
+{# 轨道＝可聚焦滚动区（tabindex＋region 语义）：键盘方向键/触摸/触控板 #}
+{# 均可横向滚动；可见焦点沿用全局 :focus-visible 描边。 #}
 {% if campus_news %}
+{% now "Y" as news_current_year %}
 <section class="news" aria-labelledby="news-title">
     <div class="sec-head">
         <h2 id="news-title">校园快讯</h2>
     </div>
-    <div class="news-rail">
+    <div class="news-rail" role="region" aria-label="校园快讯列表" tabindex="0">
         {% for item in campus_news %}
         <a class="news-card{% if item.section_slug %} tone-{{ item.section_slug|section_tone }}{% endif %}" href="{{ item.href }}">
             <div class="news-art" aria-hidden="true">
@@ -111,7 +117,7 @@ Header → 紧急提示（例外性轻量条）→ Hero 轮播 → 五分类导�
                 <p>{{ item.summary }}</p>
                 {% endif %}
                 <span class="news-meta">
-                    {% if item.department %}{{ item.department }} · {% endif %}<time datetime="{{ item.date|date:'Y-m-d' }}">{{ item.date|date:'m-d' }}</time>{% if item.event_status %} · {{ item.event_status }}{% endif %}
+                    {% if item.department %}{{ item.department }} · {% endif %}<time datetime="{{ item.date|date:'Y-m-d' }}">{% if item.date|date:'Y' != news_current_year %}{{ item.date|date:'Y-m-d' }}{% else %}{{ item.date|date:'m-d' }}{% endif %}</time>{% if item.event_status %} · {{ item.event_status }}{% endif %}
                 </span>
             </div>
         </a>

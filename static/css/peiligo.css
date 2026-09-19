@@ -1081,21 +1081,41 @@ a.pg:hover {
   letter-spacing: 0.01em;
 }
 
+/* 横向滚动轨（全断点统一）：原生 overflow 滚动＋scroll-snap，卡宽按断点
+   阶梯——≤760 一张卡＋露边、761–1279 两卡＋peek、≥1280 三卡＋peek，恒
+   露出下一张卡的一角（peek 引导横滑，轨道永不整行摊开）。≤760 轨道负外
+   边距对冲 .wrap 的 20px 内边距实现贴边（仅该轨滚动，文档不横向溢出）；
+   ≥761 收回贴边、与其他区块同栅格对齐。scroll-padding 让 snap 对位保留
+   同一沟槽。padding-block 6px＝悬停上浮/阴影在滚动容器内的纵向出血。 */
 .news-rail {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  margin-top: 18px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-top: 12px;
+  margin-inline: -20px;
+  padding-inline: 20px;
+  padding-block: 6px;
+  scroll-padding-inline: 20px;
+  scroll-snap-type: x mandatory;
+}
+
+.news-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .news-card {
   display: flex;
   flex-direction: column;
+  flex: none;
+  width: 82%;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 18px;
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  scroll-snap-align: start;
 }
 
 .news-card:hover {
@@ -1162,19 +1182,33 @@ a.pg:hover {
   font-variant-numeric: tabular-nums;
 }
 
-/* 低数据构图：1 条＝一张有分量的大卡；2 条＝两等分（无 :has 支持时
-   自然回落三等分网格，仍为合法构图） */
-
-.news-rail:has(.news-card:only-child) {
-  grid-template-columns: minmax(0, 1fr);
-}
+/* 低数据构图：1 条＝一张有分量的大卡（占满轨道、至多 720px）；2 条＝
+   按当前断点卡宽并排自然呈现（不足额不产生滚动）。 */
 
 .news-rail:has(.news-card:only-child) .news-card {
+  flex-basis: 100%;
   max-width: 720px;
 }
 
-.news-rail:has(.news-card:nth-child(2):last-child) {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+/* 平板及以上：收回贴边（与其他区块同栅格对齐），两卡＋peek（44px） */
+@media (min-width: 761px) {
+  .news-rail {
+    gap: 18px;
+    margin-inline: 0;
+    padding-inline: 0;
+    scroll-padding-inline: 0;
+  }
+
+  .news-card {
+    flex-basis: calc((100% - 18px - 44px) / 2);
+  }
+}
+
+/* 宽屏：三卡＋peek（48px）——恒不整行摊开，保留可横滑的暗示 */
+@media (min-width: 1280px) {
+  .news-card {
+    flex-basis: calc((100% - 36px - 48px) / 3);
+  }
 }
 
 .content-meta {
@@ -1953,32 +1987,7 @@ a.pg:hover {
     padding-top: 40px;
   }
 
-  /* 快讯：横向 rail，右侧露出下一张的一角（仅该轨滚动） */
-  .news-rail {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 14px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin-inline: -20px;
-    padding-inline: 20px;
-    scroll-snap-type: x mandatory;
-  }
-
-  .news-rail::-webkit-scrollbar {
-    display: none;
-  }
-
-  .news-card {
-    flex: none;
-    width: 82%;
-    scroll-snap-align: start;
-  }
-
-  .news-card:only-child {
-    width: 100%;
-  }
-
+  /* 快讯滚动轨本体规则在基础层（全断点统一）；此处仅保留移动端差异。 */
   .news-body h3 {
     font-size: 18px;
   }

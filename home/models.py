@@ -39,8 +39,10 @@ SECTIONS = [
 
 
 # 首页数据区展示参数（IA §7.1/§7.2；条数为 MB9 实现阶段展示参数，非架构
-# 冻结值）：推荐位有效槽位上限 3（Q14），最新通知 8 条，近期活动 4 条。
-FEATURED_MAX_SLOTS = 3
+# 冻结值）：推荐位有效槽位上限原为 3（Q14），2026-09-19 运营决策上调为
+# 6——校园快讯统一轨须容纳冻结六条策展条目（见 CAMPUS_NEWS_MAX_ITEMS 注）；
+# 最新通知 8 条、近期活动 4 条口径不变。
+FEATURED_MAX_SLOTS = 6
 HOMEPAGE_LATEST_NOTICES_COUNT = 8
 HOMEPAGE_UPCOMING_EVENTS_COUNT = 4
 
@@ -64,10 +66,11 @@ def _active_alert(site_settings, now):
 def _featured_entries(now):
     """推荐位有效条目（IA §7.2；Q14/Q15 裁决）。
 
-    槽位上限 3（Q14）、0 条整区不渲染、1–2 条自然呈现；顺序＝创建顺序
-    （snippet 无排序字段，§13.3——pk 升序即运营录入顺序，确定性）；有效
-    性判定复用 §15.4 ``is_on_display``（enabled∧窗口∧所指内容 S2 live）
-    为唯一权威口径——查询集的窗口预过滤仅为少取行，无效条目不占槽位。
+    槽位上限 6（原 Q14 定 3，2026-09-19 上调——见 FEATURED_MAX_SLOTS 注）、
+    0 条整区不渲染、不足额自然呈现；顺序＝创建顺序（snippet 无排序字段，
+    §13.3——pk 升序即运营录入顺序，确定性）；有效性判定复用 §15.4
+    ``is_on_display``（enabled∧窗口∧所指内容 S2 live）为唯一权威口径——
+    查询集的窗口预过滤仅为少取行，无效条目不占槽位。
     """
     candidates = FeaturedItem.objects.filter(
         enabled=True, start_at__lte=now, end_at__gte=now
@@ -125,9 +128,13 @@ def _upcoming_events(now, events_section):
     return pages[:HOMEPAGE_UPCOMING_EVENTS_COUNT]
 
 
-# 首页校园快讯目标上限（Phase 8C 定稿）：单条统一发现轨至多 3 张卡；
-# 上游数据区（推荐位 3/最新通知 8/近期活动 4）维持各自口径不变。
-CAMPUS_NEWS_MAX_ITEMS = 3
+# 首页校园快讯目标上限（Phase 8C 定稿为 3；2026-09-19 运营决策上调为 6）：
+# 单条统一发现轨至多 6 张卡，横向滚动轨呈现（各断点只露部分卡——下一张
+# 卡露边 peek 引导滑动，不整行摊开）。策展层（推荐位，创建序）足额 6 条
+# 有效时轨道即恰为该六条；最新通知/近期活动两层仅为策展不足额（或个别
+# 策展条目失效）时的补位回落，组稿算法本身不变。上游数据区（最新通知
+# 8/近期活动 4）口径不变。
+CAMPUS_NEWS_MAX_ITEMS = 6
 
 
 def _campus_news_entry(page):
@@ -165,8 +172,9 @@ def _campus_news_entries(featured_entries, latest_notices, upcoming_events):
        ——仅本页组稿层过滤，三层输入（含策展条目）一视同仁；不改页面
        可见性（板块/搜索/详情原样可达），也不用已结束内容回填补位；
     3. 同一页面只出现一次（按 pk 去重，先到先得）；
-    4. 至多 ``CAMPUS_NEWS_MAX_ITEMS``（3）张；不足自然呈现，0 条由模板
-       整区不渲染。纯函数：不改输入、不写库。
+    4. 至多 ``CAMPUS_NEWS_MAX_ITEMS``（6，2026-09-19 上调）张；策展层足额
+       时轨道即恰为策展条目，不足自然呈现，0 条由模板整区不渲染。纯函数：
+       不改输入、不写库。
     """
     entries = []
     seen = set()
@@ -300,7 +308,7 @@ class HomePage(Page):
         校园快讯 → Footer。旧首页独立「推荐/最新通知/近期活动」区与独立
         搜索卡不再在本页渲染——后端能力（FeaturedItem/通知/活动查询与
         可见性口径）原样保留，由 ``_campus_news_entries`` 统一组稿为至多
-        3 条的单一发现轨消费；五分类导航仅查询本页下已发布的 SectionPage
+        6 条的单一发现轨消费；五分类导航仅查询本页下已发布的 SectionPage
         并按 ``SECTIONS`` 冻结顺序排列（§2 #1–#5），容器不是入口、永不
         进入（§6.2）。轮播位运行时条目见 ``_carousel_entries``（含 Phase
         8C 派生展示键 summary/section_slug）。

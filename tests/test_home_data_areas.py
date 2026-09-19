@@ -2,14 +2,14 @@
 
 断言面：首页页头搜索表单参数＝q（与 /search/ 视图一致，name="query" 串
 参数 bug 回归）；层 1 紧急提示（空文案/窗口内外不渲染，§13.4 窗口语径）；
-校园快讯统一组稿（至多 3 张卡＝推荐位优先（Q14 创建序；策展失效不占序、
-所指 live 页仍公开）→ 最新通知（CURRENT_DEFAULT 谓词 live∧¬expired、
-发布倒序）→ 近期活动（活动板块子树、未结束、开始邻近升序、通知/文章双
-载体），pk 去重、0 条整区不渲染、旧独立区块零渲染；8C 产品修订：已结束
-活动载体经组稿层排除不入轨——既有 event_status 判「已结束」即跳过，
-三层输入一视同仁，页面可见性（板块/搜索/详情）不动）；FeaturedItem 模型
-级窗口契约（Q15）保留；顺带模板小疵：base.html 不再加载空 peiligo.js、
-500.html lang=zh-hans。
+校园快讯统一组稿（至多 6 张卡（2026-09-19 由 3 上调）＝推荐位优先（创建
+序；策展失效不占序、所指 live 页仍公开）→ 最新通知（CURRENT_DEFAULT
+谓词 live∧¬expired、发布倒序）→ 近期活动（活动板块子树、未结束、开始
+邻近升序、通知/文章双载体），pk 去重、0 条整区不渲染、旧独立区块零渲染；
+8C 产品修订：已结束活动载体经组稿层排除不入轨——既有 event_status 判
+「已结束」即跳过，三层输入一视同仁，页面可见性（板块/搜索/详情）不动）；
+FeaturedItem 模型级窗口契约（Q15）保留；顺带模板小疵：base.html 不再加载
+空 peiligo.js、500.html lang=zh-hans。
 """
 
 import datetime as dt
@@ -155,13 +155,13 @@ class AlertAreaTests(HomeAreasTestCase):
 
 
 class CampusNewsTests(HomeAreasTestCase):
-    """校园快讯统一组稿（Phase 8C）：旧首页「推荐/最新通知/近期活动」三区
-    在本页合并为一条至多 3 张卡的发现轨；确定性组稿＝推荐位（创建序）→
-    最新通知（发布倒序）→ 近期活动（开始邻近升序），pk 去重；三层输入的
-    可见性谓词（§15.4/§16.4）原样生效；已结束活动载体不入轨（8C 产品
-    修订：组稿层按既有 event_status 排除，页面可见性不动）。后端数据区
-    能力不删（helper 与查询口径见 home.models），仅本页不再按旧区块分别
-    渲染。"""
+    """校园快讯统一组稿（Phase 8C；2026-09-19 上调至六卡）：旧首页「推荐/
+    最新通知/近期活动」三区在本页合并为一条至多 6 张卡的发现轨；确定性
+    组稿＝推荐位（创建序）→ 最新通知（发布倒序）→ 近期活动（开始邻近
+    升序），pk 去重；三层输入的可见性谓词（§15.4/§16.4）原样生效；已结束
+    活动载体不入轨（8C 产品修订：组稿层按既有 event_status 排除，页面
+    可见性不动）。后端数据区能力不删（helper 与查询口径见 home.models），
+    仅本页不再按旧区块分别渲染。"""
 
     def _news_section(self, html):
         return self._section_html(html, "news-title")
@@ -193,19 +193,57 @@ class CampusNewsTests(HomeAreasTestCase):
         self.assertNotContains(response, "news-title")
         self.assertNotContains(response, "news-card")
 
-    def test_cap_three_priority_featured_then_notices(self):
-        """候选 >3：策展条目优先（创建序），余量按最新通知补足，超出截断。"""
+    def test_cap_six_priority_featured_then_notices(self):
+        """候选 >6：策展条目优先（创建序），余量按最新通知补足，超出截断。"""
         pool = [
             make_notice(self.container, slug=f"cn-pool-{i}", title=f"池内通知{i}", publish=True)
-            for i in range(4)
+            for i in range(8)
         ]
-        self._featured(pool[3])  # 唯一策展条目恰为最新通知，兼验去重
+        self._featured(pool[7])  # 唯一策展条目恰为最新通知，兼验去重
         html = self.client.get("/").content.decode()
         section = self._news_section(html)
-        self.assertEqual(section.count('class="news-card'), 3)
-        self.assertLess(section.index("池内通知3"), section.index("池内通知2"))
-        self.assertLess(section.index("池内通知2"), section.index("池内通知1"))
-        self.assertNotIn("池内通知0", section)  # 超出 3 张截断
+        self.assertEqual(section.count('class="news-card'), 6)
+        self.assertLess(section.index("池内通知7"), section.index("池内通知6"))
+        self.assertLess(section.index("池内通知6"), section.index("池内通知5"))
+        self.assertNotIn("池内通知1", section)  # 超出 6 张截断
+        self.assertNotIn("池内通知0", section)
+
+    def test_curated_six_exact_frozen_order(self):
+        """足额 6 条有效策展＝轨道恰为该六条（2026-09-19 冻结组稿合同）：
+        策展创建序即呈现序（与发布时间序刻意相反），最新通知源不再入轨，
+        每条恰一次。"""
+        pages = [
+            make_notice(self.container, slug=f"cn-six-{i}", title=f"冻结六条{i}", publish=True)
+            for i in range(6)
+        ]
+        for page in reversed(pages):  # 逆发布序策展：创建序（pk 序）决定呈现序
+            self._featured(page)
+        make_notice(self.container, slug="cn-six-extra", title="六条外通知EXTRA", publish=True)
+        section = self._news_section(self.client.get("/").content.decode())
+        self.assertEqual(section.count('class="news-card'), 6)
+        positions = [section.index(f"冻结六条{i}") for i in range(6)]
+        self.assertEqual(positions, sorted(positions, reverse=True))  # 呈现序＝策展创建序
+        self.assertNotIn("六条外通知EXTRA", section)  # 策展足额，通知源不补位
+
+    def test_rail_is_focusable_scroll_region(self):
+        """滚动轨 a11y 语义：可聚焦滚动区（region 角色＋可访问名＋tabindex
+        0）——键盘 Tab 入轨后方向键可横向滚动（可见焦点＝全局
+        :focus-visible 描边）。"""
+        make_notice(self.container, slug="cn-a11y", title="轨道语义N", publish=True)
+        html = self.client.get("/").content.decode()
+        self.assertIn('role="region" aria-label="校园快讯列表" tabindex="0"', html)
+
+    def test_noncurrent_year_date_shows_year(self):
+        """跨年条目日期带年份（历史通知可辨识）：非当年条目展示 Y-m-d，
+        当年条目维持既有 m-d 短式。"""
+        hist = make_notice(self.container, slug="cn-2025", title="历史通知2025", publish=True)
+        hist.first_published_at = timezone.make_aware(dt.datetime(2025, 11, 17, 8, 0))
+        hist.save()
+        make_notice(self.container, slug="cn-now", title="当年通知NOW", publish=True)
+        section = self._news_section(self.client.get("/").content.decode())
+        self.assertIn('<time datetime="2025-11-17">2025-11-17</time>', section)
+        # 当年条目仍为短式 m-d（正则排除带年份的 2025 卡）。
+        self.assertRegex(section, r"<time datetime=\"\d{4}-\d{2}-\d{2}\">\d{2}-\d{2}</time>")
 
     def test_dedup_across_sources(self):
         """同一页面只呈现一次：既被策展又属最新通知 → 单卡。"""
