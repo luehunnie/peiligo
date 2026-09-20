@@ -1,6 +1,6 @@
 # 培黎智寻 Peiligo
 
-面向校园的统一信息与资源检索平台，基于 Django + Wagtail 构建。
+面向校园的统一信息与资源检索平台，基于 Django + Wagtail 构建，并已集成 Astro SSR 新前端（`webapp/`）。
 
 ## 项目简介
 
@@ -98,9 +98,21 @@
   切换到新前端＝唯一开关 `PEILIGO_DEFAULT_UPSTREAM`（见
   [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md) §12，切换/回滚均只
   重建入口容器，秒级）。v1 模板/静态完整保留为回滚工件。
-- **服务器 Production 部署：尚未执行**。正式域名 / DNS / TLS、生产
-  密钥、备份独立存储、性能与无障碍验证、生产告警接线等属于部署
-  阶段工作，见下方「部署」。
+- **线上部署与运行状态**：以运营方实际环境为准，不在本仓库内追踪
+  与声明。部署、切换与回滚的操作流程见下方「部署」与
+  [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md)。
+
+## 仓库分工与升级状态（2026-09-20）
+
+- **本仓库（luehunnie/peiligo）**：项目主仓库，单仓维护 Django 后端
+  与 Wagtail 内容管理、只读 headless API、Astro 前端（`webapp/`）、
+  部署编排（`deploy/`）与全部文档；`main` 分支为当前集成基线。
+- **前端迭代仓库 [peiligo-upgrade](https://github.com/luehunnie/peiligo-upgrade)**：
+  承接 Astro 前端的后续迭代，已验收的改进包括首页轮播的两行标题 /
+  摘要固定槽位、「分区速览」单行横向滚动轨道（每区固定 3 个标题槽）
+  等，已于 2026-09-20 经源码同步 PR
+  [#22](https://github.com/luehunnie/peiligo/pull/22) 并入本仓库
+  `main`；两仓库 git 历史相互独立。
 
 ## 快速开始（本地开发）
 
@@ -133,21 +145,41 @@ python manage.py runserver
 更多本地运行方式（含 Docker Compose 本地实跑、新前端 webapp/ 开发）见
 [docs/guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md](docs/guides/LOCAL_RUN_AND_VALIDATION_GUIDE.md)。
 
+### Docker 源码构建与运行
+
+仓库当前提供从源码构建的 Docker 配置；现有 CI 仅做质量门（检查 /
+测试 / lint），不构建或推送镜像。本文未提供已核实的预构建镜像地址，
+以下按源码构建运行。
+
+```bash
+# 完整栈：db + web + scheduler + frontend + caddy 五容器
+cd deploy
+cp .env.example .env   # 哑值样例，按实际填写（.env 不入库）
+docker compose up -d --build
+```
+
+仅开发新前端时：`cd webapp && npm ci` 后以
+`PEILIGO_API_ALLOW_LOCAL_DEFAULT=1 npm run dev` 启动
+（连接本机 Django 开发服务器）。本地 production-like 实跑的端口 /
+证书注意事项与验证清单见上述指南与
+[docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md)。
+
 ## 部署
 
 生产架构已完成工程化打包（Docker Compose + PostgreSQL + Gunicorn +
-Caddy 自动 HTTPS + 调度器 + 备份 + 监控信号），且已在本地以
-Production-like 方式完整实跑验证；**正式服务器部署尚未执行**。
+Caddy 自动 HTTPS + 调度器 + 备份 + 监控信号），并已在本地以
+Production-like 方式完整实跑验证；线上部署与运行状态以运营方实际
+环境为准，不在本仓库内声明。
 
 - 部署步骤、环境变量、备份策略、监控接线与恢复演练流程见
   [docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md)。
 - 部署前后的运维注意项与阶段清单见
   [docs/guides/SERVER_DEPLOYMENT_GUIDE.md](docs/guides/SERVER_DEPLOYMENT_GUIDE.md)。
 
-部署阶段仍待完成的事项（均不属于仓库内代码缺口）：正式域名 /
-DNS / TLS 配置、生产密钥与 `.env` 准备、`SECONDARY_BACKUP_DIR`
-绑定独立存储、性能验证（含 100 并发）、无障碍（WCAG / axe）验证、
-生产告警接线、恢复演练（季度，RTO ≤ 4h）。
+部署前后的检查清单——正式域名 / DNS / TLS 配置、生产密钥与 `.env`
+准备、`SECONDARY_BACKUP_DIR` 独立存储、性能验证（含 100 并发）、
+无障碍（WCAG / axe）验证、生产告警接线、恢复演练（季度，RTO ≤ 4h）
+——见上述指南与运行手册；各项的实际完成情况以运营方环境为准。
 
 ## 文档
 
@@ -196,10 +228,13 @@ Wagtail 7.4.3 安全升级——当前全量结果以 CI 最新运行为准。CI
 | 架构与治理 | G2 Human Signoff PASS（2026-09-01） |
 | 本地 Production-like Docker 验证 | PASS（2026-09-02） |
 | 运行时修复 | 已合并 main（PR#14 @ 2992b1a） |
-| 服务器 Production 部署 | **尚未执行** |
+| 线上部署与运行状态 | 以运营方实际环境为准（不在仓库内声明） |
 | READY_FOR_HANDOFF | **YES** |
 | READY_FOR_STAGING | YES |
-| READY_FOR_PRODUCTION | **NO**（待正式部署与部署阶段验证） |
+| READY_FOR_PRODUCTION | **NO**（基线签收时点口径） |
+
+> 本表为 2026-09 基线签收与本地验证时点的记录；现势状态以上方
+> 「当前项目状态」「仓库分工与升级状态」及仓库实际为准。
 
 ## 关联项目
 
