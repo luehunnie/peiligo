@@ -1,15 +1,10 @@
-// 首页轮播渐进增强（SPEC-001-F05）。v1 static/js/carousel.js 等价转写
-// （ADR-0007：SSR-first ＋ 最小原生 JS；var→let/const 等价改写，控制流与
-// DOM 效果逐行一致）。以 public/ 静态文件 + defer 引入（v1 同款架构）：
-// Astro 会把小组件脚本自动内联进 HTML（无配置可关），与严格 CSP
-// （script-src 无 unsafe-inline）冲突，故沿用 v1 的外链脚本形态。
-// 内容事实源始终是 SSR DOM（data-carousel / data-carousel-item），本脚本
-// 只控制 visibility/controls/timing；无 JS 或初始化失败时条目全部按文档流
-// 自然可达。
+// 首页轮播渐进增强（SPEC-001-F05）：v1 等价转写（ADR-0007 SSR-first＋最小
+// 原生 JS）。public/ 外链＋defer（组件脚本会被 Astro 内联、与严格 CSP 冲突）；
+// 内容事实源＝SSR DOM，无 JS/初始化失败时条目自然可达，只控 visibility/controls/timing。
 (function () {
   "use strict";
 
-  // PRD §10：自动切换间隔约 5–6 秒，冻结 5500ms（仅 ≥2 项允许 autoplay）。
+  // PRD §10：切换间隔约 5–6 秒，冻结 5500ms（≥2 项才 autoplay）。
   const AUTOPLAY_INTERVAL_MS = 5500;
 
   function initCarousel(carousel) {
@@ -30,9 +25,9 @@
 
     let index = 0;
     const dots = [];
-    let enhanced = false; // 增强态闸门：回滚后所有 handler/autoplay 安全 no-op
+    let enhanced = false; // 增强态闸门：回滚后 handler/autoplay 全部 no-op
 
-    // -- 控件（仅 ≥2 项由 JS 动态创建：无 JS 时绝不留下不可用的按钮）----
+    // -- 控件（无 JS 时绝不留下不可用的按钮）----
     const prevButton = document.createElement("button");
     prevButton.type = "button";
     prevButton.className = "carousel-prev";
@@ -64,6 +59,9 @@
     controls.appendChild(nextButton);
 
     // -- 切换状态同步：hidden ＋ active class ＋ 圆点 aria-current --------
+    // （R5，#49：高度稳定改由 CSS 槽位锁定保证——HeroCarousel.astro 的
+    // line-clamp＋min-height 槽；JS 实测预留会拉伸容器、把导航推出卡外，
+    // 已整体移除，见 HeroCarousel.astro 内注释。）
     function activate(targetIndex) {
       index = targetIndex;
       slides.forEach(function (slide, slideIndex) {
@@ -80,7 +78,7 @@
       });
     }
 
-    // -- 自动播放（pause 条件聚合判定；恢复一律重建完整周期，不立即切图）--
+    // -- 自动播放（pause 条件聚合判定；恢复重建完整周期，不立即切图）--
     let timer = null;
     let hovering = false;
     let focusWithin = false;
@@ -99,8 +97,8 @@
       }
     }
 
-    // -- 回滚（事务保证）：提交阶段任一步骤失败后，把 DOM 恢复为等价于
-    // 「JS 未成功增强」的 SSR 全可见状态，随后安全 return（不显示错误）。
+    // -- 回滚（事务保证）：提交任一步失败→恢复「未增强」SSR 全可见状态后安全
+    // return（不显示错误）。
     function rollback() {
       stopAutoplay();
       slides.forEach(function (slide) {
@@ -120,7 +118,7 @@
     function refreshAutoplay() {
       stopAutoplay();
       if (!enhanced) {
-        return; // 未增强（含回滚后）：一律不再重建 autoplay
+        return; // 未增强（含回滚）：不再重建 autoplay
       }
       if (autoplayAllowed()) {
         timer = window.setInterval(function () {
@@ -129,11 +127,11 @@
       }
     }
 
-    // 手动导航（前/后循环到头即绕回）；随后按当前 pause 条件重建完整周期，
-    // 避免点击后不足一个间隔就被自动切走，也不永久关闭 autoplay。
+    // 手动导航（到头绕回）；随后按当前 pause 条件重建完整周期（不立即切走、
+    // 不永久关闭 autoplay）。
     function goTo(targetIndex) {
       if (!enhanced) {
-        return; // 回滚后控件已移除，防御性 no-op：先于任何 DOM 操作退出
+        return; // 回滚后控件已移除：先于任何 DOM 操作退出
       }
       activate((targetIndex + count) % count);
       refreshAutoplay();
@@ -151,8 +149,8 @@
       });
     });
 
-    // 暂停/恢复（TASK G）：hover、内部 keyboard focus、页面隐藏即暂停；
-    // 离开/恢复可见即以完整 interval 恢复。不抢 focus、不加 aria-live。
+    // 暂停/恢复（TASK G）：hover/内部 focus/页面隐藏即暂停；离开/恢复以完整
+    // interval 重建。不抢 focus、不加 aria-live。
     carousel.addEventListener("mouseenter", function () {
       hovering = true;
       refreshAutoplay();
@@ -176,8 +174,8 @@
       refreshAutoplay();
     });
 
-    // prefers-reduced-motion 运行时切换：reduce 即停 autoplay（手动切换
-    // 恒可用）；现代标准 change 事件＋旧 WebKit addListener 兼容 guard。
+    // reduced-motion 运行时切换：reduce 即停 autoplay（手动切换恒可用）；
+    // 标准 change 事件＋旧 WebKit addListener 兼容 guard。
     function onMotionPreferenceChange(event) {
       reducedMotion = event.matches;
       refreshAutoplay();
@@ -188,8 +186,7 @@
       motionQuery.addListener(onMotionPreferenceChange);
     }
 
-    // -- 事务提交：从首个 SSR 可见性改写（activate）起，任一步骤抛错都
-    // 进入 rollback，恢复「未增强」的全可见 SSR 状态后安全返回。
+    // -- 事务提交：任一步抛错都进 rollback。
     try {
       activate(0);
       carousel.appendChild(controls);
@@ -206,7 +203,7 @@
     document.querySelectorAll("[data-carousel]").forEach(initCarousel);
   }
 
-  // defer 加载时 DOM 已解析完毕；此处兼容 guard 兜底非 defer 引入场景。
+  // defer 时 DOM 已解析完毕；此处兜底非 defer 引入场景。
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initAll);
   } else {

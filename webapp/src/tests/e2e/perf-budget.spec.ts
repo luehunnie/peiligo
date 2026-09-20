@@ -25,7 +25,7 @@ const BUDGETS = {
   lcpMs: 2500,
   cls: 0.1,
   inpMs: 200,
-  /** 首页脚本字节预算：唯一脚本 = public/carousel.js（defer，约 5.7KB 源码）*/
+  /** 首页脚本字节预算：唯一脚本 = public/carousel.js（defer，约 8KB 源码）*/
   homeScriptBytes: 8 * 1024,
   /** 静态内容页脚本预算：零 JS（v1 内容页挂全站脚本，重建后 ≤ 基线且更低）*/
   contentScriptBytes: 0,

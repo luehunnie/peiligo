@@ -17,7 +17,7 @@
     },
     {
       "kind": "internal",
-      "title": "第 38 届校园运动会报名开启",
+      "title": "关于组织全校学生积极参加第38届校园运动会暨田径项目选拔与各班级报名赛程安排的通知",
       "href": "/events/tiyuzu/38-sports-meet/",
       "cover": null,
       "summary": "10 月中旬举行，设径赛、田赛与趣味项目，即日起至月底接受报名。",
@@ -38,11 +38,31 @@
     }
   ],
   "sections": [
-    { "slug": "chronicle", "title": "昆社纪事", "url": "/chronicle/" },
-    { "slug": "events", "title": "活动预告", "url": "/events/" },
-    { "slug": "materials", "title": "学习资料", "url": "/materials/" },
-    { "slug": "software", "title": "软件与工具", "url": "/software/" },
-    { "slug": "guide", "title": "校园指南", "url": "/guide/" }
+    {
+      "slug": "chronicle",
+      "title": "昆社纪事",
+      "url": "/chronicle/"
+    },
+    {
+      "slug": "events",
+      "title": "活动预告",
+      "url": "/events/"
+    },
+    {
+      "slug": "materials",
+      "title": "学习资料",
+      "url": "/materials/"
+    },
+    {
+      "slug": "software",
+      "title": "软件与工具",
+      "url": "/software/"
+    },
+    {
+      "slug": "guide",
+      "title": "校园指南",
+      "url": "/guide/"
+    }
   ],
   "campus_news": [
     {

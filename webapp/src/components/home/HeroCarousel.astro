@@ -29,7 +29,12 @@ function heroChip(sectionSlug: string | null): string {
         <div class="hero-panel">
           <span class="hero-chip">{heroChip(item.section_slug)}</span>
           <h2 class="hero-title">{item.title}</h2>
-          {item.summary && <p class="hero-sub">{item.summary}</p>}
+          {/* R6（Human 验收后补充）：无摘要（空串/缺失）同样渲染并保留
+             两行槽位，与标题固定槽一致；空槽 aria-hidden——无文本即无
+             读屏内容，也不新增空链接语义。 */}
+          <p class="hero-sub" aria-hidden={item.summary ? undefined : "true"}>
+            {item.summary}
+          </p>
           <span class="hero-cta">查看全文</span>
         </div>
         <div class="hero-art" aria-hidden="true">
@@ -187,6 +192,16 @@ function heroChip(sectionSlug: string | null): string {
        .hero-card 的继承白字（墨色 #191f1c 对 teal-deep 实测 2.10:1）。
        此处恢复 v1 深底白字语义，实测 7.98:1（G3，WCAG 大字 ≥3:1）。 */
     color: #fff;
+    /* R5（#49 Human 驳回整改）：标题两行封顶＋两行槽位锁定，替代 JS
+       实测高度预留。line-clamp 仅视觉省略——DOM 文本/可访问名称仍是
+       全文，全文经「查看全文」链接可达（Human 允许标题简略显示）；
+       槽位 min-height 使短/两行/超长标题的卡高在各断点内恒定，高度
+       稳定由 CSS 保证（#47 语义收窄为「卡高恒定」而非「内容全显」）。 */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    min-height: calc(2 * 1.28em);
   }
 
   .hero-sub {
@@ -194,6 +209,14 @@ function heroChip(sectionSlug: string | null): string {
     margin: 14px 0 0;
     font-size: 14px;
     color: rgb(255 255 255 / 0.78);
+    /* 与标题同理：摘要两行封顶＋两行槽位锁定（R6 起「无摘要」条目同样
+       占位——组件恒渲染本元素，min-height 即槽位；行高显式化以锁定槽位）。 */
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    min-height: 3em;
   }
 
   .hero-cta {
