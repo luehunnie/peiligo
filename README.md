@@ -110,8 +110,9 @@
 - **前端迭代仓库 [peiligo-upgrade](https://github.com/luehunnie/peiligo-upgrade)**：
   承接 Astro 前端的后续迭代，已验收的改进包括首页轮播的两行标题 /
   摘要固定槽位、「分区速览」单行横向滚动轨道（每区固定 3 个标题槽）
-  等。这些改动**尚未并入本仓库 `main`，属待集成状态**；两仓库 git
-  历史相互独立，集成进度以两仓库实际动态为准。
+  等，已于 2026-09-20 经源码同步 PR
+  [#22](https://github.com/luehunnie/peiligo/pull/22) 并入本仓库
+  `main`；两仓库 git 历史相互独立。
 
 ## 快速开始（本地开发）
 
@@ -146,9 +147,9 @@ python manage.py runserver
 
 ### Docker 源码构建与运行
 
-容器镜像一律**从源码构建**：本仓库不提供任何预构建镜像或镜像仓库
-（registry）发布物——CI 仅做质量门（检查 / 测试 / lint），不构建、
-不推送镜像，因此不存在可 `docker pull` 的官方镜像。
+仓库当前提供从源码构建的 Docker 配置；现有 CI 仅做质量门（检查 /
+测试 / lint），不构建或推送镜像。本文未提供已核实的预构建镜像地址，
+以下按源码构建运行。
 
 ```bash
 # 完整栈：db + web + scheduler + frontend + caddy 五容器
