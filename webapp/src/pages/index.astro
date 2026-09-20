@@ -1,13 +1,15 @@
 ---
 // 首页（SPEC-001-F05）。等价转写自 v1 home/templates/home/home_page.html。
-// 本文件只承担页面编排（冻结层级：Header → 紧急提示（例外性轻量条）→
-// Hero 轮播 → 五分类导航 → 校园快讯 → Footer；h1 视觉上由 Hero 大题承担，
-// 全页恒一个 h1（visually-hidden 的 page.title））：
+// 本文件只承担页面编排（层级：Header → 紧急提示（例外性轻量条）→
+// Hero 轮播 → 五分类导航 → 校园快讯 → 分区文章（SPEC-003 #48 增量，
+// 仅 Astro/零后端）→ Footer；h1 视觉上由 Hero 大题承担，全页恒一个 h1
+// （visually-hidden 的 page.title））：
 //   1. 取数与错误边界（下方数据面说明）；
 //   2. 查询参数态 SEO 状态选择（hasQuery → noindex/canonical）；
 //   3. 区块组装——区块标记与样式在 src/components/home/：
 //      HeroCarousel.astro（Hero 轮播＋轮播控件全局样式）、
 //      SectionNav.astro（五分类导航）、CampusNews.astro（校园快讯）、
+//      SectionArticles.astro（分区文章）、
 //      SectionPoster.astro（快讯卡无封面时的板块海报）。
 //
 // 数据面（契约 4 内容新鲜度）：每请求经 F04 客户端直连 /home 与 /chrome
@@ -22,12 +24,14 @@
 // noindex ＋ canonical 指向去参基础 URL（其余页面随所属票接入）。
 import CampusNews from "../components/home/CampusNews.astro";
 import HeroCarousel from "../components/home/HeroCarousel.astro";
+import SectionArticles from "../components/home/SectionArticles.astro";
 import SectionNav from "../components/home/SectionNav.astro";
 import FailureState from "../components/system/FailureState.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { toSectionCards } from "../lib/sectionArticles";
 import { unavailableResponse } from "../lib/responses";
-import type { Chrome, Home } from "../schemas/api-schema";
-import { api } from "../services/api";
+import type { Chrome, Home, SectionList } from "../schemas/api-schema";
+import { api, type ApiResult } from "../services/api";
 
 let chrome: Chrome | undefined;
 let home: Home | undefined;
@@ -57,6 +61,25 @@ const retryHref = Astro.url.pathname + Astro.url.search;
 
 const hasQuery = Astro.url.searchParams.toString() !== "";
 const canonical = hasQuery ? Astro.url.origin + Astro.url.pathname : undefined;
+
+// 分区文章（SPEC-003 #48，M2；仅 Astro、零后端）：消费现有 E3
+// GET /api/v1/sections/{slug}?page=1——服务端 CURRENT_DEFAULT 可见性与
+// -first_published_at 排序即权威口径，前端每分区仅取前 3 条。五分区并行
+// 直连（契约 4 每请求取数同款）；失败（含 5xx/404/契约违约/超时/抛错）
+// 由 toSectionCards 过滤＝该分区隐藏（有 ≤5min 陈旧版本时 api 层已按
+// 契约 4 回退陈旧内容，页面不破损）；0 篇分区不渲染；全部失败/全空 →
+// 整个模块不渲染。无独立数据字段，不依赖任何后端增量。
+const sectionCards = home
+  ? toSectionCards(
+      await Promise.all(
+        home.sections.map((nav) =>
+          api
+            .getSectionList(nav.slug, { page: "1" })
+            .catch((): ApiResult<SectionList> | null => null),
+        ),
+      ),
+    )
+  : [];
 ---
 
 <BaseLayout
@@ -80,6 +103,7 @@ const canonical = hasQuery ? Astro.url.origin + Astro.url.pathname : undefined;
       {home.carousel.length > 0 && <HeroCarousel items={home.carousel} />}
       <SectionNav sections={home.sections} />
       {home.campus_news.length > 0 && <CampusNews items={home.campus_news} />}
+      {sectionCards.length > 0 && <SectionArticles sections={sectionCards} />}
     </Fragment>
   ) : (
     // 内容失败且无陈旧版本可回退（F08 统一失败态；HTTP 500 已在前置区设定）

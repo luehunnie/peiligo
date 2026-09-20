@@ -1,0 +1,240 @@
+---
+// 首页分区文章（SPEC-003 #48，M2）。置于校园快讯正下方（页面编排见
+// pages/index.astro）。仅 Astro、零后端：数据 = 现有 E3
+// GET /api/v1/sections/{slug}?page=1（服务端 CURRENT_DEFAULT 可见性与
+// -first_published_at 排序即权威口径），由调用方并行取数后传入——
+// 每分区仅前 3 条（slice 在调用方），单分区失败/空列表不传入本组件。
+// 内容规则（PRD B 冻结）：每分区一张轻量卡片，顶部＝分区标识徽标＋分区
+// 名称＋「查看全部」（落点=既有分区列表页 /<slug>/；新增元素，样式沿用
+// 现有徽标/链接语言）；文章行＝仅可点击标题（无日期/缩略图/摘要/作者/
+// 标签）；固定 3 条槽位与空间——1/2 篇其余位置留白（不收缩卡片、不填
+// 假文章、不显示占位文字、不创建空可点击项）。
+// 视觉：浅边框/留白/细分隔线，克制不抢首页重点。布局（Human 人工验收
+// 反馈 2026-09-20 裁定，#50 重开）：全部卡片置于**单行横向滚动轨道**，
+// 不再多行换行——手机优先（手指横滑、下一卡边缘外露作可滑提示）、桌面
+// 同样可用（鼠标滚轮/触控板横移；轨道为可聚焦滚动区——tabindex=0 的
+// WCAG 滚动区键盘模式，标题链接本身全在 Tab 链中、聚焦即滚入视野，
+// 所有引擎键盘可到全部分区）；仅 CSS/原生浏览器能力，零 JS、无轮播
+// 按钮。卡宽 min(82%,320px)：手机见当前卡＋下一卡外露边缘，宽屏一行约 3 卡＋尾部露边，视觉重心不
+// 被拉走。配色仅既有 token：标题与「查看全部」用品牌青 --teal
+// （hover --teal-deep）；分区徽标沿用冻结 accent 映射的 soft 底＋deep 字
+// （小字 deep ≥4.5:1）——与 CampusNews 同款 tone 类（作用域随组件，
+// 色值全部引用既有 token，tokens.test.ts 守护）。
+import { sectionShort } from "../../lib/sections";
+
+interface Props {
+  sections: {
+    slug: string;
+    title: string;
+    url: string;
+    entries: { title: string; url: string }[];
+  }[];
+}
+
+const { sections } = Astro.props;
+const SLOTS = [0, 1, 2]; // 固定 3 槽：不足留白，超出（不会发生）截断
+---
+
+<section class="sec-articles" aria-labelledby="sec-articles-title">
+  <div class="sec-head">
+    <h2 id="sec-articles-title">分区速览</h2>
+  </div>
+  <div
+    class="cards"
+    tabindex="0"
+    role="group"
+    aria-label="分区速览卡片（可左右滚动查看各分区）"
+  >
+    {sections.map((s) => (
+      <article class="card">
+        <header class="card-head">
+          <span class:list={["tag", `tone-${s.slug}`]} aria-hidden="true">
+            {sectionShort(s.slug)}
+          </span>
+          <h3 class="name">{s.title}</h3>
+          <a class="more" href={s.url}>
+            查看全部<span class="visually-hidden">：{s.title}</span>
+          </a>
+        </header>
+        <ul class="rows">
+          {SLOTS.map((i) => {
+            const entry = s.entries[i];
+            return entry ? (
+              <li>
+                <a href={entry.url}>{entry.title}</a>
+              </li>
+            ) : (
+              <li class="blank" aria-hidden="true" />
+            );
+          })}
+        </ul>
+      </article>
+    ))}
+  </div>
+</section>
+
+<style>
+  /* Human 验收裁定（2026-09-20，#50 重开）：全部卡片置于单行横向滚动
+     轨道，任何视口都只有一行——grid-auto-flow:column 结构性保证不换行。
+     手机优先：卡宽 min(82%,320px)＝当前卡＋下一卡边缘外露（可滑提示）；
+     scroll-snap proximity 轻吸附；overscroll-behavior:contain 防横滑
+     触发浏览器历史导航。轨道 tabindex=0＝键盘可聚焦滚动区（WCAG 滚动
+     区键盘可达模式），键盘可达性由标题链接 Tab 链保证（聚焦即滚入
+     视野，全引擎一致；方向键滚动视引擎对聚焦滚动区的支持而定）；
+     细滚动条仅桌面可见。零 JS、零按钮。 */
+
+  .sec-articles {
+    padding-top: 40px;
+  }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .sec-head h2 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+
+  .cards {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(82%, 320px);
+    gap: 14px;
+    margin-top: 18px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+    /* Chromium 把单行 grid 轨道的固有内容宽传播进根滚动区（内容已被
+       裁剪仍使 documentElement 可横向滚动 ~1100px，页面出现横向平移）。
+       contain:layout paint 在轨内重建布局/裁剪边界，根滚动区恢复与视口
+       等宽；不影响轨道自身内部滚动/吸附。e2e 已断言页面无横向溢出。 */
+    contain: layout paint;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px 18px 6px;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 行内分区徽标：soft 底 + deep 字（小字对比达标），与 CampusNews 同款 */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    min-height: 24px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .tone-chronicle {
+    background: var(--coral-soft);
+    color: var(--coral-deep);
+  }
+
+  .tone-events {
+    background: var(--amber-soft);
+    color: var(--amber-deep);
+  }
+
+  .tone-materials {
+    background: var(--blue-soft);
+    color: var(--blue-deep);
+  }
+
+  .tone-software {
+    background: var(--violet-soft);
+    color: var(--violet-deep);
+  }
+
+  .tone-guide {
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+  }
+
+  .name {
+    margin: 0;
+    min-width: 0;
+    font-size: 15.5px;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .more {
+    margin-left: auto;
+    flex: none;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--teal);
+    transition: color 0.18s ease;
+  }
+
+  .more:hover {
+    color: var(--teal-deep);
+    text-decoration: underline;
+  }
+
+  /* 文章行：细分隔线；固定 3 槽等高，不足留白（空 li 不含任何可交互/文本） */
+  .rows {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+  }
+
+  .rows li {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    border-top: 1px solid var(--line);
+  }
+
+  .rows li a {
+    display: block;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--teal);
+    transition: color 0.18s ease;
+  }
+
+  .rows li a:hover {
+    color: var(--teal-deep);
+    text-decoration: underline;
+  }
+
+  /* ===== 平板/桌面档：轨道布局不随断点换行，仅调区块节奏 ===== */
+
+  @media (min-width: 761px) {
+    .sec-articles {
+      padding-top: 52px;
+    }
+  }
+</style>

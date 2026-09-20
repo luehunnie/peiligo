@@ -113,6 +113,14 @@ const counters = Object.fromEntries(
   [...Object.keys(fixtures), "page-detail"].map((name) => [name, 0]),
 );
 
+/** 分区列表按 slug 覆写（SPEC-003 #48 首页分区文章模块的 0/1/2/3 篇与
+ *  单分区失败容忍场景）；null＝回落共享夹具态。经控制面 endpoint
+ *  "section-list:{slug}" 设置；裸 "section-list" 覆写仍作用于全部 slug
+ *  并清除按 slug 覆写（与既有用例语义一致）。 */
+const perSectionList = Object.fromEntries(
+  SECTION_SLUGS.map((slug) => [slug, null]),
+);
+
 function reset() {
   for (const [name, data] of Object.entries(fixtures)) {
     state[name] = { mode: "ok", data };
@@ -125,6 +133,7 @@ function reset() {
     ]),
   );
   counters["page-detail"] = 0;
+  for (const slug of SECTION_SLUGS) perSectionList[slug] = null;
 }
 
 function sendJson(res, status, body) {
@@ -186,6 +195,31 @@ const server = createServer((req, res) => {
     req.on("end", () => {
       try {
         const { endpoint, mode, payload } = JSON.parse(body);
+        if (
+          typeof endpoint === "string" &&
+          endpoint.startsWith("section-list:")
+        ) {
+          const slug = endpoint.slice("section-list:".length);
+          if (!SECTION_SLUGS.includes(slug)) {
+            throw new Error(`未知 section slug: ${slug}`);
+          }
+          if (mode === "ok") {
+            perSectionList[slug] = {
+              mode,
+              data: payload ?? fixtures["section-list"],
+            };
+          } else if (
+            mode === "fail" ||
+            mode === "invalid" ||
+            mode === "notfound"
+          ) {
+            perSectionList[slug] = { mode, data: null };
+          } else {
+            throw new Error(`未知 mode: ${mode}`);
+          }
+          sendJson(res, 200, { ok: true });
+          return;
+        }
         const names = endpoint === "all" ? ["chrome", "home"] : [endpoint];
         for (const name of names) {
           if (name === "page-detail") {
@@ -211,6 +245,10 @@ const server = createServer((req, res) => {
             throw new Error(`未知 mode: ${mode}`);
           }
         }
+        if (endpoint === "section-list") {
+          // 裸覆写＝作用于全部 slug（既有语义）并清除按 slug 覆写
+          for (const slug of SECTION_SLUGS) perSectionList[slug] = null;
+        }
         sendJson(res, 200, { ok: true });
       } catch (error) {
         sendJson(res, 400, { ok: false, error: String(error) });
@@ -223,6 +261,7 @@ const server = createServer((req, res) => {
   if (req.method === "GET" && apiPath.startsWith("/api/v1/")) {
     const rest = apiPath.slice("/api/v1/".length);
     let name = null;
+    let sectionSlug = null;
     if (rest === "chrome" || rest === "home" || rest === "search") {
       name = rest;
     } else if (
@@ -233,6 +272,7 @@ const server = createServer((req, res) => {
       name = rest;
     } else if (rest.startsWith("sections/")) {
       const [, section, maybeArchive] = rest.split("/");
+      sectionSlug = section;
       if (!SECTION_SLUGS.includes(section)) {
         sendErrorEnvelope(res, 404, "not_found", "未知板块");
         return;
@@ -262,7 +302,10 @@ const server = createServer((req, res) => {
       return;
     }
     counters[name] += 1;
-    const entry = state[name];
+    const entry =
+      name === "section-list" && sectionSlug && perSectionList[sectionSlug]
+        ? perSectionList[sectionSlug]
+        : state[name];
     if (entry.mode === "fail") {
       sendErrorEnvelope(res, 500, "server_error", "模拟后端暂时不可用");
       return;
